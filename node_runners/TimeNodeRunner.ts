@@ -1,0 +1,34 @@
+
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
+import { interpolate } from './utils';
+
+export class TimeNodeRunner implements NodeRunner {
+  async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
+    const params = interpolate(node.parameters, context);
+    
+    if (node.type === 'timer') {
+        // Timer acts as a trigger, usually 0 delay in immediate execution context
+        return {
+            status: 'success',
+            inputs: params,
+            output: { triggeredAt: new Date().toISOString() },
+            logs: [`Timer triggered interval: ${params.secondsInterval || 0}s`]
+        };
+    }
+
+    // Wait Node
+    const seconds = Number(params.seconds) || 1;
+    const ms = seconds * 1000;
+    
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                status: 'success',
+                inputs: params,
+                output: { waited: seconds, completedAt: new Date().toISOString() },
+                logs: [`Waited for ${seconds} seconds`]
+            });
+        }, ms);
+    });
+  }
+}

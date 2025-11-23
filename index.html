@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workflow YAML Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow@11.11.4/dist/style.css" />
+    <style>
+      /* React Flow Basic Styles Override for Tailwind integration */
+      .react-flow__node {
+        font-family: inherit;
+      }
+      /* Ensure the graph takes full height */
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+      }
+
+      /* Improve Handle Usability - Make them larger and easier to click */
+      .react-flow__handle {
+        width: 12px;
+        height: 12px;
+        background-color: #94a3b8; /* slate-400 */
+        border: 2px solid #fff;
+        transition: all 0.2s ease-in-out;
+        z-index: 10;
+      }
+
+      .react-flow__handle:hover {
+        background-color: #3b82f6; /* blue-500 */
+        width: 16px;
+        height: 16px;
+        border-color: #eff6ff; /* blue-50 */
+      }
+
+      /* Adjust position to account for larger size */
+      .react-flow__handle-top {
+        top: -6px;
+      }
+      .react-flow__handle-bottom {
+        bottom: -6px;
+      }
+      .react-flow__handle-left {
+        left: -6px;
+      }
+      .react-flow__handle-right {
+        right: -6px;
+      }
+      
+      .react-flow__handle-top:hover {
+        top: -8px;
+      }
+      .react-flow__handle-bottom:hover {
+        bottom: -8px;
+      }
+      .react-flow__handle-left:hover {
+        left: -8px;
+      }
+      .react-flow__handle-right:hover {
+        right: -8px;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "reactflow/": "https://aistudiocdn.com/reactflow@^11.11.4/",
+    "reactflow": "https://aistudiocdn.com/reactflow@^11.11.4",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "js-yaml": "https://aistudiocdn.com/js-yaml@^4.1.1",
+    "dagre": "https://aistudiocdn.com/dagre@^0.8.5",
+    "markdown-to-jsx": "https://aistudiocdn.com/markdown-to-jsx@^7.1.9",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
