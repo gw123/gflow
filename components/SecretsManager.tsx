@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Edit2, Save, Key, Search, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Save, Key, Search, AlertCircle, Loader2 } from 'lucide-react';
 import { CredentialItem } from '../types';
 import { CREDENTIAL_DEFINITIONS, CredentialDefinition } from '../credential_definitions';
 
@@ -11,10 +11,17 @@ interface SecretsManagerProps {
   onSave: (updatedCredentials: CredentialItem[]) => void;
   onCredentialUpdate: (item: CredentialItem) => void;
   notify: (message: string, type: 'success' | 'error' | 'info') => void;
+  
+  // New props for async handling
+  isServerMode?: boolean;
+  onServerCreate?: (secret: CredentialItem) => Promise<void>;
+  onServerUpdate?: (secret: CredentialItem) => Promise<void>;
+  onServerDelete?: (id: string) => Promise<void>;
 }
 
 const SecretsManager: React.FC<SecretsManagerProps> = ({ 
-  isOpen, onClose, credentials, onSave, onCredentialUpdate, notify
+  isOpen, onClose, credentials, onSave, onCredentialUpdate, notify,
+  isServerMode = false, onServerCreate, onServerUpdate, onServerDelete
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>(CREDENTIAL_DEFINITIONS[0]?.name || '');
@@ -22,6 +29,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
   const [formName, setFormName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Prepare list of filtered credentials
   const filteredCredentials = credentials.filter(c => 
@@ -61,14 +69,27 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     initFormData(newType);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this secret? Linked nodes will lose their connection.")) {
-      const updated = credentials.filter(c => c.id !== id);
-      onSave(updated);
-      if (editingId === id) {
-        setEditingId(null);
+      if (isServerMode && onServerDelete) {
+         try {
+             setIsSaving(true);
+             await onServerDelete(id);
+             if (editingId === id) setEditingId(null);
+             notify("Secret deleted successfully", "success");
+         } catch(e) {
+             notify("Failed to delete secret", "error");
+         } finally {
+             setIsSaving(false);
+         }
+      } else {
+        const updated = credentials.filter(c => c.id !== id);
+        onSave(updated);
+        if (editingId === id) {
+            setEditingId(null);
+        }
+        notify("Secret deleted successfully", "success");
       }
-      notify("Secret deleted successfully", "success");
     }
   };
 
@@ -97,7 +118,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveForm = () => {
+  const handleSaveForm = async () => {
     const def = CREDENTIAL_DEFINITIONS.find(d => d.name === selectedType);
     if (!def) {
         notify("Invalid credential type", "error");
@@ -116,16 +137,36 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
       data: formData
     };
 
-    if (editingId === 'new') {
-      onSave([...credentials, newItem]);
-      notify("Secret created successfully", "success");
+    if (isServerMode) {
+        setIsSaving(true);
+        try {
+            if (editingId === 'new' && onServerCreate) {
+                await onServerCreate(newItem);
+                notify("Secret created successfully", "success");
+            } else if (onServerUpdate) {
+                await onServerUpdate(newItem);
+                notify("Secret updated successfully", "success");
+            }
+            onCredentialUpdate(newItem);
+            setEditingId(null);
+        } catch (e) {
+            notify("Failed to save secret to server", "error");
+        } finally {
+            setIsSaving(false);
+        }
     } else {
-      const updated = credentials.map(c => c.id === editingId ? newItem : c);
-      onSave(updated);
-      onCredentialUpdate(newItem);
-      notify("Secret updated successfully", "success");
+        // Legacy local mode
+        if (editingId === 'new') {
+            onSave([...credentials, newItem]);
+            notify("Secret created successfully", "success");
+        } else {
+            const updated = credentials.map(c => c.id === editingId ? newItem : c);
+            onSave(updated);
+            onCredentialUpdate(newItem);
+            notify("Secret updated successfully", "success");
+        }
+        setEditingId(null);
     }
-    setEditingId(null);
   };
 
   const renderField = (key: string, value: any) => {
@@ -188,7 +229,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-5xl rounded-xl shadow-2xl flex h-[85vh] overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 w-full max-w-5xl rounded-xl shadow-2xl flex h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-slate-50 dark:bg-slate-900">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
@@ -238,6 +279,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
                             <button 
                                 onClick={(e) => { e.stopPropagation(); handleDelete(cred.id); }}
                                 className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition"
+                                disabled={isSaving}
                             >
                                 <Trash2 size={14} />
                             </button>
@@ -312,14 +354,16 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
                    <button 
                      onClick={() => setEditingId(null)}
                      className="px-4 py-2 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-700 rounded-lg transition"
+                     disabled={isSaving}
                    >
                        Cancel
                    </button>
                    <button 
                      onClick={handleSaveForm}
                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-2 transition"
+                     disabled={isSaving}
                    >
-                       <Save size={16} /> Save Secret
+                       {isSaving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16} />} Save Secret
                    </button>
                </div>
            )}

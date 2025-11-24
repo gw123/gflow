@@ -1,4 +1,5 @@
 
+
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { 
@@ -6,7 +7,7 @@ import {
   Settings, GitBranch, Cloud, MessageSquare, 
   Server, Bell, Shuffle, Code, Bug, Terminal,
   Globe, Clock, Search, CheckCircle, AlertCircle, Loader2,
-  Play, Pause, AlertTriangle
+  Play, Pause, AlertTriangle, Plug
 } from 'lucide-react';
 import { NodeDefinition } from '../types';
 
@@ -47,6 +48,9 @@ const getNodeStyles = (type: string) => {
     // Integrations
     feishu_custom_robot: { icon: Bell, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' },
     
+    // Plugins
+    grpc_plugin: { icon: Plug, color: 'text-teal-600', bg: 'bg-teal-50 dark:bg-teal-900/20', border: 'border-teal-200 dark:border-teal-800' },
+
     // Default
     default: { icon: Zap, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
   };

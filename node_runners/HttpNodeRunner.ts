@@ -1,6 +1,7 @@
 
 import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
+import { interpolate, validateSchema } from './utils';
+import type { Schema } from './utils';
 
 export class HttpNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
@@ -26,12 +27,42 @@ export class HttpNodeRunner implements NodeRunner {
 
     // Standard HTTP Request
     try {
+        // Normalize method if present
+        if (params.method && typeof params.method === 'string') {
+            params.method = params.method.toUpperCase();
+        }
+
+        const httpParamSchema: Schema = {
+            type: 'object',
+            required: true,
+            properties: {
+                url: { type: 'string', required: true },
+                method: { type: 'string', required: false, enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'] },
+                headers: { 
+                    type: 'object', 
+                    required: false,
+                    additionalProperties: { type: 'string' } 
+                },
+                body: { type: 'any', required: false }
+            }
+        };
+
+        const validationErrors = validateSchema(params, httpParamSchema, 'parameters');
+        if (validationErrors.length > 0) {
+            throw new Error(`Validation failed: ${validationErrors.join(', ')}`);
+        }
+
         const url = params.url;
-        const method = params.method || 'GET';
+        let method = params.method || 'GET';
         const headers = params.headers || {};
         const body = params.body ? (typeof params.body === 'string' ? params.body : JSON.stringify(params.body)) : undefined;
 
-        if (!url) throw new Error("URL is required");
+        // Additional URL format check (schema handles string type, but not valid URL syntax strictly)
+        try {
+            new URL(url); // Validates URL format
+        } catch (e) {
+            throw new Error(`Invalid URL format: ${url}`);
+        }
 
         logs.push(`Request: ${method} ${url}`);
         
@@ -45,20 +76,29 @@ export class HttpNodeRunner implements NodeRunner {
         let responseData;
         
         if (contentType && contentType.includes('application/json')) {
-            responseData = await response.json();
+            try {
+                responseData = await response.json();
+            } catch (e) {
+                // If content-type is json but body is not valid json, fallback to text
+                responseData = await response.text();
+            }
         } else {
             responseData = await response.text();
         }
 
         logs.push(`Response Status: ${response.status}`);
         
+        // Convert headers to plain object safely
+        const respHeaders: Record<string, string> = {};
+        response.headers.forEach((val, key) => { respHeaders[key] = val; });
+
         return {
             status: response.ok ? 'success' : 'error',
             inputs: params,
             output: {
                 status: response.status,
                 data: responseData,
-                headers: Object.fromEntries(response.headers.entries())
+                headers: respHeaders
             },
             logs
         };

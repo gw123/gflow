@@ -1,10 +1,11 @@
 
+
 import React from 'react';
 import { 
   Zap, Bot, Database, Layers, File, Box, 
   Settings, GitBranch, Cloud, MessageSquare, 
   Server, Bell, Shuffle, Code, Bug, Terminal,
-  Globe, Clock, Search
+  Globe, Clock, Search, Plug
 } from 'lucide-react';
 import { TEMPLATE_LIBRARY } from '../nodes';
 
@@ -24,7 +25,8 @@ const CATEGORY_ICONS: Record<string, any> = {
   notification: Bell,
   control: Shuffle,
   code: Code,
-  debug: Bug
+  debug: Bug,
+  plugin: Plug
 };
 
 // Fallback icons for specific node types if needed, 
@@ -42,7 +44,8 @@ const NODE_ICONS: Record<string, any> = {
   docker: Box,
   js: Code,
   code_search: Search,
-  debug: Bug
+  debug: Bug,
+  grpc_plugin: Plug
 };
 
 const Sidebar = () => {

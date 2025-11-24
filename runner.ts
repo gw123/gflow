@@ -1,8 +1,11 @@
 
+
+
 import { 
   WorkflowDefinition, 
   NodeRunnerContext, 
-  WorkflowExecutionState
+  WorkflowExecutionState,
+  PendingInputConfig
 } from './types';
 import { getRunner, evaluateCondition } from './node_runners';
 
@@ -11,13 +14,18 @@ import { getRunner, evaluateCondition } from './node_runners';
 export class WorkflowRunner {
   private workflow: WorkflowDefinition;
   private updateCallback: (state: WorkflowExecutionState) => void;
-  private state: WorkflowExecutionState;
+  public state: WorkflowExecutionState;
+  private mode: 'run' | 'step' = 'run';
+  private stepResolver: (() => void) | null = null;
+  private inputResolver: ((data: any) => void) | null = null;
 
   constructor(workflow: WorkflowDefinition, onUpdate: (state: WorkflowExecutionState) => void) {
     this.workflow = workflow;
     this.updateCallback = onUpdate;
     this.state = {
       isRunning: false,
+      isPaused: false,
+      waitingForInput: false,
       nodeResults: {},
       logs: []
     };
@@ -32,13 +40,17 @@ export class WorkflowRunner {
     this.updateCallback({ ...this.state });
   }
 
-  public async execute() {
+  public async execute(mode: 'run' | 'step' = 'run') {
     if (this.state.isRunning) return;
     
+    this.mode = mode;
     this.state.isRunning = true;
+    this.state.isPaused = false;
+    this.state.waitingForInput = false;
+    this.state.pendingInputConfig = undefined;
     this.state.nodeResults = {};
     this.state.logs = [];
-    this.log("Starting workflow execution...");
+    this.log(`Starting workflow execution in ${mode} mode...`);
     this.notify();
 
     try {
@@ -62,10 +74,21 @@ export class WorkflowRunner {
         while (queue.length > 0) {
             const currentName = queue.shift()!;
             
-            // If we see the same node again in the queue, that's okay (multiple parents), 
-            // but if we already processed it successfully, we usually skip unless it's a loop.
-            // For simple DAG, skip.
             if (processed.has(currentName)) continue;
+
+            // --- Pause for Step Mode ---
+            if (this.mode === 'step') {
+                 this.log(`[Step Mode] Paused before executing: ${currentName}`);
+                 this.state.isPaused = true;
+                 this.notify();
+                 
+                 // Wait for nextStep() or resume() to be called
+                 await new Promise<void>(resolve => { this.stepResolver = resolve; });
+                 
+                 this.state.isPaused = false;
+                 this.stepResolver = null;
+                 this.notify();
+            }
 
             const nodeDef = this.workflow.nodes.find(n => n.name === currentName);
             if (!nodeDef) {
@@ -87,8 +110,16 @@ export class WorkflowRunner {
                 workflow: this.workflow,
                 executionState: this.state,
                 global: this.workflow.global || {},
-                // Combine outputs from previous nodes as inputs
-                inputs: nodeInputs 
+                inputs: nodeInputs,
+                // Pass wait handler
+                waitForInput: (config) => this.waitForInput(config),
+                // Pass log handler for real-time node logging
+                log: (msg: string) => {
+                    if (this.state.nodeResults[currentName]) {
+                        this.state.nodeResults[currentName].logs.push(msg);
+                        this.notify();
+                    }
+                }
             };
 
             try {
@@ -100,7 +131,7 @@ export class WorkflowRunner {
                     endTime: Date.now(),
                     inputs: result.inputs,
                     output: result.output,
-                    logs: result.logs || [],
+                    logs: result.logs || this.state.nodeResults[currentName].logs, // Use existing logs if provided
                     error: result.error
                 };
                 
@@ -137,7 +168,8 @@ export class WorkflowRunner {
                                         workflow: this.workflow,
                                         executionState: this.state,
                                         global: this.workflow.global || {},
-                                        inputs: nodeInputs
+                                        inputs: nodeInputs,
+                                        log: () => {} // No-op for condition eval
                                     };
                                     
                                     const passed = evaluateCondition(condition, context);
@@ -169,7 +201,51 @@ export class WorkflowRunner {
         this.log(`Workflow execution failed: ${e.message}`);
     } finally {
         this.state.isRunning = false;
+        this.state.isPaused = false;
+        this.state.waitingForInput = false;
+        this.state.pendingInputConfig = undefined;
         this.notify();
     }
+  }
+
+  public nextStep() {
+      if (this.stepResolver) {
+          this.stepResolver();
+      }
+  }
+
+  public resume() {
+      this.mode = 'run';
+      if (this.stepResolver) {
+          this.stepResolver();
+      }
+  }
+
+  // Called by Interaction Node
+  public waitForInput(config: PendingInputConfig): Promise<any> {
+      this.log(`Waiting for user input on node: ${config.nodeName}`);
+      
+      this.state.waitingForInput = true;
+      this.state.pendingInputConfig = config;
+      // We are technically 'running' but blocked on IO
+      this.notify();
+
+      return new Promise((resolve) => {
+          this.inputResolver = resolve;
+      });
+  }
+
+  // Called by UI
+  public submitInput(data: any) {
+      if (this.inputResolver) {
+          this.log(`Input received for ${this.state.pendingInputConfig?.nodeName}`);
+          
+          this.state.waitingForInput = false;
+          this.state.pendingInputConfig = undefined;
+          this.notify();
+          
+          this.inputResolver(data);
+          this.inputResolver = null;
+      }
   }
 }

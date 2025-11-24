@@ -1,17 +1,26 @@
 
+
+
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText } from 'lucide-react';
-import { WorkflowExecutionState, NodeExecutionResult } from '../types';
+import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User } from 'lucide-react';
+import { WorkflowExecutionState, PendingInputConfig, InputFieldDefinition } from '../types';
 
 interface ExecutionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   state: WorkflowExecutionState;
+  onNextStep?: () => void;
+  onResume?: () => void;
+  onSubmitInput?: (data: any) => void;
 }
 
-const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state }) => {
+const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state, onNextStep, onResume, onSubmitInput }) => {
   const [selectedNodeName, setSelectedNodeName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'output' | 'input' | 'logs' | 'error'>('output');
+  
+  // Input Form State
+  const [inputFormData, setInputFormData] = useState<Record<string, any>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Reset selection when panel opens/closes or state resets
   useEffect(() => {
@@ -21,15 +30,83 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state 
   // Auto-select the latest running/finished node if nothing is selected
   useEffect(() => {
       if (state.isRunning && !selectedNodeName) {
-          const latest = Object.values(state.nodeResults).sort((a,b) => b.startTime - a.startTime)[0];
-          if (latest) setSelectedNodeName(latest.nodeName);
+          // If waiting for input, prioritize that node
+          if (state.waitingForInput && state.pendingInputConfig) {
+             setSelectedNodeName(state.pendingInputConfig.nodeName);
+          } else {
+             const latest = Object.values(state.nodeResults).sort((a,b) => b.startTime - a.startTime)[0];
+             if (latest) setSelectedNodeName(latest.nodeName);
+          }
       }
   }, [state, selectedNodeName]);
+  
+  // Initialize form data when waiting starts
+  useEffect(() => {
+      if (state.waitingForInput && state.pendingInputConfig) {
+          const init: Record<string, any> = {};
+          state.pendingInputConfig.fields.forEach(f => {
+              init[f.key] = f.defaultValue !== undefined ? f.defaultValue : (f.type === 'boolean' ? false : '');
+          });
+          setInputFormData(init);
+          setValidationErrors({});
+          // Also select this node
+          setSelectedNodeName(state.pendingInputConfig.nodeName);
+      }
+  }, [state.waitingForInput, state.pendingInputConfig]);
 
   if (!isOpen) return null;
 
   const sortedResults = Object.values(state.nodeResults).sort((a, b) => a.startTime - b.startTime);
   const selectedResult = selectedNodeName ? state.nodeResults[selectedNodeName] : null;
+
+  const validateField = (field: InputFieldDefinition, value: any): string | null => {
+     if (field.required && (value === undefined || value === null || value === '')) {
+         return "This field is required";
+     }
+     if (field.validationRegex && typeof value === 'string') {
+         try {
+             const regex = new RegExp(field.validationRegex);
+             if (!regex.test(value)) {
+                 return field.validationMessage || "Invalid format";
+             }
+         } catch(e) {
+             // Invalid regex config, ignore or log
+         }
+     }
+     return null;
+  };
+
+  const handleInputSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      // Validate all fields
+      if (state.pendingInputConfig) {
+          const errors: Record<string, string> = {};
+          state.pendingInputConfig.fields.forEach(field => {
+              const error = validateField(field, inputFormData[field.key]);
+              if (error) errors[field.key] = error;
+          });
+          
+          if (Object.keys(errors).length > 0) {
+              setValidationErrors(errors);
+              return;
+          }
+      }
+
+      if (onSubmitInput) {
+          onSubmitInput(inputFormData);
+      }
+  };
+
+  const handleFieldChange = (key: string, value: any, field?: InputFieldDefinition) => {
+      setInputFormData(prev => ({ ...prev, [key]: value }));
+      // Clear error on change
+      if (validationErrors[key]) {
+          const newErrors = { ...validationErrors };
+          delete newErrors[key];
+          setValidationErrors(newErrors);
+      }
+  };
 
   const renderJson = (data: any) => {
       if (data === undefined || data === null) return <span className="text-slate-500 italic">Empty</span>;
@@ -37,6 +114,99 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state 
           <pre className="font-mono text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700 overflow-auto max-h-[300px]">
               {JSON.stringify(data, null, 2)}
           </pre>
+      );
+  };
+  
+  const renderInputForm = (config: PendingInputConfig) => {
+      return (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
+              <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-6 animate-in zoom-in-95 duration-200">
+                  <div className="flex items-center gap-3 mb-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+                      <div className="p-2.5 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                          <User size={20} />
+                      </div>
+                      <div>
+                          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{config.title}</h3>
+                          {config.description && <p className="text-sm text-slate-500 dark:text-slate-400">{config.description}</p>}
+                      </div>
+                  </div>
+                  
+                  <form onSubmit={handleInputSubmit} className="space-y-4">
+                      {config.fields.map(field => {
+                          // Parse custom style if present
+                          const inputStyle = field.style || {};
+
+                          return (
+                          <div key={field.key}>
+                              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                              </label>
+                              
+                              {field.description && <p className="text-xs text-slate-500 mb-2">{field.description}</p>}
+
+                              {field.type === 'boolean' ? (
+                                  <div className="flex items-center gap-2 mt-2">
+                                     <button
+                                        type="button"
+                                        onClick={() => handleFieldChange(field.key, !inputFormData[field.key], field)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${inputFormData[field.key] ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                                        style={inputFormData[field.key] ? inputStyle : {}}
+                                     >
+                                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${inputFormData[field.key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                                     </button>
+                                     <span className="text-sm text-slate-600 dark:text-slate-400">{inputFormData[field.key] ? 'Yes' : 'No'}</span>
+                                  </div>
+                              ) : field.type === 'select' && field.options ? (
+                                  <select
+                                      value={inputFormData[field.key]}
+                                      onChange={(e) => handleFieldChange(field.key, e.target.value, field)}
+                                      className={`w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 ${validationErrors[field.key] ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
+                                      style={inputStyle}
+                                  >
+                                      {field.options.map(opt => (
+                                          <option key={opt} value={opt}>{opt}</option>
+                                      ))}
+                                  </select>
+                              ) : field.type === 'text' ? (
+                                  <textarea
+                                      value={inputFormData[field.key]}
+                                      onChange={(e) => handleFieldChange(field.key, e.target.value, field)}
+                                      className={`w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px] ${validationErrors[field.key] ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
+                                      required={field.required}
+                                      placeholder={field.placeholder}
+                                      style={inputStyle}
+                                  />
+                              ) : (
+                                  <input 
+                                      type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : field.type === 'email' ? 'email' : field.type === 'date' ? 'date' : 'text'}
+                                      value={inputFormData[field.key]}
+                                      onChange={(e) => handleFieldChange(field.key, field.type === 'number' ? parseFloat(e.target.value) : e.target.value, field)}
+                                      className={`w-full p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 ${validationErrors[field.key] ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
+                                      required={field.required}
+                                      placeholder={field.placeholder}
+                                      style={inputStyle}
+                                  />
+                              )}
+                              
+                              {validationErrors[field.key] && (
+                                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                      <AlertCircle size={10} /> {validationErrors[field.key]}
+                                  </p>
+                              )}
+                          </div>
+                      )})}
+                      
+                      <div className="pt-2">
+                          <button 
+                             type="submit" 
+                             className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2"
+                          >
+                             <Send size={16} /> Submit Response
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
       );
   };
 
@@ -49,9 +219,40 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state 
                 <Activity size={16} className={state.isRunning ? "text-blue-500 animate-pulse" : "text-slate-400"} />
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">Execution Console</h3>
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${state.isRunning ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'}`}>
-                {state.isRunning ? 'Running' : 'Finished'}
-            </span>
+            
+            <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border flex items-center gap-1 ${
+                    state.waitingForInput
+                    ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800 animate-pulse'
+                    : state.isPaused 
+                    ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+                    : state.isRunning 
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' 
+                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                }`}>
+                    {state.waitingForInput ? <User size={10} /> : state.isPaused ? <PauseCircle size={10} /> : null}
+                    {state.waitingForInput ? 'Waiting for Input' : state.isPaused ? 'Paused' : state.isRunning ? 'Running' : 'Finished'}
+                </span>
+
+                {state.isPaused && !state.waitingForInput && (
+                    <div className="flex items-center gap-1 ml-2 animate-in fade-in slide-in-from-left-2">
+                        <button 
+                            onClick={onNextStep} 
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition-colors shadow-sm"
+                            title="Execute Next Step"
+                        >
+                            <StepForward size={12}/> Next
+                        </button>
+                        <button 
+                            onClick={onResume} 
+                            className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded text-xs font-bold transition-colors"
+                            title="Resume Full Execution"
+                        >
+                            <Play size={12}/> Resume
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-500">
             <X size={18} />
@@ -110,7 +311,10 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state 
         {/* Right: Details View */}
         <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
             
-            {selectedResult ? (
+            {/* Show Form If Waiting for Input AND Selected Node matches config node */}
+            {state.waitingForInput && state.pendingInputConfig && selectedNodeName === state.pendingInputConfig.nodeName ? (
+                renderInputForm(state.pendingInputConfig)
+            ) : selectedResult ? (
                 /* Node Details Mode */
                 <div className="flex-1 flex flex-col h-full">
                     {/* Detail Header */}

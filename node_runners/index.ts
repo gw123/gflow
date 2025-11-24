@@ -1,4 +1,5 @@
 
+
 import { NodeRunner } from '../types';
 import { JsNodeRunner } from './JsNodeRunner';
 import { ManualNodeRunner } from './ManualNodeRunner';
@@ -8,6 +9,8 @@ import { LlmNodeRunner } from './LlmNodeRunner';
 import { ControlNodeRunner } from './ControlNodeRunner';
 import { SystemNodeRunner } from './SystemNodeRunner';
 import { DefaultRunner } from './DefaultRunner';
+import { GrpcNodeRunner } from './GrpcNodeRunner';
+import { InteractionNodeRunner } from './InteractionNodeRunner';
 
 // Registry
 const Runners: Record<string, NodeRunner> = {
@@ -38,6 +41,12 @@ const Runners: Record<string, NodeRunner> = {
   'docker': new SystemNodeRunner(),
   'docker_compose': new SystemNodeRunner(),
   'git': new SystemNodeRunner(),
+
+  // Plugins
+  'grpc_plugin': new GrpcNodeRunner(),
+  
+  // Human in the Loop
+  'user_interaction': new InteractionNodeRunner(),
 };
 
 export const getRunner = (type: string): NodeRunner => {

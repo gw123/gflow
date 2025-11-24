@@ -1,4 +1,7 @@
 
+
+
+
 export const TEMPLATE_LIBRARY: Record<string, { description: string; templates: any[] }> = {
   trigger: {
     description: "工作流触发器相关模板，用于启动工作流",
@@ -54,6 +57,54 @@ export const TEMPLATE_LIBRARY: Record<string, { description: string; templates: 
         type: "timer",
         init_delay: 2,
         parameters: [{ secondsInterval: 10 }]
+      }
+    ]
+  },
+  control: {
+    description: "控制流操作相关模板，用于流程控制",
+    templates: [
+      {
+        name: "User Input",
+        type: "user_interaction",
+        desc: "Pauses workflow to wait for human input via a form.",
+        parameters: {
+          title: "Review Required",
+          description: "Please review the generated content and approve.",
+          fields: [
+             { key: "decision", label: "Approve?", type: "boolean", defaultValue: false },
+             { key: "comments", label: "Feedback", type: "text", required: true },
+             { key: "email", label: "Notification Email", type: "email", validationRegex: "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$", validationMessage: "Invalid email format" }
+          ]
+        }
+      },
+      {
+        name: "If",
+        type: "if",
+        parameters: {
+          condition: "={{ $P.value > 0 }}",
+          true_branch: "success",
+          false_branch: "failure"
+        }
+      },
+      {
+        name: "Switch",
+        type: "switch",
+        parameters: {
+          value: "={{ $P.status }}",
+          cases: [
+            { value: "success", branch: "success_branch" },
+            { value: "failure", branch: "failure_branch" },
+            { default: "default_branch" }
+          ]
+        }
+      },
+      {
+        name: "Loop",
+        type: "loop",
+        parameters: {
+          count: 5,
+          interval: 10
+        }
       }
     ]
   },
@@ -169,6 +220,35 @@ export const TEMPLATE_LIBRARY: Record<string, { description: string; templates: 
         parameters: {
           action: "query",
           sql: "SELECT * FROM example_table"
+        }
+      }
+    ]
+  },
+  plugin: {
+    description: "扩展插件，支持 gRPC 协议的外部节点",
+    templates: [
+      {
+        name: "Example Plugin",
+        type: "grpc_plugin",
+        desc: "Connects to an external gRPC service implementing NodePluginService",
+        parameters: {
+          endpoint: "localhost:50051",
+          timeout: 5000,
+          target: "example_target"
+        },
+        // This metadata block simulates what the backend GetMetadata RPC would return
+        meta: {
+          kind: "ExampleGrpcPlugin",
+          nodeType: "grpc_plugin",
+          credentialType: "none",
+          description: "An example plugin node communicating via gRPC",
+          version: "1.0.0",
+          parameters: [
+            { name: "endpoint", type: "string", defaultValue: "localhost:50051", description: "Plugin Service Address", required: true },
+            { name: "timeout", type: "int", defaultValue: 5000, description: "Execution timeout in ms", required: false },
+            { name: "target", type: "string", description: "Target resource identifier", required: true },
+            { name: "enable_tls", type: "bool", defaultValue: false, description: "Enable TLS for connection", required: false }
+          ]
         }
       }
     ]
@@ -463,40 +543,6 @@ export const TEMPLATE_LIBRARY: Record<string, { description: string; templates: 
           to: "recipient@example.com",
           subject: "Test Email",
           body: "This is a test email"
-        }
-      }
-    ]
-  },
-  control: {
-    description: "控制流操作相关模板，用于流程控制",
-    templates: [
-      {
-        name: "If",
-        type: "if",
-        parameters: {
-          condition: "={{ $P.value > 0 }}",
-          true_branch: "success",
-          false_branch: "failure"
-        }
-      },
-      {
-        name: "Switch",
-        type: "switch",
-        parameters: {
-          value: "={{ $P.status }}",
-          cases: [
-            { value: "success", branch: "success_branch" },
-            { value: "failure", branch: "failure_branch" },
-            { default: "default_branch" }
-          ]
-        }
-      },
-      {
-        name: "Loop",
-        type: "loop",
-        parameters: {
-          count: 5,
-          interval: 10
         }
       }
     ]

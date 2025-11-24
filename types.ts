@@ -1,4 +1,5 @@
 
+
 export interface StorageConfig {
   name: string;
   type: string;
@@ -24,6 +25,22 @@ export interface NodeCredentials {
   [key: string]: any;
 }
 
+export interface PluginParameterDefinition {
+  name: string;
+  type: 'string' | 'int' | 'integer' | 'float' | 'double' | 'number' | 'bool' | 'boolean' | 'array' | 'object';
+  defaultValue?: any;
+  description?: string;
+  required?: boolean;
+  options?: string[]; // For select inputs
+}
+
+export interface PluginMetadata {
+  kind: string;
+  nodeType: string;
+  credentialType?: string;
+  parameters?: PluginParameterDefinition[];
+}
+
 export interface NodeDefinition {
   name: string;
   type: string;
@@ -41,6 +58,10 @@ export interface NodeDefinition {
     [key: string]: any;
   };
   credentialType?: string;
+  
+  // Metadata for dynamic plugins (gRPC)
+  meta?: PluginMetadata;
+  
   [key: string]: any; // Allow extra fields
 }
 
@@ -72,6 +93,34 @@ export interface WorkflowDefinition {
   pinData?: Record<string, any>;
 }
 
+// --- Interaction Types ---
+
+export interface InputFieldDefinition {
+  key: string;
+  label: string;
+  type: 'string' | 'number' | 'boolean' | 'select' | 'text' | 'password' | 'email' | 'date';
+  defaultValue?: any;
+  options?: string[];
+  required?: boolean;
+  description?: string;
+  placeholder?: string;
+  
+  // Validation
+  validationRegex?: string;
+  validationMessage?: string;
+  
+  // Styling
+  className?: string; // Tailwind classes
+  style?: Record<string, any>; // Inline styles for the input
+}
+
+export interface PendingInputConfig {
+  nodeName: string;
+  title: string;
+  description?: string;
+  fields: InputFieldDefinition[];
+}
+
 // --- Execution Types ---
 
 export type ExecutionStatus = 'pending' | 'running' | 'success' | 'error' | 'skipped';
@@ -89,6 +138,9 @@ export interface NodeExecutionResult {
 
 export interface WorkflowExecutionState {
   isRunning: boolean;
+  isPaused?: boolean;
+  waitingForInput?: boolean;
+  pendingInputConfig?: PendingInputConfig;
   nodeResults: Record<string, NodeExecutionResult>;
   logs: string[];
 }
@@ -98,6 +150,8 @@ export interface NodeRunnerContext {
   executionState: WorkflowExecutionState;
   global: Record<string, any>;
   inputs: Record<string, any>; // Inputs from previous nodes
+  waitForInput?: (config: PendingInputConfig) => Promise<any>;
+  log: (message: string) => void; // Real-time logging
 }
 
 export interface NodeRunner {

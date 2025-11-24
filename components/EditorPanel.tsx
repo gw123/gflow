@@ -1,7 +1,10 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Trash2, Code, List, AlertCircle, Check, Link, Settings, Info, Maximize2, Minimize2 } from 'lucide-react';
-import { NodeDefinition, CredentialItem } from '../types';
+import { X, Save, Trash2, Code, List, AlertCircle, Check, Link, Settings, Info, Maximize2, Minimize2, Plus, FileText, Plug } from 'lucide-react';
+import { NodeDefinition, CredentialItem, PluginParameterDefinition, InputFieldDefinition } from '../types';
+import { FormBuilder } from './FormBuilder';
 
 interface EditorPanelProps {
   selectedNode: NodeDefinition | null;
@@ -14,7 +17,7 @@ interface EditorPanelProps {
 
 // --- Helper Components ---
 
-const JsonEditor: React.FC<{ 
+export const JsonEditor: React.FC<{ 
   value: any; 
   onChange: (val: any) => void; 
   disabled?: boolean;
@@ -71,6 +74,195 @@ const JsonEditor: React.FC<{
               <AlertCircle size={10} /> {error}
           </div>
       )}
+    </div>
+  );
+};
+
+const BodyEditor: React.FC<{ 
+  value: any; 
+  onChange: (val: any) => void; 
+  disabled?: boolean; 
+}> = ({ value, onChange, disabled }) => {
+  const [mode, setMode] = useState<'json' | 'text'>(
+      typeof value === 'object' && value !== null ? 'json' : 'text'
+  );
+
+  useEffect(() => {
+     // If value becomes an object externally and we are in text mode, switch to json? 
+     // Or just let the user toggle. We'll stick to manual toggle but sync initial state if undefined.
+     if (typeof value === 'object' && value !== null && mode === 'text') {
+         // Only switch if we are sure? No, user might be typing a JSON string in text mode.
+         // Let's keep manual control mostly, but if it's clearly an object, prefer JSON.
+     }
+  }, [value]); // eslint-disable-line
+
+  const handleModeSwitch = (newMode: 'json' | 'text') => {
+      if (newMode === mode) return;
+
+      if (newMode === 'text') {
+          // Object -> String
+          if (typeof value === 'object' && value !== null) {
+              onChange(JSON.stringify(value, null, 2));
+          } else {
+              onChange(String(value || ''));
+          }
+      } else {
+          // String -> Object
+          if (typeof value === 'string') {
+              try {
+                  const parsed = JSON.parse(value);
+                  onChange(parsed);
+              } catch (e) {
+                   if (!confirm("Content is not valid JSON. Discard and create empty object?")) {
+                       return;
+                   }
+                   onChange({});
+              }
+          } else {
+              // Number or other types
+              onChange({});
+          }
+      }
+      setMode(newMode);
+  };
+
+  return (
+     <div className="w-full pt-2 pb-1">
+         <div className="flex justify-between items-center mb-2">
+             <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                 <FileText size={12}/> Request Body
+             </span>
+             <div className="flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-md">
+                <button 
+                    onClick={() => handleModeSwitch('json')}
+                    disabled={disabled}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${mode === 'json' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                >
+                    JSON
+                </button>
+                <button 
+                    onClick={() => handleModeSwitch('text')}
+                    disabled={disabled}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${mode === 'text' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                >
+                    Text
+                </button>
+             </div>
+         </div>
+         
+         {mode === 'json' ? (
+             <JsonEditor value={value} onChange={onChange} disabled={disabled} minHeight="200px" />
+         ) : (
+             <div className="relative">
+                 <textarea
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    disabled={disabled}
+                    className={`w-full h-[200px] text-xs p-3 font-mono border rounded-md bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 outline-none resize-y transition-all ${
+                        disabled 
+                        ? 'opacity-60 cursor-not-allowed border-gray-200 dark:border-gray-700' 
+                        : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20'
+                    }`}
+                    placeholder="Raw body content (e.g. plain text, XML, etc.)"
+                    spellCheck={false}
+                 />
+                 <div className="absolute top-2 right-2 pointer-events-none opacity-50">
+                     <span className="text-[9px] font-bold text-slate-400 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 py-0.5 rounded">RAW</span>
+                 </div>
+             </div>
+         )}
+     </div>
+  );
+};
+
+const KeyValueMapEditor: React.FC<{ 
+  value: any; 
+  onChange: (val: any) => void; 
+  disabled?: boolean;
+}> = ({ value, onChange, disabled }) => {
+  const [items, setItems] = useState<{id: string, key: string, value: string}[]>([]);
+
+  useEffect(() => {
+    const obj = value || {};
+    // Compare current items (as object) with incoming object to avoid unnecessary updates/re-renders
+    const currentObj = items.reduce((acc, item) => {
+        if (item.key) acc[item.key] = item.value;
+        return acc;
+    }, {} as any);
+    
+    if (JSON.stringify(obj) !== JSON.stringify(currentObj)) {
+        const newItems = Object.entries(obj).map(([k, v]) => ({
+            id: k + '-' + Math.random().toString(36).substr(2, 5),
+            key: k,
+            value: String(v)
+        }));
+        setItems(newItems);
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateParent = (newItems: typeof items) => {
+     const newObj = newItems.reduce((acc, item) => {
+        if (item.key.trim()) acc[item.key.trim()] = item.value;
+        return acc;
+     }, {} as any);
+     onChange(newObj);
+  };
+
+  const handleChange = (id: string, field: 'key'|'value', val: string) => {
+     const newItems = items.map(i => i.id === id ? { ...i, [field]: val } : i);
+     setItems(newItems);
+     updateParent(newItems);
+  };
+
+  const handleAdd = () => {
+     setItems([...items, { id: Math.random().toString(), key: '', value: '' }]);
+  };
+
+  const handleDelete = (id: string) => {
+     const newItems = items.filter(i => i.id !== id);
+     setItems(newItems);
+     updateParent(newItems);
+  };
+
+  return (
+    <div className="flex flex-col gap-2 w-full pt-1">
+        {items.map((item) => (
+            <div key={item.id} className="flex gap-2 items-center">
+                <input
+                    value={item.key}
+                    onChange={(e) => handleChange(item.id, 'key', e.target.value)}
+                    placeholder="Key"
+                    disabled={disabled}
+                    className="flex-1 min-w-0 w-1/3 text-xs px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                />
+                <input
+                    value={item.value}
+                    onChange={(e) => handleChange(item.id, 'value', e.target.value)}
+                    placeholder="Value"
+                    disabled={disabled}
+                    className="flex-1 min-w-0 w-2/3 text-xs px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                />
+                <button 
+                    onClick={() => handleDelete(item.id)}
+                    disabled={disabled}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    title="Remove Header"
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
+        ))}
+        {!disabled && (
+            <button 
+                onClick={handleAdd}
+                className="self-start flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded transition-colors font-medium"
+            >
+                <Plus size={14} /> Add Header
+            </button>
+        )}
+        {items.length === 0 && (
+             <div className="text-[10px] text-slate-400 italic px-1">No headers defined</div>
+        )}
     </div>
   );
 };
@@ -163,6 +355,83 @@ const ValueInput: React.FC<{ value: any; onChange: (val: any) => void; disabled?
   );
 };
 
+const DynamicFormEditor: React.FC<{ 
+  data: any; 
+  paramDefs: PluginParameterDefinition[]; 
+  onChange: (newData: any) => void;
+  disabled?: boolean;
+}> = ({ data, paramDefs, onChange, disabled }) => {
+    
+    const handleChange = (key: string, val: any) => {
+        onChange({ ...data, [key]: val });
+    };
+
+    return (
+        <div className="flex flex-col gap-4">
+            {paramDefs.map((def) => {
+                const value = data[def.name] ?? def.defaultValue;
+                
+                return (
+                    <div key={def.name} className="group relative">
+                         <div className="flex flex-col gap-1.5">
+                             <div className="flex items-center gap-2">
+                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono break-all">
+                                     {def.name}
+                                 </label>
+                                 {def.required && <span className="text-[10px] text-red-500">*</span>}
+                                 <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 rounded">{def.type}</span>
+                             </div>
+                             
+                             {def.description && (
+                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 -mt-0.5">{def.description}</p>
+                             )}
+
+                             <div className="mt-1">
+                                 {(def.type === 'bool' || def.type === 'boolean') ? (
+                                      <div className="flex items-center h-9">
+                                        <button
+                                          onClick={() => !disabled && handleChange(def.name, !value)}
+                                          disabled={disabled}
+                                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                                            value ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-600'
+                                          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${value ? 'translate-x-5' : 'translate-x-1'}`} />
+                                        </button>
+                                        <span className="ml-2 text-xs text-slate-500 dark:text-slate-400 font-medium">{value ? 'True' : 'False'}</span>
+                                      </div>
+                                 ) : (def.type === 'int' || def.type === 'integer' || def.type === 'float' || def.type === 'double' || def.type === 'number') ? (
+                                     <input
+                                        type="number"
+                                        value={value}
+                                        onChange={(e) => {
+                                            const val = def.type.includes('int') ? parseInt(e.target.value) : parseFloat(e.target.value);
+                                            handleChange(def.name, isNaN(val) ? e.target.value : val);
+                                        }}
+                                        disabled={disabled}
+                                        className={`w-full text-xs px-2 py-1.5 border rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 ${disabled ? 'opacity-60 cursor-not-allowed border-gray-200' : 'border-gray-300 dark:border-gray-600'}`}
+                                     />
+                                 ) : (def.type === 'object' || def.type === 'array') ? (
+                                     <JsonEditor value={value} onChange={(v) => handleChange(def.name, v)} disabled={disabled} />
+                                 ) : (
+                                     <input
+                                        type="text"
+                                        value={value}
+                                        onChange={(e) => handleChange(def.name, e.target.value)}
+                                        disabled={disabled}
+                                        placeholder={def.defaultValue}
+                                        className={`w-full text-xs px-2 py-1.5 border rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 ${disabled ? 'opacity-60 cursor-not-allowed border-gray-200' : 'border-gray-300 dark:border-gray-600'}`}
+                                     />
+                                 )}
+                             </div>
+                         </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const KeyValueList: React.FC<{ data: any; onChange: (key: string, val: any) => void; disabled?: boolean }> = ({ data, onChange, disabled }) => {
   if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
     return (
@@ -177,9 +446,9 @@ const KeyValueList: React.FC<{ data: any; onChange: (key: string, val: any) => v
     <div className="flex flex-col gap-4">
       {Object.entries(data).map(([key, value]) => (
         <div key={key} className="group relative pl-0">
-           <div className="flex flex-col md:flex-row md:items-start gap-1.5 md:gap-4">
+           <div className={`flex flex-col md:flex-row md:items-start gap-1.5 md:gap-4 ${key === 'body' ? 'flex-col md:flex-col' : ''}`}>
               {/* Key Label */}
-              <div className="w-full md:w-1/3 pt-1.5 flex items-center">
+              <div className={`${key === 'body' ? 'w-full' : 'w-full md:w-1/3'} pt-1.5 flex items-center`}>
                  <label 
                     className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono break-all" 
                     title={key}
@@ -189,8 +458,15 @@ const KeyValueList: React.FC<{ data: any; onChange: (key: string, val: any) => v
               </div>
               
               {/* Value Input */}
-              <div className="w-full md:w-2/3">
-                 <ValueInput value={value} onChange={(newVal) => onChange(key, newVal)} disabled={disabled} />
+              <div className={`${key === 'body' ? 'w-full' : 'w-full md:w-2/3'}`}>
+                 {/* Special handling for headers */}
+                 {key === 'headers' && typeof value === 'object' ? (
+                     <KeyValueMapEditor value={value} onChange={(newVal) => onChange(key, newVal)} disabled={disabled} />
+                 ) : key === 'body' ? (
+                     <BodyEditor value={value} onChange={(newVal) => onChange(key, newVal)} disabled={disabled} />
+                 ) : (
+                     <ValueInput value={value} onChange={(newVal) => onChange(key, newVal)} disabled={disabled} />
+                 )}
               </div>
            </div>
            {/* Separator */}
@@ -211,7 +487,11 @@ const SectionEditor: React.FC<{
   isLocked?: boolean; 
   headerAction?: React.ReactNode;
   defaultOpen?: boolean;
-}> = ({ title, description, data, rawString, onDataChange, onRawChange, isLocked, headerAction, defaultOpen = true }) => {
+  // Dynamic Plugin Support
+  pluginParams?: PluginParameterDefinition[];
+  // Interaction Node Support
+  isUserInteraction?: boolean;
+}> = ({ title, description, data, rawString, onDataChange, onRawChange, isLocked, headerAction, defaultOpen = true, pluginParams, isUserInteraction }) => {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [isValidJson, setIsValidJson] = useState(true);
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -237,6 +517,9 @@ const SectionEditor: React.FC<{
     onDataChange(newData);
     onRawChange(JSON.stringify(newData, null, 2));
   };
+  
+  // If plugin params are present, default to form mode and maybe disable toggling if strict?
+  // For now, we allow toggle but form view renders specific inputs.
 
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg border shadow-sm transition-colors ${isLocked ? 'border-blue-200 dark:border-blue-900/50' : 'border-slate-200 dark:border-slate-700'}`}>
@@ -276,7 +559,41 @@ const SectionEditor: React.FC<{
             {description && <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 -mt-1">{description}</p>}
             
             {mode === 'form' ? (
-                <KeyValueList data={data} onChange={handleKeyValueChange} disabled={isLocked} />
+                isUserInteraction ? (
+                   <div className="space-y-4">
+                       <div className="grid grid-cols-1 gap-4">
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Form Title</label>
+                               <input 
+                                   type="text" 
+                                   value={data.title || ''} 
+                                   onChange={(e) => handleKeyValueChange('title', e.target.value)}
+                                   className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900"
+                               />
+                           </div>
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                               <input 
+                                   type="text" 
+                                   value={data.description || ''} 
+                                   onChange={(e) => handleKeyValueChange('description', e.target.value)}
+                                   className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900"
+                               />
+                           </div>
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Fields</label>
+                               <FormBuilder 
+                                   fields={data.fields || []} 
+                                   onChange={(fields) => handleKeyValueChange('fields', fields)} 
+                               />
+                           </div>
+                       </div>
+                   </div>
+                ) : pluginParams ? (
+                    <DynamicFormEditor data={data} paramDefs={pluginParams} onChange={onDataChange} disabled={isLocked} />
+                ) : (
+                    <KeyValueList data={data} onChange={handleKeyValueChange} disabled={isLocked} />
+                )
             ) : (
             <div className="relative group">
                 <textarea
@@ -431,10 +748,14 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
   const nodeTypes = [
     "webhook", "project", "prompt_template", "chatgpt", "code_search", 
     "loop", "js", "ai_low_code", "text2sql", "low_code", "pg", 
-    "tts", "wait", "debug", "mysql", "timer", "feishu_bitable", "docker_compose"
+    "tts", "wait", "debug", "mysql", "timer", "feishu_bitable", "docker_compose",
+    "grpc_plugin", "user_interaction"
   ];
 
   const showCredEditor = formData.credentials || formData.secret || ['mysql', 'pg', 'feishu_bitable', 'text2sql', 'tts', 'chatgpt', 'webhook', 'prompt_template', 'code_search'].includes(formData.type) || formData['credentialType'];
+
+  // Check if this node is a plugin with metadata
+  const isPlugin = !!formData.meta;
 
   return (
     <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm border-l border-slate-200 dark:border-slate-800 shadow-2xl">
@@ -442,7 +763,14 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
         <div>
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Edit Node</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{formData.name}</p>
+            <div className="flex items-center gap-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400">{formData.name}</p>
+                {isPlugin && (
+                    <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 rounded text-[9px] font-bold border border-teal-200 dark:border-teal-800 flex items-center gap-1">
+                        <Plug size={8} /> PLUGIN
+                    </span>
+                )}
+            </div>
         </div>
         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
           <X size={20} />
@@ -466,15 +794,21 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
             </div>
             <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Type</label>
-                <select
-                value={formData.type}
-                onChange={(e) => handleChange('type', e.target.value)}
-                className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                {nodeTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                ))}
-                </select>
+                {isPlugin ? (
+                     <div className="w-full p-2 text-sm border border-slate-200 dark:border-slate-700 rounded-md bg-slate-100 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 cursor-not-allowed">
+                         {formData.type}
+                     </div>
+                ) : (
+                    <select
+                    value={formData.type}
+                    onChange={(e) => handleChange('type', e.target.value)}
+                    className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    >
+                    {nodeTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                    ))}
+                    </select>
+                )}
             </div>
           </div>
           
@@ -504,12 +838,14 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
 
         {/* Parameters Section */}
         <SectionEditor 
-            title="Parameters" 
-            description="Configure logic parameters and inputs"
+            title={isPlugin ? "Plugin Configuration" : (formData.type === 'user_interaction' ? "Interaction Form" : "Parameters")}
+            description={isPlugin ? "Configure specific settings defined by this plugin." : "Configure logic parameters and inputs"}
             data={formData.parameters || {}}
             rawString={rawParams}
             onDataChange={(newData) => handleChange('parameters', newData)}
             onRawChange={setRawParams}
+            pluginParams={formData.meta?.parameters}
+            isUserInteraction={formData.type === 'user_interaction'}
         />
 
         {/* Credentials Section */}
