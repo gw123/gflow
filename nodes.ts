@@ -1,604 +1,228 @@
 
+import { NodeDefinition } from './types';
 
+export interface TemplateCategory {
+  description?: string;
+  templates: NodeDefinition[];
+}
 
-
-export const TEMPLATE_LIBRARY: Record<string, { description: string; templates: any[] }> = {
+export const TEMPLATE_LIBRARY: Record<string, TemplateCategory> = {
   trigger: {
-    description: "工作流触发器相关模板，用于启动工作流",
+    description: "Workflow triggers to start execution",
     templates: [
       {
         name: "Manual",
         type: "manual",
-        parameters: {
-          input_example: { key: "value" }
-        },
-        global: {
-          start_time: "={{ $P.startTime }}"
-        }
+        parameters: { input_example: { key: "value" } },
+        global: { start_time: "={{ $P.startTime }}" }
       },
       {
         name: "Webhook",
         type: "webhook",
-        credentialType: "webhook",
-        credentials: {
-          frp: {
-            serverAddr: 'frp.lo.mytool.zone',
-            serverPort: 2023,
-            token: 'demo-token-123456',
-            customDomains: ['xxx.lo.mytool.zone'],
-            localIP: "127.0.0.1",
-            proxyName: 'xxx'
-          }
-        },
-        parameters: {
-          httpMethod: "POST",
-          path: "webhook",
-          port: 8088,
-          exportHeader: { Authorization: "Authorization", Host: "Host" },
-          exportQuery: { rand: "rand" },
-          exportBody: { desc: "desc", locationName: "locationName" }
-        },
-        global: {
-          locationName: "={{ $P.locationName }}"
-        }
-      },
-      {
-        name: "HTTP",
-        type: "http",
-        parameters: {
-          method: "GET",
-          url: "https://api.example.com/data",
-          headers: { "Content-Type": "application/json" },
-          body: ""
-        }
+        parameters: { method: "POST", path: "my-hook" },
+        parameterDefinitions: [
+            { name: "method", type: "string", options: ["GET", "POST", "PUT", "DELETE", "PATCH"], defaultValue: "POST" },
+            { name: "path", type: "string", defaultValue: "my-hook" }
+        ]
       },
       {
         name: "Timer",
         type: "timer",
-        init_delay: 2,
-        parameters: [{ secondsInterval: 10 }]
+        parameters: { secondsInterval: 60 }
+      },
+      {
+        name: "Media Capture",
+        type: "media_capture",
+        desc: "Captures audio and video from the user's device for a set duration.",
+        parameters: { mode: "audio", duration: 5, fps: 1 },
+        parameterDefinitions: [
+            { name: "mode", type: "string", options: ["audio", "video", "both"], defaultValue: "audio" },
+            { name: "duration", type: "number", defaultValue: 5, description: "Capture duration in seconds" },
+            { name: "fps", type: "number", defaultValue: 1, description: "Frames per second (video/both mode only)" }
+        ]
       }
     ]
   },
-  control: {
-    description: "控制流操作相关模板，用于流程控制",
+  action: {
+    description: "Basic actions and utilities",
     templates: [
       {
-        name: "User Input",
-        type: "user_interaction",
-        desc: "Pauses workflow to wait for human input via a form.",
-        parameters: {
-          title: "Review Required",
-          description: "Please review the generated content and approve.",
-          fields: [
-             { key: "decision", label: "Approve?", type: "boolean", defaultValue: false },
-             { key: "comments", label: "Feedback", type: "text", required: true },
-             { key: "email", label: "Notification Email", type: "email", validationRegex: "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$", validationMessage: "Invalid email format" }
-          ]
-        }
-      },
-      {
-        name: "If",
-        type: "if",
-        parameters: {
-          condition: "={{ $P.value > 0 }}",
-          true_branch: "success",
-          false_branch: "failure"
-        }
-      },
-      {
-        name: "Switch",
-        type: "switch",
-        parameters: {
-          value: "={{ $P.status }}",
-          cases: [
-            { value: "success", branch: "success_branch" },
-            { value: "failure", branch: "failure_branch" },
-            { default: "default_branch" }
-          ]
-        }
-      },
-      {
-        name: "Loop",
-        type: "loop",
-        parameters: {
-          count: 5,
-          interval: 10
-        }
-      }
-    ]
-  },
-  llm: {
-    description: "大语言模型相关模板，用于文本生成和处理",
-    templates: [
-      {
-        name: "ChatGPT",
-        type: "chatgpt",
-        credentialType: "openai",
-        credentials: {
-          openai_proxy: 'https://api.openai.com/v1',
-          openai_api_key: 'sk-demo-1234567890abcdefghijklmnopqrstuvwxyz'
-        },
-        parameters: {
-          question: "=请帮忙生成一个景点的50字左右的描述信息：景区名称 {{ $global.locationName }}，景区简介{{ $global.locationInfo }}",
-          role: "assistant",
-          roleDesc: "你是一名导游"
-        },
-        global: {
-          generateContent: "={{ $P.result }}"
-        }
-      },
-      {
-        name: "TTS",
-        type: "tts",
-        credentialType: "openai",
-        credentials: {
-          openai_proxy: 'https://api.openai.com/v1',
-          openai_api_key: 'sk-demo-1234567890abcdefghijklmnopqrstuvwxyz',
-          baidu_api_key: 'demo-baidu-api-key-123456',
-          baidu_secret: 'demo-baidu-secret-abcdef'
-        },
-        artifact: {
-          storage_name: "qiniu",
-          from_path: "1",
-          target_path: "=ai_gen/{{ $global.locationName }}_{{$global.locationID}}.mp3",
-          is_overwrite: true
-        },
-        parameters: {
-          text: "={{ $P.result }}",
-          voice: "alloy"
-        },
-        global: {
-          artifactKey: "=https://data.xytschool.com/ai_gen/{{ $global.locationName }}_{{$global.locationID}}.mp3"
-        }
-      },
-      {
-        name: "Agent",
-        type: "agent",
-        parameters: {
-          question: "={{ $P.question }}",
-          instructions: "You are a helpful assistant.",
-          model: "gpt-4",
-          functions: ["jsonToEchart", "webSearch"]
-        }
-      },
-      {
-        name: "AILowCode",
-        type: "ai_low_code",
-        parameters: {
-          nextPageMethod: "replace",
-          question: "=请使用MarkDown渲染以下内容：{{ $P.result }}"
-        }
-      },
-      {
-        name: "prompt_template",
-        type: "prompt_template",
-        parameters: {
-          template_id: 33
-        },
-        global: {
-          workflow_usage: "={{ $P.result }}"
-        }
-      }
-    ]
-  },
-  database: {
-    description: "数据库操作相关模板，支持多种数据库类型",
-    templates: [
-      {
-        name: "MySQLQuery",
-        type: "mysql",
-        credentialType: "mysql",
-        credentials: {
-          hostname: 'db.test.mytool.zone',
-          port: '21062',
-          database: 'mall',
-          username: 'dever',
-          password: 'demo-mysql-password-123456'
-        },
-        parameters: {
-          action: "query",
-          sql: "=select * from locations where voice_url = '' limit 1"
-        },
-        global: {
-          locationName: "={{ $P.first.name }}",
-          locationID: "={{ $P.first.id }}",
-          locationInfo: "={{ $P.first.info }}"
-        }
-      },
-      {
-        name: "PostgreSQL",
-        type: "pg",
-        credentialType: "pg",
-        credentials: {
-          hostname: 'db.example.com',
-          port: '5432',
-          database: 'exampledb',
-          username: 'exampleuser',
-          password: 'demo-pg-password-123456'
-        },
-        parameters: {
-          action: "query",
-          sql: "SELECT * FROM example_table"
-        }
-      }
-    ]
-  },
-  plugin: {
-    description: "扩展插件，支持 gRPC 协议的外部节点",
-    templates: [
-      {
-        name: "Example Plugin",
-        type: "grpc_plugin",
-        desc: "Connects to an external gRPC service implementing NodePluginService",
-        parameters: {
-          endpoint: "localhost:50051",
-          timeout: 5000,
-          target: "example_target"
-        },
-        // This metadata block simulates what the backend GetMetadata RPC would return
-        meta: {
-          kind: "ExampleGrpcPlugin",
-          nodeType: "grpc_plugin",
-          credentialType: "none",
-          description: "An example plugin node communicating via gRPC",
-          version: "1.0.0",
-          parameters: [
-            { name: "endpoint", type: "string", defaultValue: "localhost:50051", description: "Plugin Service Address", required: true },
-            { name: "timeout", type: "int", defaultValue: 5000, description: "Execution timeout in ms", required: false },
-            { name: "target", type: "string", description: "Target resource identifier", required: true },
-            { name: "enable_tls", type: "bool", defaultValue: false, description: "Enable TLS for connection", required: false }
-          ]
-        }
-      }
-    ]
-  },
-  cache: {
-    description: "缓存操作相关模板，支持多种缓存类型",
-    templates: [
-      {
-        name: "Redis",
-        type: "redis",
-        credentialType: "redis",
-        credentials: {
-          hostname: 'redis.example.com',
-          port: '6379',
-          password: 'demo-redis-password-123456'
-        },
-        parameters: {
-          action: "get",
-          key: "example_key"
-        }
-      },
-      {
-        name: "RedisList",
-        type: "redis_list",
-        credentialType: "redis",
-        credentials: {
-          hostname: 'redis.example.com',
-          port: '6379',
-          password: 'demo-redis-password-123456',
-          db: 0
-        },
-        parameters: {
-          action: "lpush",
-          key: "example_list",
-          value: "example_value"
-        }
-      }
-    ]
-  },
-  file: {
-    description: "文件操作相关模板，用于文件处理和压缩",
-    templates: [
-      {
-        name: "FileReplace",
-        type: "file",
-        parameters: {
-          action: "cp-replace",
-          from: 'xytschool\/task-mini-program:[[:space:]]*\([0-9]\+\(\.[0-9]\+\)\{1,2\}\)',
-          to: "={{ $P.image }}",
-          file: "={{ $P.workdir }}/docker-compose.yml",
-          newFile: "",
-          workdir: "={{ $global.deployDir }}"
-        }
-      },
-      {
-        name: "FileCompress",
-        type: "file_compress",
-        parameters: {
-          action: "unzip",
-          zipFilePath: "={{ $P.dist_path }}",
-          outputDir: '=/tmp/{{ $global.file_token }}_unzip'
-        }
-      }
-    ]
-  },
-  docker: {
-    description: "Docker容器管理相关模板",
-    templates: [
-      {
-        name: "DockerCompose",
-        type: "docker_compose",
-        parameters: {
-          action: "up",
-          "docker-compose-file": "={{ $P.newFile }}",
-          workdir: "={{ $global.deployDir }}"
-        }
-      },
-      {
-        name: "DockerBuild",
-        type: "docker",
-        parameters: {
-          reg: "xytschool",
-          image: "task-mini-program",
-          tag: "={{ $global.headCommitID }}",
-          dockerfile: "Dockerfile",
-          workdir: "={{ $P.sourcePath }}"
-        }
-      }
-    ]
-  },
-  system: {
-    description: "系统操作相关模板，用于定时和命令执行",
-    templates: [
-      {
-        name: "ExecuteCommand",
-        type: "execute_command",
-        parameters: {
-          command: "=cp -r /tmp/{{ $global.file_token }}_unzip/build/* {{ $global.deployDir }}",
-          workdir: "."
-        }
+        name: "HTTP Request",
+        type: "http",
+        parameters: { url: "https://api.example.com", method: "GET", headers: {}, body: {} },
+        parameterDefinitions: [
+            { name: "method", type: "string", options: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], defaultValue: "GET" },
+            { name: "url", type: "string", defaultValue: "https://api.example.com" },
+            { name: "headers", type: "object", defaultValue: {} },
+            { name: "body", type: "object", defaultValue: {} }
+        ]
       },
       {
         name: "Wait",
         type: "wait",
-        parameters: {
-          seconds: 60
-        }
-      }
-    ]
-  },
-  git: {
-    description: "Git版本控制相关模板",
-    templates: [
-      {
-        name: "GitClone",
-        type: "git",
-        parameters: {
-          action: "clone",
-          workdir: "={{ $global.rootDir }}",
-          gitURL: "={{ $global.gitURL }}",
-          repoName: "={{ $global.repoName }}",
-          ref: "={{ $P.Ref }}",
-          headCommitID: "={{ $P.headCommitID }}"
-        }
-      }
-    ]
-  },
-  storage: {
-    description: "存储操作相关模板，用于文件存储和获取",
-    templates: [
-      {
-        name: "StorageUpload",
-        type: "storage",
-        parameters: {
-          action: "upload",
-          storage_name: "oss",
-          from_path: "=/tmp/{{ $global.file_token }}_unzip",
-          target_path: "public/boss"
-        }
-      }
-    ]
-  },
-  feishu: {
-    description: "飞书集成相关模板，支持多种飞书操作",
-    templates: [
-      {
-        name: "FeishuRobot",
-        type: "feishu_custom_robot",
-        credentialType: "feishu_custom_robot",
-        credentials: {
-          webhook_url: 'https://open.feishu.cn/open-apis/bot/v2/hook/demo-webhook-token-123456'
-        },
-        parameters: {
-          text: "=前端代码发布成功 🎉🎉🎉\n环  境  ： {{ $global.deploy_env }}\n发布者  ： {{ $global.user }}\n发布信息 ： {{ $global.desc }}\n文件Token ： {{ $global.file_token }}\n"
-        }
+        parameters: { seconds: 5 }
       },
-      {
-        name: "FeishuFileDownload",
-        type: "feishu_file_download",
-        credentialType: "feishu",
-        credentials: {
-          app_id: 'demo-feishu-app-id-123456',
-          app_secret: 'demo-feishu-app-secret-abcdef'
-        },
-        parameters: {
-          file_token: "={{ $global.file_token }}"
-        }
-      },
-      {
-        name: "FeishuDocRead",
-        type: "feishu_doc_read",
-        credentialType: "feishu",
-        credentials: {
-          app_id: 'demo-feishu-app-id-123456',
-          app_secret: 'demo-feishu-app-secret-abcdef'
-        },
-        parameters: {
-          doc_token: "={{ $global.doc_token }}"
-        }
-      },
-      {
-        name: "FeishuDocWrite",
-        type: "feishu_doc_write",
-        credentialType: "feishu",
-        credentials: {
-          app_id: 'demo-feishu-app-id-123456',
-          app_secret: 'demo-feishu-app-secret-abcdef'
-        },
-        parameters: {
-          action: "create_document",
-          title: "={{ $global.document_title || 'Workflow Document' }}",
-          folder_token: "={{ $global.folder_token }}"
-        }
-      },
-      {
-        name: "FeishuBitable",
-        type: "feishu_bitable",
-        credentialType: "feishu",
-        credentials: {
-          app_id: 'demo-feishu-app-id-123456',
-          app_secret: 'demo-feishu-app-secret-abcdef'
-        },
-        parameters: {
-          table_id: "={{ $global.table_id }}"
-        }
-      }
-    ]
-  },
-  mq: {
-    description: "消息队列操作相关模板",
-    templates: [
-      {
-        name: "Kafka",
-        type: "kafka",
-        credentialType: "kafka",
-        credentials: {
-          brokers: "kafka1.example.com:9092,kafka2.example.com:9092",
-          username: "demo-kafka-username",
-          password: "demo-kafka-password"
-        },
-        parameters: {
-          topic: "example-topic",
-          message: "={{ $P.message }}"
-        }
-      },
-      {
-        name: "RocketMQ",
-        type: "rocketmq",
-        credentialType: "rocketmq",
-        credentials: {
-          endpoint: "rocketmq.example.com:9876",
-          access_key: "demo-rocketmq-access-key",
-          secret_key: "demo-rocketmq-secret-key",
-          namespace: "example-namespace",
-          consumer_group: "example-consumer-group"
-        },
-        parameters: {
-          action: "send",
-          topic: "example-topic",
-          message: "={{ $P.message }}"
-        }
-      },
-      {
-        name: "RabbitMQ",
-        type: "rabbitmq",
-        credentialType: "rabbitmq",
-        credentials: {
-          hostname: "rabbitmq.example.com",
-          port: "5672",
-          username: "demo-rabbitmq-username",
-          password: "demo-rabbitmq-password",
-          vhost: "/",
-          ssl: false
-        },
-        parameters: {
-          action: "send",
-          queue: "example-queue",
-          message: "={{ $P.message }}"
-        }
-      }
-    ]
-  },
-  notification: {
-    description: "通知服务相关模板，用于发送通知",
-    templates: [
-      {
-        name: "SMS",
-        type: "sms",
-        credentialType: "sms",
-        credentials: {
-          provider: "aliyun",
-          access_key: "demo-sms-access-key",
-          access_secret: "demo-sms-access-secret"
-        },
-        parameters: {
-          phone_numbers: "13800138000",
-          template_code: "SMS_123456789",
-          template_param: '{"code":"123456"}'
-        }
-      },
-      {
-        name: "Mail",
-        type: "mail",
-        credentialType: "smtp",
-        credentials: {
-          host: "smtp.example.com",
-          port: "587",
-          username: "demo@example.com",
-          password: "demo-mail-password"
-        },
-        parameters: {
-          to: "recipient@example.com",
-          subject: "Test Email",
-          body: "This is a test email"
-        }
-      }
-    ]
-  },
-  code: {
-    description: "代码操作相关模板，用于代码处理",
-    templates: [
       {
         name: "JavaScript",
         type: "js",
-        parameters: {
-          code: "function process(data) {\n  return data.map(item => item * 2);\n}",
-          input: "={{ $P.data }}"
-        }
+        parameters: { code: "return { result: 'Hello ' + input.name };" }
       },
       {
-        name: "CodeSearch",
+        name: "Code Search",
         type: "code_search",
-        parameters: {
-          query: "={{ $P.search_query }}",
-          language: "go"
-        }
+        parameters: { query: "search query" }
       },
       {
-        name: "CodeProject",
-        type: "code_project",
-        parameters: {
-          project_path: "={{ $P.project_path }}",
-          action: "analyze"
-        }
+        name: "Play Media",
+        type: "play_media",
+        desc: "Plays audio or video data from variables (e.g. captured frames) or URLs.",
+        parameters: { mediaType: "audio", data: "={{ $P.audioData }}" },
+        parameterDefinitions: [
+            { name: "mediaType", type: "string", options: ["audio", "video"], defaultValue: "audio" },
+            { name: "data", type: "string", defaultValue: "={{ $P.audioData }}", description: "URL or Base64 data variable" },
+            { name: "fps", type: "number", defaultValue: 2, description: "FPS for video frame playback" }
+        ]
       }
     ]
   },
-  debug: {
-    description: "调试操作相关模板，用于调试信息输出",
+  ai: {
+    description: "Artificial Intelligence nodes",
     templates: [
       {
-        name: "Debug",
-        type: "debug",
-        parameters: {
-          message: "Debug message",
-          level: "info"
-        }
+        name: "ChatGPT",
+        type: "chatgpt",
+        parameters: { model: "gpt-3.5-turbo", prompt: "Hello!" },
+        credentials: { openai_api_key: "" },
+        parameterDefinitions: [
+            { name: "model", type: "string", options: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"], defaultValue: "gpt-3.5-turbo" },
+            { name: "prompt", type: "string", defaultValue: "Hello!" }
+        ]
+      },
+      {
+        name: "AI Image Gen",
+        type: "ai_image_gen",
+        desc: "Generate images using Google's Nano Banana (Gemini Flash Image) model.",
+        parameters: { prompt: "A futuristic city with flying cars", aspectRatio: "1:1", outputFormat: "data_uri", download: false },
+        parameterDefinitions: [
+            { name: "prompt", type: "string", defaultValue: "A futuristic city", description: "Image description" },
+            { name: "aspectRatio", type: "string", options: ["1:1", "3:4", "4:3", "9:16", "16:9"], defaultValue: "1:1" },
+            { name: "outputFormat", type: "string", options: ["base64", "data_uri"], defaultValue: "data_uri", description: "Output format" },
+            { name: "download", type: "boolean", defaultValue: false, description: "Auto-download to device" }
+        ]
+      },
+      {
+        name: "Text To Speech",
+        type: "tts",
+        parameters: { text: "Hello world" }
+      },
+      {
+        name: "Agent",
+        type: "agent",
+        parameters: { role: "You are a helpful assistant" }
+      },
+      {
+        name: "AI Low Code",
+        type: "ai_low_code",
+        parameters: { instruction: "Create a form" }
       }
     ]
+  },
+  control: {
+    description: "Flow control logic",
+    templates: [
+      {
+        name: "If Condition",
+        type: "if",
+        parameters: { condition: "={{ $P.value > 10 }}" }
+      },
+      {
+        name: "Switch",
+        type: "switch",
+        parameters: { value: "={{ $P.category }}" }
+      },
+      {
+        name: "Loop",
+        type: "loop",
+        parameters: { items: "={{ $P.items }}" }
+      }
+    ]
+  },
+  system: {
+    description: "System interactions",
+    templates: [
+        {
+            name: "Execute Command",
+            type: "execute_command",
+            parameters: { command: "echo 'hello'" }
+        },
+        {
+            name: "Docker",
+            type: "docker",
+            parameters: { image: "alpine", action: "run" },
+            parameterDefinitions: [
+                { name: "action", type: "string", options: ["run", "stop", "start", "restart", "logs"], defaultValue: "run" },
+                { name: "image", type: "string", defaultValue: "alpine" },
+                { name: "docker-compose-file", type: "string", defaultValue: "" }
+            ]
+        },
+        {
+            name: "Docker Compose",
+            type: "docker_compose",
+            parameters: { file: "docker-compose.yml" }
+        },
+        {
+            name: "Git",
+            type: "git",
+            parameters: { action: "clone", repo: "" },
+            parameterDefinitions: [
+                { name: "action", type: "string", options: ["clone", "pull", "push", "checkout"], defaultValue: "clone" },
+                { name: "repo", type: "string", defaultValue: "" }
+            ]
+        }
+    ]
+  },
+  data: {
+      description: "Database and Storage",
+      templates: [
+          { name: "MySQL", type: "mysql", parameters: { sql: "SELECT * FROM table" } },
+          { name: "PostgreSQL", type: "pg", parameters: { sql: "SELECT * FROM table" } },
+          { name: "Redis", type: "redis", parameters: { command: "GET key" } },
+          { name: "Feishu Bitable", type: "feishu_bitable", parameters: { app_token: "" } },
+          { name: "Text to SQL", type: "text2sql", parameters: { prompt: "Find users" } }
+      ]
+  },
+  human: {
+      description: "Human interactions",
+      templates: [
+          {
+              name: "User Form",
+              type: "user_interaction",
+              parameters: { 
+                  title: "Approval", 
+                  fields: [
+                      { key: "approved", label: "Approve?", type: "boolean", required: true }
+                  ] 
+              }
+          }
+      ]
+  },
+  plugin: {
+      description: "External Plugins",
+      templates: [
+          {
+              name: "gRPC Plugin",
+              type: "grpc_plugin",
+              parameters: { endpoint: "localhost:50051" }
+          }
+      ]
   }
 };
 
-// Flattened version for easier lookup in drag-and-drop logic
-export const NODE_TEMPLATES: Record<string, any> = {};
+export const NODE_TEMPLATES: Record<string, NodeDefinition> = {};
 
+// Flatten library for easy lookup by type
 Object.values(TEMPLATE_LIBRARY).forEach(category => {
   category.templates.forEach(template => {
-    NODE_TEMPLATES[template.type] = {
-      ...template,
-      category: category.description
-    };
+    NODE_TEMPLATES[template.type] = template;
   });
 });

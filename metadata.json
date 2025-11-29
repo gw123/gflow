@@ -1,5 +1,8 @@
 {
   "name": "gflow",
   "description": "A visual editor for AI workflow YAML configurations, featuring node graph visualization and property editing.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }

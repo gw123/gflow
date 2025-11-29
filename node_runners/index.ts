@@ -1,5 +1,4 @@
 
-
 import { NodeRunner } from '../types';
 import { JsNodeRunner } from './JsNodeRunner';
 import { ManualNodeRunner } from './ManualNodeRunner';
@@ -11,6 +10,9 @@ import { SystemNodeRunner } from './SystemNodeRunner';
 import { DefaultRunner } from './DefaultRunner';
 import { GrpcNodeRunner } from './GrpcNodeRunner';
 import { InteractionNodeRunner } from './InteractionNodeRunner';
+import { MediaNodeRunner } from './MediaNodeRunner';
+import { PlayMediaNodeRunner } from './PlayMediaNodeRunner';
+import { AiImageNodeRunner } from './AiImageNodeRunner';
 
 // Registry
 const Runners: Record<string, NodeRunner> = {
@@ -30,6 +32,8 @@ const Runners: Record<string, NodeRunner> = {
   'tts': new LlmNodeRunner(),
   'agent': new LlmNodeRunner(),
   'prompt_template': new LlmNodeRunner(),
+  'ai_low_code': new LlmNodeRunner(),
+  'ai_image_gen': new AiImageNodeRunner(),
   
   // Control Flow
   'if': new ControlNodeRunner(),
@@ -47,6 +51,10 @@ const Runners: Record<string, NodeRunner> = {
   
   // Human in the Loop
   'user_interaction': new InteractionNodeRunner(),
+  
+  // Media
+  'media_capture': new MediaNodeRunner(),
+  'play_media': new PlayMediaNodeRunner(),
 };
 
 export const getRunner = (type: string): NodeRunner => {

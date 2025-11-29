@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   Controls,
@@ -24,7 +23,7 @@ import yaml from 'js-yaml';
 import { 
   Settings, FileJson, Braces, Box, LayoutDashboard, Database, 
   Upload, Download, Key, Sparkles, Play, HelpCircle, 
-  Beaker, Save, FolderOpen, UserCircle, LogIn, StepForward, LogOut 
+  Beaker, Save, FolderOpen, UserCircle, LogIn, StepForward, LogOut, Cloud, Laptop, Globe
 } from 'lucide-react';
 
 import { WorkflowDefinition, NodeDefinition, CredentialItem, WorkflowExecutionState } from './types';
@@ -51,6 +50,7 @@ import TestReportModal from './components/TestReportModal';
 import WorkflowListModal from './components/WorkflowListModal';
 import AuthModal from './components/AuthModal';
 import UserProfileModal from './components/UserProfileModal';
+import ApiManager from './components/ApiManager';
 
 const AppContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -70,6 +70,7 @@ const AppContent: React.FC = () => {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [conditionModalOpen, setConditionModalOpen] = useState(false);
+  const [apiManagerOpen, setApiManagerOpen] = useState(false);
   
   // Auth & Server State
   const [user, setUser] = useState<User | null>(null);
@@ -79,6 +80,7 @@ const AppContent: React.FC = () => {
 
   // Execution State
   const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
+  const [runMode, setRunMode] = useState<'local' | 'cloud'>('local');
   const [executionState, setExecutionState] = useState<WorkflowExecutionState>({
     isRunning: false,
     isPaused: false,
@@ -121,7 +123,7 @@ const AppContent: React.FC = () => {
                showToast("Failed to load server secrets: " + err.message, "error");
            });
        } else {
-           // Local mode secrets (could load from localstorage if we wanted, for now empty or memory)
+           // Local mode secrets
        }
     }
   }, [secretsManagerOpen, user]);
@@ -132,22 +134,61 @@ const AppContent: React.FC = () => {
     setToast({ message, type });
   };
 
-  const handleNodeClick = (_: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
     setSelectedEdge(null);
     setIsRightPanelOpen(true);
+    // Execute single node handling: handled by Editor Panel actions
+  }, []);
+  
+  const handleRunNode = async (nodeName: string) => {
+     if (!runnerRef.current) {
+         // Create a temporary runner just for this op context
+         const currentData = flowToWorkflow(workflowData, nodes, edges);
+         const runner = new WorkflowRunner(currentData, (state) => {
+             // We don't update full execution UI for single node runs usually,
+             // but here we can partial update if needed.
+         });
+         // This is a bit complex without refactoring Runner to be stateless.
+         // For now, let's assume global runner is fine or create on fly.
+         await runner.executeNode(nodeName); 
+         // Update UI logs?
+     } else {
+         await runnerRef.current.executeNode(nodeName);
+     }
+  };
+  
+  const handlePinNode = (nodeName: string) => {
+      setWorkflowData(prev => {
+         const newPin = { ...(prev.pinData || {}) };
+         // Toggle: if exists remove, else add from current execution if avail
+         if (newPin[nodeName]) {
+             delete newPin[nodeName];
+             showToast(`Unpinned data for ${nodeName}`, "info");
+         } else {
+             const result = executionState.nodeResults[nodeName]?.output;
+             if (result) {
+                 newPin[nodeName] = result;
+                 showToast(`Pinned data for ${nodeName}`, "success");
+             } else {
+                 showToast("No execution data available to pin", "error");
+                 return prev;
+             }
+         }
+         return { ...prev, pinData: newPin };
+      });
   };
 
-  const handlePaneClick = () => {
+  const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null);
     setSelectedEdge(null);
     setIsRightPanelOpen(false);
-  };
+  }, []);
 
-  const handleEdgeClick = (_: React.MouseEvent, edge: Edge) => {
+  const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
       setSelectedEdge(edge);
       setConditionModalOpen(true);
-  };
+  }, []);
 
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ 
@@ -158,7 +199,6 @@ const AppContent: React.FC = () => {
         markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#64748b' }
     }, eds));
     
-    // Sync to data model
     setWorkflowData(prev => {
         const newData = flowToWorkflow(prev, nodes, [...edges, { ...params, id: `e-${params.source}-${params.target}` } as Edge]);
         return newData;
@@ -192,14 +232,13 @@ const AppContent: React.FC = () => {
         position,
         data: { 
             label: template.name, 
-            name: template.name, // Will be overwritten by ID logic in flowToWorkflow to ensure uniqueness if we want
+            name: template.name, 
             ...template 
         },
       };
 
       setNodes((nds) => {
           const newNodes = nds.concat(newNode);
-          // Update workflow data immediately
           const newData = flowToWorkflow(workflowData, newNodes, edges);
           setWorkflowData(newData);
           return newNodes;
@@ -212,16 +251,9 @@ const AppContent: React.FC = () => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === selectedNodeId) {
-            // ID change check
-            if (updatedNode.name !== node.data.name) {
-                // If name changes, we need to update ID and connections... complicated in simple mapping.
-                // For simplicity, we sync ID to Name in flowToWorkflow, so here we assume name change updates ID logic eventually.
-                // But changing ID in ReactFlow requires re-building edges.
-                // We will just update data for now.
-            }
             return {
                 ...node,
-                id: updatedNode.name, // Rename node ID to match name
+                id: updatedNode.name, 
                 data: { ...node.data, ...updatedNode },
             };
         }
@@ -229,22 +261,15 @@ const AppContent: React.FC = () => {
       })
     );
     
-    // Defer the workflowData update slightly or do it now:
     setWorkflowData(prev => {
-        // We need to construct based on the updated nodes list
-        // This is a bit circular since we are inside setNodes callback above, 
-        // so we can't access the *result* of setNodes yet.
-        // We will do a manual update:
         const updatedNodes = prev.nodes.map(n => n.name === selectedNodeId ? updatedNode : n);
         
-        // If name changed, we need to update connections map keys...
         if (updatedNode.name !== selectedNodeId) {
              const newConns = { ...prev.connections };
              if (selectedNodeId && newConns[selectedNodeId]) {
                  newConns[updatedNode.name] = newConns[selectedNodeId];
                  delete newConns[selectedNodeId];
              }
-             // Also update targets in other connections
              Object.keys(newConns).forEach(key => {
                  newConns[key].forEach(group => {
                      group.forEach(rule => {
@@ -270,7 +295,6 @@ const AppContent: React.FC = () => {
         const newNodes = prev.nodes.filter(n => n.name !== nodeName);
         const newConns = { ...prev.connections };
         delete newConns[nodeName];
-        // Remove incoming edges
         Object.keys(newConns).forEach(key => {
             newConns[key] = newConns[key].map(group => group.filter(rule => rule.node !== nodeName)).filter(g => g.length > 0);
             if (newConns[key].length === 0) delete newConns[key];
@@ -284,7 +308,6 @@ const AppContent: React.FC = () => {
   const updateYaml = (newContent: string): boolean => {
     try {
       const parsed = yaml.load(newContent) as WorkflowDefinition;
-      // Validate minimal structure
       if (!parsed || typeof parsed !== 'object') throw new Error("Invalid YAML");
       
       setWorkflowData(parsed);
@@ -312,10 +335,9 @@ const AppContent: React.FC = () => {
         return;
     }
 
-    // Refresh data from flow to ensure latest state
     const currentData = flowToWorkflow(workflowData, nodes, edges);
     
-    // Validate
+    // Validation
     const tester = new WorkflowTester(currentData);
     const report = tester.runTest();
     if (!report.isValid) {
@@ -327,30 +349,80 @@ const AppContent: React.FC = () => {
 
     setExecutionPanelOpen(true);
     
-    // Start Runner
-    const runner = new WorkflowRunner(currentData, (state) => {
-        // Sync ReactFlow nodes status
-        setNodes(nds => nds.map(n => {
-            const res = state.nodeResults[n.id];
-            if (res) {
-                return { ...n, data: { ...n.data, executionStatus: res.status } };
-            }
-            return { ...n, data: { ...n.data, executionStatus: undefined } };
-        }));
-        setExecutionState(state);
-    });
+    if (runMode === 'cloud') {
+        // --- Server Side Execution ---
+        if (!user) {
+            showToast("Login required for cloud execution", "error");
+            setAuthModalOpen(true);
+            return;
+        }
 
-    runnerRef.current = runner;
-    setExecutionState({ ...runner['state'], isRunning: true }); // Initial state
-    
-    try {
-        await runner.execute(mode);
-    } catch (e) {
-        console.error(e);
-    } finally {
-        // Only clear runner if we are completely done and not paused/waiting
-        if (!runner.state.waitingForInput && !runner.state.isPaused) {
-             runnerRef.current = null;
+        setExecutionState(prev => ({ 
+            ...prev, 
+            isRunning: true, 
+            isPaused: false, 
+            waitingForInput: false,
+            logs: ["Submitting to server..."] 
+        }));
+
+        try {
+            const response = await api.executeWorkflow(currentData, currentWorkflowId || undefined);
+            
+            // Map server results to local state format
+            setExecutionState({
+                isRunning: false,
+                isPaused: false,
+                waitingForInput: false,
+                nodeResults: response.results,
+                logs: response.logs
+            });
+            
+            // Sync status visual
+            setNodes(nds => nds.map(n => {
+                const res = response.results[n.id];
+                if (res) {
+                    return { ...n, data: { ...n.data, executionStatus: res.status } };
+                }
+                return { ...n, data: { ...n.data, executionStatus: undefined } };
+            }));
+
+        } catch (e: any) {
+            setExecutionState(prev => ({
+                ...prev,
+                isRunning: false,
+                logs: [...prev.logs, `Server Error: ${e.message}`]
+            }));
+            showToast("Server execution failed", "error");
+        }
+
+    } else {
+        // --- Browser Side Execution ---
+        
+        // Preserve previous results to allow partial re-runs or single node runs to build up
+        const previousResults = executionState.nodeResults;
+        
+        const runner = new WorkflowRunner(currentData, (state) => {
+            setNodes(nds => nds.map(n => {
+                const res = state.nodeResults[n.id];
+                if (res) {
+                    return { ...n, data: { ...n.data, executionStatus: res.status } };
+                }
+                return { ...n, data: { ...n.data, executionStatus: undefined } };
+            }));
+            setExecutionState(state);
+        }, previousResults);
+
+        runnerRef.current = runner;
+        setExecutionState({ ...runner['state'], isRunning: true });
+        
+        try {
+            await runner.execute(mode);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            if (!runner.state.waitingForInput && !runner.state.isPaused) {
+                runnerRef.current = null;
+            }
         }
     }
   };
@@ -392,12 +464,6 @@ const AppContent: React.FC = () => {
           return e;
       }));
       setConditionModalOpen(false);
-      // Sync workflow data
-      setWorkflowData(prev => {
-          // This is complex to sync back efficiently without full recalc, 
-          // but relying on flowToWorkflow before save/run is safer.
-          return prev; 
-      });
   };
 
   const handleDeleteConnection = (edgeId: string) => {
@@ -419,7 +485,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
       api.logout();
       setUser(null);
-      setCredentials([]); // Clear secrets
+      setCredentials([]);
       showToast("Logged out successfully", "info");
   };
 
@@ -456,7 +522,6 @@ const AppContent: React.FC = () => {
 
   // --- Render ---
 
-  // Get current node for editor
   const selectedNodeData = useMemo(() => {
       if (!selectedNodeId) return null;
       const node = nodes.find(n => n.id === selectedNodeId);
@@ -464,7 +529,7 @@ const AppContent: React.FC = () => {
   }, [selectedNodeId, nodes]);
 
   const availableCreds = useMemo(() => {
-      return [...credentials]; // Could merge with local creds if we had them
+      return [...credentials];
   }, [credentials]);
 
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
@@ -510,6 +575,22 @@ const AppContent: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+           {/* Run Mode Switch */}
+           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700 mr-2">
+               <button 
+                  onClick={() => setRunMode('local')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${runMode === 'local' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}
+               >
+                   <Laptop size={12} /> Local
+               </button>
+               <button 
+                  onClick={() => setRunMode('cloud')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${runMode === 'cloud' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}
+               >
+                   <Cloud size={12} /> Cloud
+               </button>
+           </div>
+
            <button 
               onClick={() => handleRunWorkflow('run')}
               disabled={executionState.isRunning && !executionState.isPaused && !executionState.waitingForInput}
@@ -520,23 +601,31 @@ const AppContent: React.FC = () => {
               }`}
            >
               <Play size={14} className={executionState.isRunning ? "animate-pulse" : "fill-current"} /> 
-              {executionState.isRunning ? 'Running...' : 'Run Workflow'}
+              {executionState.isRunning ? 'Running...' : `Run (${runMode})`}
            </button>
 
            <button 
               onClick={() => handleRunWorkflow('step')}
-              disabled={executionState.isRunning}
+              disabled={executionState.isRunning || runMode === 'cloud'}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-xs transition-all shadow-sm border ${
-                  executionState.isRunning 
+                  (executionState.isRunning || runMode === 'cloud')
                   ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-900 dark:border-slate-800' 
                   : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50 dark:bg-slate-800 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-slate-700'
               }`}
-              title="Step Run (Debug)"
+              title="Step Run (Debug Local)"
            >
               <StepForward size={14} /> 
            </button>
 
            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2" />
+
+           <button 
+                onClick={() => setApiManagerOpen(true)}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+                title="API Manager"
+           >
+                <Globe size={14} /> APIs
+           </button>
 
            <button 
                 onClick={() => setSecretsManagerOpen(true)}
@@ -657,7 +746,7 @@ const AppContent: React.FC = () => {
 
         {/* Right Editor Panel */}
         {isRightPanelOpen && selectedNodeData && (
-            <div className="w-[400px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-20 flex-shrink-0 animate-in slide-in-from-right duration-300">
+            <div className="w-[450px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-20 flex-shrink-0 animate-in slide-in-from-right duration-300">
                 <EditorPanel 
                     selectedNode={selectedNodeData}
                     onClose={() => setIsRightPanelOpen(false)}
@@ -665,6 +754,11 @@ const AppContent: React.FC = () => {
                     onDelete={handleDeleteNode}
                     availableCredentials={availableCreds}
                     onOpenSecretsManager={() => setSecretsManagerOpen(true)}
+                    executionState={executionState}
+                    workflowData={workflowData}
+                    // Pass Single Node execution handlers
+                    onRunNode={() => handleRunNode(selectedNodeData.name)}
+                    onPinData={() => handlePinNode(selectedNodeData.name)}
                 />
             </div>
         )}
@@ -683,12 +777,18 @@ const AppContent: React.FC = () => {
          onClose={() => setSecretsManagerOpen(false)}
          credentials={credentials}
          onSave={setCredentials}
-         onCredentialUpdate={() => {}} // Local update handled by setCredentials
+         onCredentialUpdate={() => {}}
          notify={showToast}
          isServerMode={!!user}
          onServerCreate={user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
          onServerUpdate={user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
          onServerDelete={user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
+      />
+
+      <ApiManager 
+          isOpen={apiManagerOpen} 
+          onClose={() => setApiManagerOpen(false)} 
+          notify={showToast} 
       />
 
       <AICopilot 

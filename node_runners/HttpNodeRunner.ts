@@ -1,18 +1,26 @@
 
+
 import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
 import { interpolate, validateSchema } from './utils';
 import type { Schema } from './utils';
+import { api } from '../api/client';
 
 export class HttpNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const logs: string[] = [];
     
-    // Interpolate parameters
+    // Helper to log to both context (realtime) and result logs
+    const log = (msg: string) => {
+        if (context.log) context.log(msg);
+        logs.push(msg);
+    };
+
+    log(`Interpolating parameters...`);
     const params = interpolate(node.parameters, context);
     
     if (node.type === 'webhook') {
         // Webhook in Client Side is just a simulation trigger
-        logs.push(`Webhook Triggered: ${params.httpMethod || 'POST'} ${params.path || '/'}`);
+        log(`Webhook Triggered: ${params.httpMethod || 'POST'} ${params.path || '/'}`);
         return {
             status: 'success',
             inputs: params,
@@ -57,53 +65,73 @@ export class HttpNodeRunner implements NodeRunner {
         const headers = params.headers || {};
         const body = params.body ? (typeof params.body === 'string' ? params.body : JSON.stringify(params.body)) : undefined;
 
-        // Additional URL format check (schema handles string type, but not valid URL syntax strictly)
+        log(`Request: ${method} ${url}`);
+        log(`Preparing to send...`);
+        
+        // Attempt Direct Fetch (Fast, but subject to CORS)
         try {
-            new URL(url); // Validates URL format
-        } catch (e) {
-            throw new Error(`Invalid URL format: ${url}`);
-        }
+            const response = await fetch(url, {
+                method,
+                headers,
+                body: method !== 'GET' && method !== 'HEAD' ? body : undefined
+            });
 
-        logs.push(`Request: ${method} ${url}`);
-        
-        const response = await fetch(url, {
-            method,
-            headers,
-            body: method !== 'GET' && method !== 'HEAD' ? body : undefined
-        });
-
-        const contentType = response.headers.get('content-type');
-        let responseData;
-        
-        if (contentType && contentType.includes('application/json')) {
-            try {
-                responseData = await response.json();
-            } catch (e) {
-                // If content-type is json but body is not valid json, fallback to text
+            log(`Response Status: ${response.status} ${response.statusText}`);
+            
+            const contentType = response.headers.get('content-type');
+            let responseData;
+            
+            log(`Parsing response body (${contentType || 'unknown'})...`);
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    responseData = await response.json();
+                } catch (e) {
+                    responseData = await response.text();
+                }
+            } else {
                 responseData = await response.text();
             }
-        } else {
-            responseData = await response.text();
+
+            const respHeaders: Record<string, string> = {};
+            response.headers.forEach((val, key) => { respHeaders[key] = val; });
+
+            log(`Request completed successfully.`);
+
+            return {
+                status: response.ok ? 'success' : 'error',
+                inputs: params,
+                output: {
+                    status: response.status,
+                    data: responseData,
+                    headers: respHeaders
+                },
+                logs
+            };
+        } catch (fetchError: any) {
+             // Fallback to Server Proxy if fetch fails (likely CORS or Network)
+             log(`Direct fetch failed: ${fetchError.message}. Switching to Server Proxy...`);
+             
+             try {
+                 const proxyRes = await api.proxyRequest(method, url, headers, params.body /* pass raw body param here since proxy handles stringify if needed */);
+                 log(`Proxy Response Status: ${proxyRes.status}`);
+                 return {
+                     status: proxyRes.status >= 200 && proxyRes.status < 300 ? 'success' : 'error',
+                     inputs: params,
+                     output: {
+                         status: proxyRes.status,
+                         data: proxyRes.data,
+                         headers: proxyRes.headers
+                     },
+                     logs
+                 };
+             } catch (proxyError: any) {
+                 throw new Error(`Proxy failed: ${proxyError.message}`);
+             }
         }
 
-        logs.push(`Response Status: ${response.status}`);
-        
-        // Convert headers to plain object safely
-        const respHeaders: Record<string, string> = {};
-        response.headers.forEach((val, key) => { respHeaders[key] = val; });
-
-        return {
-            status: response.ok ? 'success' : 'error',
-            inputs: params,
-            output: {
-                status: response.status,
-                data: responseData,
-                headers: respHeaders
-            },
-            logs
-        };
     } catch (e: any) {
-        logs.push(`Error: ${e.message}`);
+        log(`Error: ${e.message}`);
         return {
             status: 'error',
             inputs: params,

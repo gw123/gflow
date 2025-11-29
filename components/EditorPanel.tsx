@@ -1,9 +1,6 @@
-
-
-
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Trash2, Code, List, AlertCircle, Check, Link, Settings, Info, Maximize2, Minimize2, Plus, FileText, Plug } from 'lucide-react';
-import { NodeDefinition, CredentialItem, PluginParameterDefinition, InputFieldDefinition } from '../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Save, Trash2, Code, List, AlertCircle, Check, Link, Settings, Info, Maximize2, Minimize2, Plus, FileText, Plug, Database, Copy, ChevronRight, ChevronDown, Play, Pin } from 'lucide-react';
+import { NodeDefinition, CredentialItem, PluginParameterDefinition, InputFieldDefinition, WorkflowExecutionState, WorkflowDefinition } from '../types';
 import { FormBuilder } from './FormBuilder';
 
 interface EditorPanelProps {
@@ -13,6 +10,10 @@ interface EditorPanelProps {
   onDelete: (nodeName: string) => void;
   availableCredentials?: CredentialItem[];
   onOpenSecretsManager?: () => void;
+  executionState: WorkflowExecutionState;
+  workflowData: WorkflowDefinition;
+  onRunNode?: () => void;
+  onPinData?: () => void;
 }
 
 // --- Helper Components ---
@@ -88,11 +89,8 @@ const BodyEditor: React.FC<{
   );
 
   useEffect(() => {
-     // If value becomes an object externally and we are in text mode, switch to json? 
-     // Or just let the user toggle. We'll stick to manual toggle but sync initial state if undefined.
      if (typeof value === 'object' && value !== null && mode === 'text') {
-         // Only switch if we are sure? No, user might be typing a JSON string in text mode.
-         // Let's keep manual control mostly, but if it's clearly an object, prefer JSON.
+         // Keep manual control for text mode but prefer json if object
      }
   }, [value]); // eslint-disable-line
 
@@ -518,9 +516,6 @@ const SectionEditor: React.FC<{
     onRawChange(JSON.stringify(newData, null, 2));
   };
   
-  // If plugin params are present, default to form mode and maybe disable toggling if strict?
-  // For now, we allow toggle but form view renders specific inputs.
-
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg border shadow-sm transition-colors ${isLocked ? 'border-blue-200 dark:border-blue-900/50' : 'border-slate-200 dark:border-slate-700'}`}>
       {/* Header */}
@@ -621,9 +616,215 @@ const SectionEditor: React.FC<{
   );
 };
 
+// --- Variable Explorer Component ---
+
+interface VariableTreeProps {
+    data: any;
+    path: string;
+    onCopy: (path: string) => void;
+    level?: number;
+}
+
+const VariableTree: React.FC<VariableTreeProps> = ({ data, path, onCopy, level = 0 }) => {
+    const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
+
+    const toggle = (key: string) => {
+        setExpandedKeys(prev => ({...prev, [key]: !prev[key]}));
+    };
+
+    if (data === null || data === undefined) return <span className="text-slate-400 italic text-[10px]">null</span>;
+    if (typeof data !== 'object') {
+        return (
+            <span 
+                className="text-blue-600 dark:text-blue-400 cursor-pointer hover:underline text-[10px] break-all font-mono"
+                onClick={() => onCopy(path)}
+                title="Click to copy variable path"
+            >
+                {String(data)}
+            </span>
+        );
+    }
+
+    const keys = Object.keys(data);
+    if (keys.length === 0) return <span className="text-slate-400 text-[10px]">{}</span>;
+
+    return (
+        <div className="flex flex-col gap-0.5">
+            {keys.map(key => {
+                const val = data[key];
+                const isObj = typeof val === 'object' && val !== null;
+                const currentPath = path ? (key.includes(' ') || key.includes('-') ? `${path}["${key}"]` : `${path}.${key}`) : key;
+                const isExpanded = expandedKeys[key];
+
+                return (
+                    <div key={key} className="pl-2 border-l border-slate-200 dark:border-slate-700 ml-1">
+                        <div className="flex items-start gap-1">
+                            {isObj ? (
+                                <button 
+                                    onClick={() => toggle(key)} 
+                                    className="mt-0.5 p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500"
+                                >
+                                    {isExpanded ? <ChevronDown size={10}/> : <ChevronRight size={10}/>}
+                                </button>
+                            ) : (
+                                <div className="w-3 h-3 flex-shrink-0" />
+                            )}
+                            
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1 group">
+                                    <span 
+                                        className="font-mono text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-blue-500"
+                                        onClick={() => onCopy(currentPath)}
+                                        title="Copy path"
+                                    >
+                                        {key}:
+                                    </span>
+                                    {!isObj && <VariableTree data={val} path={currentPath} onCopy={onCopy} level={level + 1} />}
+                                    <button 
+                                        className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-blue-500"
+                                        onClick={(e) => { e.stopPropagation(); onCopy(currentPath); }}
+                                    >
+                                        <Copy size={10} />
+                                    </button>
+                                </div>
+                                {isObj && isExpanded && (
+                                    <VariableTree data={val} path={currentPath} onCopy={onCopy} level={level + 1} />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const VariableExplorer: React.FC<{ 
+    executionState: WorkflowExecutionState; 
+    workflowData: WorkflowDefinition;
+    selectedNodeName: string;
+}> = ({ executionState, workflowData, selectedNodeName }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = (text: string) => {
+        const interpolation = `{{ ${text} }}`;
+        navigator.clipboard.writeText(interpolation);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    // Calculate upstream nodes for context
+    const upstreamNodes = useMemo(() => {
+        const upstream = new Set<string>();
+        // Very basic reachability: Any node executed before this one could be relevant
+        // But for $P context, strictly it's parent nodes. 
+        // We will list all executed nodes as "Available Data"
+        return Object.keys(executionState.nodeResults).filter(n => n !== selectedNodeName);
+    }, [executionState, selectedNodeName]);
+
+    return (
+        <div className="flex flex-col h-full overflow-hidden">
+             {copied && (
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg z-50 animate-in fade-in slide-in-from-top-1">
+                    Copied!
+                </div>
+             )}
+             
+             <div className="p-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500">
+                 Click variables to copy interpolation syntax <code>{'{{ ... }}'}</code>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                 {/* Global Variables */}
+                 <div>
+                     <div className="flex items-center gap-2 mb-2 font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                         <Database size={12} className="text-purple-500"/> Global Variables
+                     </div>
+                     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2">
+                         {Object.keys(workflowData.global || {}).length > 0 ? (
+                             <VariableTree data={workflowData.global} path="$global" onCopy={handleCopy} />
+                         ) : (
+                             <span className="text-slate-400 text-[10px] italic">No global variables defined.</span>
+                         )}
+                     </div>
+                 </div>
+
+                 {/* Available Node Data */}
+                 <div>
+                     <div className="flex items-center gap-2 mb-2 font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                         <FileText size={12} className="text-blue-500"/> Node Outputs
+                     </div>
+                     <div className="space-y-2">
+                         {upstreamNodes.length === 0 ? (
+                             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded text-center text-slate-400 text-[10px]">
+                                 Run the workflow to see data from other nodes here.
+                             </div>
+                         ) : (
+                             upstreamNodes.map(nodeName => {
+                                 const result = executionState.nodeResults[nodeName];
+                                 if (!result || !result.output) return null;
+                                 
+                                 return (
+                                     <div key={nodeName} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
+                                         <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 font-bold text-[10px] text-slate-700 dark:text-slate-300">
+                                             {nodeName}
+                                         </div>
+                                         <div className="p-2">
+                                            <VariableTree 
+                                                data={result.output} 
+                                                path={`$node["${nodeName}"].output`} // Standard n8n-like syntax
+                                                onCopy={handleCopy} 
+                                            />
+                                         </div>
+                                     </div>
+                                 );
+                             })
+                         )}
+                     </div>
+                 </div>
+
+                 {/* Flattened Inputs ($P) */}
+                 <div>
+                    <div className="flex items-center gap-2 mb-2 font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                         <List size={12} className="text-green-500"/> Input Context ($P)
+                     </div>
+                     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-2">
+                         {upstreamNodes.length > 0 ? (
+                             <p className="text-[10px] text-slate-400 mb-2">
+                                 Merged outputs from previous nodes available directly.
+                             </p>
+                         ) : null}
+                         {/* We can approximate $P by merging all outputs, but in the UI it's better to guide them to specific nodes. 
+                             We will just show a tip here or listing specific merged keys if we tracked them properly in state. 
+                             For now, let's just hint.
+                          */}
+                         <div className="text-[10px] text-slate-500">
+                             Use <code>$P.variable</code> to access flattened inputs. <br/>
+                             Example: <code>{'{{ $P.id }}'}</code>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+        </div>
+    );
+};
+
+
 // --- Main Component ---
 
-const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave, onDelete, availableCredentials = [], onOpenSecretsManager }) => {
+const EditorPanel: React.FC<EditorPanelProps> = ({ 
+    selectedNode, 
+    onClose, 
+    onSave, 
+    onDelete, 
+    availableCredentials = [], 
+    onOpenSecretsManager, 
+    executionState, 
+    workflowData, 
+    onRunNode, 
+    onPinData 
+}) => {
+  const [activeTab, setActiveTab] = useState<'settings' | 'data'>('settings');
   const [formData, setFormData] = useState<NodeDefinition | null>(null);
   
   // Raw strings for JSON edit mode (synced with formData)
@@ -656,6 +857,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
 
       setSaveStatus('idle');
       setStatusMessage('');
+      setActiveTab('settings'); // Reset to settings on node change
     } else {
       setFormData(null);
     }
@@ -758,263 +960,221 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ selectedNode, onClose, onSave
   const isPlugin = !!formData.meta;
 
   return (
-    <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm border-l border-slate-200 dark:border-slate-800 shadow-2xl">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
-        <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Edit Node</h2>
-            <div className="flex items-center gap-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{formData.name}</p>
-                {isPlugin && (
-                    <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 rounded text-[9px] font-bold border border-teal-200 dark:border-teal-800 flex items-center gap-1">
-                        <Plug size={8} /> PLUGIN
-                    </span>
-                )}
-            </div>
-        </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-          <X size={20} />
-        </button>
+    <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm border-l border-slate-200 dark:border-slate-800">
+      
+      {/* Header */}
+      <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+         <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-100">
+             <Settings size={18} className="text-blue-600 dark:text-blue-400" />
+             <span className="truncate max-w-[200px]">{formData.name}</span>
+         </div>
+         <div className="flex items-center gap-1">
+             <button 
+                onClick={onRunNode}
+                className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                title="Run this node only"
+             >
+                <Play size={18} />
+             </button>
+             {onPinData && (
+                 <button 
+                    onClick={onPinData}
+                    className={`p-1.5 rounded transition-colors ${
+                        workflowData.pinData?.[formData.name] 
+                        ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100'
+                    }`}
+                    title="Pin output data"
+                 >
+                    <Pin size={18} />
+                 </button>
+             )}
+             <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X size={20} />
+             </button>
+         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-        
-        {/* Basic Info Card */}
-        <div className="space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Name</label>
-                <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Type</label>
-                {isPlugin ? (
-                     <div className="w-full p-2 text-sm border border-slate-200 dark:border-slate-700 rounded-md bg-slate-100 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 cursor-not-allowed">
-                         {formData.type}
-                     </div>
-                ) : (
-                    <select
-                    value={formData.type}
-                    onChange={(e) => handleChange('type', e.target.value)}
-                    className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    >
-                    {nodeTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                    ))}
-                    </select>
-                )}
-            </div>
-          </div>
-          
-          {/* Description */}
-          <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Description</label>
-                <textarea
-                value={formData.desc || ''}
-                onChange={(e) => handleChange('desc', e.target.value)}
-                className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none h-16"
-                placeholder="Enter a brief description of this node..."
-                />
-          </div>
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <button 
+             onClick={() => setActiveTab('settings')}
+             className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'settings' ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+             Configuration
+          </button>
+          <button 
+             onClick={() => setActiveTab('data')}
+             className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${activeTab === 'data' ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+             Variables & Output
+          </button>
+      </div>
 
-          {['timer', 'feishu_bitable'].includes(formData.type) && (
-             <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Init Delay (ms)</label>
-                <input
-                    type="number"
-                    value={formData.init_delay || 0}
-                    onChange={(e) => handleChange('init_delay', parseInt(e.target.value))}
-                    className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-             </div>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {activeTab === 'settings' ? (
+              <>
+                  {/* Common Settings */}
+                  <div className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Node Name</label>
+                          <input 
+                              type="text" 
+                              value={formData.name}
+                              onChange={(e) => handleChange('name', e.target.value)}
+                              className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Node Type</label>
+                          <select 
+                              value={formData.type}
+                              onChange={(e) => handleChange('type', e.target.value)}
+                              className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                          >
+                              {nodeTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                      </div>
+
+                      {/* Credentials / Secrets */}
+                      {showCredEditor && (
+                          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                               <div className="flex items-center justify-between mb-3">
+                                   <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                                       <Plug size={14} /> Authentication
+                                   </h3>
+                                   <div className="flex bg-slate-200 dark:bg-slate-700 p-0.5 rounded">
+                                       <button 
+                                          onClick={() => toggleCredMode('direct')}
+                                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${credMode === 'direct' ? 'bg-white dark:bg-slate-600 shadow text-blue-600' : 'text-slate-500'}`}
+                                       >
+                                          Custom
+                                       </button>
+                                       <button 
+                                          onClick={() => toggleCredMode('reference')}
+                                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${credMode === 'reference' ? 'bg-white dark:bg-slate-600 shadow text-blue-600' : 'text-slate-500'}`}
+                                       >
+                                          Managed
+                                       </button>
+                                   </div>
+                               </div>
+                               
+                               {credMode === 'reference' ? (
+                                   <div className="flex gap-2">
+                                       <select 
+                                           value={formData.secret?.secret_id || ""}
+                                           onChange={(e) => handleSecretSelection(e.target.value)}
+                                           className="flex-1 p-2 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900"
+                                       >
+                                           <option value="">-- Select Secret --</option>
+                                           {availableCredentials.map(c => (
+                                               <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
+                                           ))}
+                                       </select>
+                                       <button 
+                                            onClick={onOpenSecretsManager}
+                                            className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400 rounded hover:bg-blue-200 transition-colors"
+                                            title="Manage Secrets"
+                                       >
+                                           <Settings size={14} />
+                                       </button>
+                                   </div>
+                               ) : (
+                                   <SectionEditor 
+                                      title="Credentials Config" 
+                                      data={formData.credentials || {}}
+                                      rawString={rawCreds}
+                                      onDataChange={(d) => handleChange('credentials', d)}
+                                      onRawChange={setRawCreds}
+                                      defaultOpen={true}
+                                   />
+                               )}
+                          </div>
+                      )}
+                  </div>
+                  
+                  {/* Parameters */}
+                  <SectionEditor 
+                      title="Parameters"
+                      description={formData.desc}
+                      data={formData.parameters || {}}
+                      rawString={rawParams}
+                      onDataChange={(d) => handleChange('parameters', d)}
+                      onRawChange={setRawParams}
+                      pluginParams={isPlugin ? formData.meta?.parameters : undefined}
+                      isUserInteraction={formData.type === 'user_interaction'}
+                  />
+
+                  {/* Artifacts (Conditional) */}
+                  {formData.type === 'tts' && (
+                       <SectionEditor 
+                          title="Artifact Configuration"
+                          description="Configure where to store the generated audio file"
+                          data={formData.artifact || {}}
+                          rawString={rawArtifact}
+                          onDataChange={(d) => handleChange('artifact', d)}
+                          onRawChange={setRawArtifact}
+                       />
+                  )}
+                  
+                  {/* Global Output */}
+                  <SectionEditor 
+                      title="Global Output Mapping" 
+                      description="Map node outputs to global workflow variables"
+                      data={formData.global || {}}
+                      rawString={rawGlobal}
+                      onDataChange={(d) => handleChange('global', d)}
+                      onRawChange={setRawGlobal}
+                      defaultOpen={false}
+                  />
+
+                  {/* Plugin Metadata (Read Only) */}
+                  {isPlugin && formData.meta && (
+                      <div className="p-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                          <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase">Plugin Metadata</h4>
+                          <pre className="text-[10px] font-mono whitespace-pre-wrap text-slate-500">
+                              {JSON.stringify(formData.meta, null, 2)}
+                          </pre>
+                      </div>
+                  )}
+
+                  <div className="pt-4 flex items-center justify-between">
+                      <button 
+                          onClick={() => onDelete(formData.name)}
+                          className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-xs font-bold"
+                      >
+                          <Trash2 size={16} /> Delete Node
+                      </button>
+                      <button 
+                          onClick={handleSave}
+                          disabled={saveStatus === 'success'}
+                          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                              saveStatus === 'success' 
+                              ? 'bg-green-600 text-white' 
+                              : saveStatus === 'error'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                      >
+                          {saveStatus === 'success' ? <Check size={16} /> : <Save size={16} />}
+                          {saveStatus === 'success' ? 'Saved' : 'Save Changes'}
+                      </button>
+                  </div>
+                  {statusMessage && (
+                      <div className={`text-center text-xs mt-2 ${saveStatus === 'error' ? 'text-red-500' : 'text-green-500'}`}>
+                          {statusMessage}
+                      </div>
+                  )}
+              </>
+          ) : (
+              <VariableExplorer 
+                  executionState={executionState} 
+                  workflowData={workflowData} 
+                  selectedNodeName={formData.name}
+              />
           )}
-        </div>
-
-        {/* Parameters Section */}
-        <SectionEditor 
-            title={isPlugin ? "Plugin Configuration" : (formData.type === 'user_interaction' ? "Interaction Form" : "Parameters")}
-            description={isPlugin ? "Configure specific settings defined by this plugin." : "Configure logic parameters and inputs"}
-            data={formData.parameters || {}}
-            rawString={rawParams}
-            onDataChange={(newData) => handleChange('parameters', newData)}
-            onRawChange={setRawParams}
-            pluginParams={formData.meta?.parameters}
-            isUserInteraction={formData.type === 'user_interaction'}
-        />
-
-        {/* Credentials Section */}
-        {showCredEditor && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-                <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                    <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                        Authentication
-                    </h3>
-                    <div className="flex bg-slate-200 dark:bg-slate-700 p-0.5 rounded-md">
-                        <button 
-                            onClick={() => toggleCredMode('direct')}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${credMode === 'direct' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            Inline
-                        </button>
-                        <button 
-                            onClick={() => toggleCredMode('reference')}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${credMode === 'reference' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            Managed
-                        </button>
-                    </div>
-                </div>
-                
-                <div className="p-4">
-                    {credMode === 'reference' ? (
-                        <div className="space-y-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Select Credential</label>
-                                <div className="flex items-stretch gap-2">
-                                    <div className="relative flex-1">
-                                        <select
-                                            value={formData.secret?.secret_id || ""}
-                                            onChange={(e) => handleSecretSelection(e.target.value)}
-                                            className={`w-full p-2.5 pl-3 pr-8 text-sm border rounded-md appearance-none focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${formData.secret ? 'bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-100' : 'bg-slate-50 border-slate-300 dark:bg-slate-900 dark:border-slate-600'}`}
-                                        >
-                                            <option value="">-- No Secret Linked --</option>
-                                            {availableCredentials.map(c => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.name} • {c.type}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {formData.secret && <Link size={14} className="absolute right-3 top-3 text-blue-500 pointer-events-none" />}
-                                    </div>
-                                    
-                                    <button 
-                                        onClick={onOpenSecretsManager}
-                                        className="px-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-md transition-colors flex items-center justify-center"
-                                        title="Open Secrets Manager"
-                                    >
-                                        <Settings size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            {formData.secret ? (
-                                <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-md border border-blue-100 dark:border-blue-800">
-                                    <div className="flex items-center gap-2 mb-2 text-blue-700 dark:text-blue-400">
-                                        <Check size={14} className="stroke-[3]" />
-                                        <span className="text-xs font-bold uppercase">Linked Successfully</span>
-                                    </div>
-                                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-                                        <span className="font-medium text-right">Name:</span> 
-                                        <span className="font-mono text-slate-800 dark:text-slate-200">{formData.secret.secret_name}</span>
-                                        
-                                        <span className="font-medium text-right">Type:</span> 
-                                        <span className="font-mono text-slate-800 dark:text-slate-200">{formData.secret.secret_type}</span>
-                                        
-                                        <span className="font-medium text-right">ID:</span> 
-                                        <span className="font-mono text-slate-500 truncate">{formData.secret.secret_id}</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-md text-center">
-                                    <p className="text-xs text-slate-400">Select a managed secret to link credentials to this node.</p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <SectionEditor 
-                            title="" 
-                            data={formData.credentials || {}}
-                            rawString={rawCreds}
-                            onDataChange={(newData) => handleChange('credentials', newData)}
-                            onRawChange={setRawCreds}
-                            defaultOpen={true}
-                        />
-                    )}
-                </div>
-            </div>
-        )}
-
-        {/* Advanced / Output Section */}
-        <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Output & Artifacts</h3>
-            </div>
-
-            <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Global Output</label>
-                <JsonEditor 
-                    value={formData.global || {}} 
-                    onChange={(val) => handleChange('global', val)}
-                    minHeight="100px"
-                />
-            </div>
-
-            {formData.type === 'tts' && (
-                <div>
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Artifact Configuration</label>
-                    <JsonEditor 
-                        value={formData.artifact || {}} 
-                        onChange={(val) => handleChange('artifact', val)}
-                        minHeight="100px"
-                    />
-                </div>
-            )}
-            
-            {formData.type === 'webhook' && (
-                 <div>
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Legacy Secret</label>
-                    <JsonEditor 
-                        value={formData.secret || {}} 
-                        onChange={(val) => handleChange('secret', val)}
-                        minHeight="100px"
-                    />
-                 </div>
-            )}
-        </div>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 z-10">
-        {statusMessage && (
-          <div className={`mb-3 p-2 text-xs font-medium rounded-md flex items-center justify-center gap-2 transition-all duration-300 ${
-            saveStatus === 'success' 
-              ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-100 dark:border-green-900' 
-              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-100 dark:border-red-900'
-          }`}>
-             {saveStatus === 'success' ? <Check size={14}/> : <AlertCircle size={14}/>}
-             {statusMessage}
-          </div>
-        )}
-        
-        <div className="flex gap-3">
-            <button
-            onClick={handleSave}
-            disabled={saveStatus === 'success'}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md font-semibold text-sm shadow-sm transition-all duration-200 ${
-                saveStatus === 'success' 
-                    ? 'bg-green-600 text-white hover:bg-green-700' 
-                    : saveStatus === 'error'
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-            >
-            {saveStatus === 'success' ? <Check size={18} /> : <Save size={18} />} 
-            {saveStatus === 'success' ? 'Saved Successfully' : 'Save Changes'}
-            </button>
-            <button
-            onClick={() => onDelete(formData.name)}
-            className="flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 py-2 px-4 rounded-md font-medium transition-colors border border-red-100 dark:border-red-900/50"
-            title="Delete Node"
-            >
-            <Trash2 size={18} />
-            </button>
-        </div>
       </div>
     </div>
   );

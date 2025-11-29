@@ -1,9 +1,7 @@
 
-
-
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User } from 'lucide-react';
-import { WorkflowExecutionState, PendingInputConfig, InputFieldDefinition } from '../types';
+import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User, Image as ImageIcon, Download } from 'lucide-react';
+import { WorkflowExecutionState, PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../types';
 
 interface ExecutionPanelProps {
   isOpen: boolean;
@@ -34,7 +32,8 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
           if (state.waitingForInput && state.pendingInputConfig) {
              setSelectedNodeName(state.pendingInputConfig.nodeName);
           } else {
-             const latest = Object.values(state.nodeResults).sort((a,b) => b.startTime - a.startTime)[0];
+             const results = Object.values(state.nodeResults) as NodeExecutionResult[];
+             const latest = results.sort((a,b) => b.startTime - a.startTime)[0];
              if (latest) setSelectedNodeName(latest.nodeName);
           }
       }
@@ -56,7 +55,8 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
 
   if (!isOpen) return null;
 
-  const sortedResults = Object.values(state.nodeResults).sort((a, b) => a.startTime - b.startTime);
+  const results = Object.values(state.nodeResults) as NodeExecutionResult[];
+  const sortedResults = results.sort((a, b) => a.startTime - b.startTime);
   const selectedResult = selectedNodeName ? state.nodeResults[selectedNodeName] : null;
 
   const validateField = (field: InputFieldDefinition, value: any): string | null => {
@@ -110,9 +110,18 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
 
   const renderJson = (data: any) => {
       if (data === undefined || data === null) return <span className="text-slate-500 italic">Empty</span>;
+      
+      // Helper to truncate long strings (like Base64 images) in JSON view
+      const replacer = (key: string, value: any) => {
+          if (typeof value === 'string' && value.length > 200) {
+              return value.substring(0, 50) + `... [${value.length} chars truncated]`;
+          }
+          return value;
+      };
+
       return (
           <pre className="font-mono text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700 overflow-auto max-h-[300px]">
-              {JSON.stringify(data, null, 2)}
+              {JSON.stringify(data, replacer, 2)}
           </pre>
       );
   };
@@ -366,6 +375,30 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
                                  <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wide">
                                      <FileJson size={14} /> Execution Output
                                  </div>
+                                 
+                                 {/* Image Preview */}
+                                 {selectedResult.output?.image && typeof selectedResult.output.image === 'string' && (
+                                     <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                                         <div className="flex items-center justify-between mb-2">
+                                             <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1"><ImageIcon size={12}/> Generated Image</p>
+                                             <a 
+                                                href={selectedResult.output.image} 
+                                                download={`image_${Date.now()}.png`}
+                                                className="text-[10px] flex items-center gap-1 text-blue-600 hover:underline"
+                                             >
+                                                 <Download size={10} /> Download
+                                             </a>
+                                         </div>
+                                         <div className="flex justify-center bg-white dark:bg-black/20 p-2 rounded border border-slate-200 dark:border-slate-800">
+                                             <img 
+                                                src={selectedResult.output.image} 
+                                                alt="Generated Result" 
+                                                className="max-w-full h-auto rounded shadow-sm max-h-[300px] object-contain"
+                                             />
+                                         </div>
+                                     </div>
+                                 )}
+
                                  {renderJson(selectedResult.output)}
                              </div>
                         )}

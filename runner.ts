@@ -1,11 +1,11 @@
 
 
-
 import { 
   WorkflowDefinition, 
   NodeRunnerContext, 
   WorkflowExecutionState,
-  PendingInputConfig
+  PendingInputConfig,
+  NodeExecutionResult
 } from './types';
 import { getRunner, evaluateCondition } from './node_runners';
 
@@ -19,14 +19,18 @@ export class WorkflowRunner {
   private stepResolver: (() => void) | null = null;
   private inputResolver: ((data: any) => void) | null = null;
 
-  constructor(workflow: WorkflowDefinition, onUpdate: (state: WorkflowExecutionState) => void) {
+  constructor(
+    workflow: WorkflowDefinition, 
+    onUpdate: (state: WorkflowExecutionState) => void,
+    initialResults?: Record<string, NodeExecutionResult>
+  ) {
     this.workflow = workflow;
     this.updateCallback = onUpdate;
     this.state = {
       isRunning: false,
       isPaused: false,
       waitingForInput: false,
-      nodeResults: {},
+      nodeResults: initialResults || {},
       logs: []
     };
   }
@@ -97,6 +101,8 @@ export class WorkflowRunner {
             }
 
             // 2. Execute Node
+            this.log(`-> Starting Node: ${currentName} (${nodeDef.type})`);
+            
             this.state.nodeResults[currentName] = {
                 nodeName: currentName,
                 status: 'running',
@@ -140,13 +146,16 @@ export class WorkflowRunner {
                     nodeInputs[currentName] = result.output;
                     // Also allow accessing via $node.Name.output pattern implicitly by flattening
                     nodeInputs['$P'] = { ...nodeInputs['$P'], ...result.output }; 
+                    this.log(`   Node ${currentName} completed successfully.`);
+                } else {
+                    this.log(`   Node ${currentName} failed/skipped.`);
                 }
 
             } catch (e: any) {
                 this.state.nodeResults[currentName].status = 'error';
                 this.state.nodeResults[currentName].error = e.message;
                 this.state.nodeResults[currentName].endTime = Date.now();
-                this.log(`Node ${currentName} failed: ${e.message}`);
+                this.log(`Node ${currentName} failed exception: ${e.message}`);
             }
             
             this.notify();
@@ -175,10 +184,10 @@ export class WorkflowRunner {
                                     const passed = evaluateCondition(condition, context);
                                     if (!passed) {
                                         shouldRun = false;
-                                        this.log(`Skipping edge ${currentName} -> ${rule.node}: Condition '${condition}' failed.`);
+                                        this.log(`   Edge ${currentName} -> ${rule.node}: Condition '${condition}' FAILED.`);
                                         break;
                                     } else {
-                                        this.log(`Edge ${currentName} -> ${rule.node}: Condition '${condition}' passed.`);
+                                        this.log(`   Edge ${currentName} -> ${rule.node}: Condition '${condition}' PASSED.`);
                                     }
                                 }
                             }
@@ -206,6 +215,71 @@ export class WorkflowRunner {
         this.state.pendingInputConfig = undefined;
         this.notify();
     }
+  }
+
+  public async executeNode(nodeName: string) {
+    const nodeDef = this.workflow.nodes.find(n => n.name === nodeName);
+    if (!nodeDef) {
+        this.log(`Error: Node ${nodeName} not found`);
+        return;
+    }
+
+    // Initialize/Reset result for this node
+    this.log(`[Single Run] Executing node: ${nodeName}`);
+    this.state.nodeResults[nodeName] = {
+        nodeName: nodeName,
+        status: 'running',
+        startTime: Date.now(),
+        logs: []
+    };
+    this.notify();
+
+    // Gather inputs from current state
+    const nodeInputs: Record<string, any> = { '$P': {} };
+    Object.values(this.state.nodeResults).forEach(res => {
+        if (res.status === 'success' && res.output) {
+             nodeInputs[res.nodeName] = res.output;
+             nodeInputs['$P'] = { ...nodeInputs['$P'], ...res.output };
+        }
+    });
+
+    const runner = getRunner(nodeDef.type);
+    const context: NodeRunnerContext = {
+        workflow: this.workflow,
+        executionState: this.state,
+        global: this.workflow.global || {},
+        inputs: nodeInputs,
+        waitForInput: (config) => this.waitForInput(config),
+        log: (msg) => {
+             if (this.state.nodeResults[nodeName]) {
+                 this.state.nodeResults[nodeName].logs.push(msg);
+                 this.notify();
+             }
+        }
+    };
+
+    try {
+        const result = await runner.run(nodeDef, context);
+        this.state.nodeResults[nodeName] = {
+            ...this.state.nodeResults[nodeName],
+            status: result.status || 'success',
+            endTime: Date.now(),
+            inputs: result.inputs,
+            output: result.output,
+            logs: result.logs || this.state.nodeResults[nodeName].logs,
+            error: result.error
+        };
+        this.log(`[Single Run] Node ${nodeName} finished with status: ${result.status || 'success'}`);
+    } catch (e: any) {
+        this.state.nodeResults[nodeName] = {
+            ...this.state.nodeResults[nodeName],
+            status: 'error',
+            error: e.message,
+            endTime: Date.now()
+        };
+        this.log(`[Single Run] Node ${nodeName} failed: ${e.message}`);
+    }
+    this.notify();
   }
 
   public nextStep() {

@@ -1,5 +1,5 @@
 
-import { CredentialItem, WorkflowDefinition } from '../types';
+import { CredentialItem, WorkflowDefinition, NodeExecutionResult } from '../types';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -26,6 +26,22 @@ export interface User {
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+export interface ServerExecutionResponse {
+  results: Record<string, NodeExecutionResult>;
+  logs: string[];
+}
+
+export interface ApiRequest {
+  id: string;
+  name: string;
+  method: string;
+  url: string;
+  headers: { key: string; value: string; enabled: boolean }[];
+  params: { key: string; value: string; enabled: boolean }[];
+  body: string; // JSON string or plain text
+  updatedAt?: string;
 }
 
 class ApiClient {
@@ -170,6 +186,82 @@ class ApiClient {
       headers: this.getHeaders()
     });
     if (!res.ok) throw new Error('Failed to delete secret');
+  }
+
+  // --- API Management ---
+
+  async getApis(): Promise<ApiRequest[]> {
+    const res = await fetch(`${API_BASE}/apis`, { headers: this.getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch APIs');
+    return res.json();
+  }
+
+  async saveApi(apiReq: ApiRequest): Promise<ApiRequest> {
+    const res = await fetch(`${API_BASE}/apis`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(apiReq)
+    });
+    if (!res.ok) throw new Error('Failed to save API');
+    return res.json();
+  }
+
+  async deleteApi(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/apis/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to delete API');
+  }
+
+  // --- Execution & Proxy ---
+
+  async executeWorkflow(workflow: WorkflowDefinition, workflowId?: string): Promise<ServerExecutionResponse> {
+    const res = await fetch(`${API_BASE}/execute`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ workflow, workflowId })
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Server execution failed');
+    }
+    return res.json();
+  }
+
+  async proxyRequest(method: string, url: string, headers?: any, body?: any, params?: any): Promise<any> {
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/proxy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ method, url, headers, body, params })
+        });
+      } catch (err: any) {
+        throw new Error(`Failed to connect to backend proxy: ${err.message}. Is the server running on port 3001?`);
+      }
+
+      // Check content type before parsing to avoid syntax errors on HTML responses (404/500 pages)
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+          const text = await res.text();
+          // Extract title if possible for better error
+          const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+          const title = titleMatch ? titleMatch[1] : 'Unknown Error';
+          throw new Error(`Backend returned HTML (Status ${res.status} ${res.statusText}): "${title}". The server might be down, the proxy path is incorrect, or the target URL is returning HTML.`);
+      }
+
+      const text = await res.text();
+      try {
+          return JSON.parse(text);
+      } catch (e: any) {
+          // Fallback check if it starts with HTML tag
+          if (text.trim().startsWith('<')) {
+              console.error("Proxy returned HTML:", text);
+              throw new Error(`Backend server returned HTML (Status ${res.status}). The server might be down or the proxy path is incorrect.`);
+          }
+          throw new Error(`Invalid JSON response from server (Status ${res.status}): ${e.message}`);
+      }
   }
 }
 
