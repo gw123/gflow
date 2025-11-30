@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -12,18 +12,20 @@ import ReactFlow, {
   Panel,
   ReactFlowProvider,
   useReactFlow,
-  MarkerType
+  MarkerType,
+  applyNodeChanges,
+  applyEdgeChanges
 } from 'reactflow';
 import yaml from 'js-yaml';
 import { FileJson, HelpCircle, Beaker } from 'lucide-react';
 
-import { WorkflowDefinition, NodeDefinition, CredentialItem, WorkflowExecutionState } from './types';
-import { workflowToFlow, flowToWorkflow, getLayoutedElements } from './utils';
+import { WorkflowDefinition, NodeDefinition } from './types';
+import { workflowToFlow, flowToWorkflow } from './utils';
 import { SAMPLE_YAML } from './constants';
 import { NODE_TEMPLATES } from './nodes';
 import { WorkflowRunner } from './runner';
-import { WorkflowTester, TestReport } from './tester';
-import { api, User } from './api/client';
+import { WorkflowTester } from './tester';
+import { api } from './api/client';
 
 import EditorPanel from './components/EditorPanel';
 import YamlView from './components/YamlView';
@@ -36,52 +38,50 @@ import CustomNode from './components/CustomNode';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { ModalsManager } from './components/ModalsManager';
 
+// Import Stores
+import { useUIStore, useUserStore, useWorkflowStore, useExecutionStore } from './stores';
+
 const AppContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [workflowData, setWorkflowData] = useState<WorkflowDefinition>({ name: 'Untitled', nodes: [] });
-  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  const { project } = useReactFlow();
   
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
-  const [showYamlView, setShowYamlView] = useState(false);
-  
-  // Modals State
-  const [configModalOpen, setConfigModalOpen] = useState(false);
-  const [secretsManagerOpen, setSecretsManagerOpen] = useState(false);
-  const [toolsManagerOpen, setToolsManagerOpen] = useState(false);
-  const [workflowListOpen, setWorkflowListOpen] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
-  const [helpModalOpen, setHelpModalOpen] = useState(false);
-  const [conditionModalOpen, setConditionModalOpen] = useState(false);
-  const [apiManagerOpen, setApiManagerOpen] = useState(false);
-  
-  // Auth & Server State
-  const [user, setUser] = useState<User | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [userProfileOpen, setUserProfileOpen] = useState(false);
-  const [credentials, setCredentials] = useState<CredentialItem[]>([]);
+  // Stores
+  const ui = useUIStore();
+  const userStore = useUserStore();
+  const wfStore = useWorkflowStore();
+  const execStore = useExecutionStore();
 
-  // Execution State
-  const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
-  const [runMode, setRunMode] = useState<'local' | 'cloud'>('local');
-  const [executionState, setExecutionState] = useState<WorkflowExecutionState>({
-    isRunning: false,
-    isPaused: false,
-    waitingForInput: false,
-    nodeResults: {},
-    logs: []
-  });
   const runnerRef = useRef<WorkflowRunner | null>(null);
 
-  // Test Report
-  const [testReport, setTestReport] = useState<TestReport | null>(null);
-  const [testReportOpen, setTestReportOpen] = useState(false);
+  // Sync React Flow Internal State with Store
+  // We allow ReactFlow to handle interactions, but we sync changes back to store
+  const onNodesChange = useCallback(
+    (changes: any) => {
+        const nextNodes = applyNodeChanges(changes, wfStore.nodes);
+        wfStore.setNodes(nextNodes);
+        
+        // If drag ended, update workflow data structure
+        if (changes.some((c: any) => c.type === 'position' && !c.dragging)) {
+             const newWf = flowToWorkflow(wfStore.workflowData, nextNodes, wfStore.edges);
+             wfStore.updateWorkflowData(newWf);
+        }
+    },
+    [wfStore]
+  );
 
-  const [toast, setToast] = useState<{message: string, type: 'success'|'error'|'info'} | null>(null);
-  const { project } = useReactFlow();
+  const onEdgesChange = useCallback(
+    (changes: any) => {
+        const nextEdges = applyEdgeChanges(changes, wfStore.edges);
+        wfStore.setEdges(nextEdges);
+        const newWf = flowToWorkflow(wfStore.workflowData, wfStore.nodes, nextEdges);
+        wfStore.updateWorkflowData(newWf);
+    },
+    [wfStore]
+  );
+
+  const onConnect = useCallback((params: Connection) => {
+      wfStore.onConnect(params);
+  }, [wfStore]);
 
   // --- Initialization ---
 
@@ -89,102 +89,30 @@ const AppContent: React.FC = () => {
     // Initial Load
     try {
       const parsed = yaml.load(SAMPLE_YAML) as WorkflowDefinition;
-      const { nodes: flowNodes, edges: flowEdges } = workflowToFlow(parsed);
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-      setWorkflowData(parsed);
+      wfStore.loadWorkflow(parsed);
     } catch (e) {
       console.error("Failed to parse initial sample YAML", e);
     }
 
     // Check Auth
-    api.getMe().then(setUser).catch(() => {}); // Silent fail on auth check
-  }, [setNodes, setEdges]);
-
-  // Sync Creds on open
-  useEffect(() => {
-    if (secretsManagerOpen) {
-       if (user) {
-           api.getSecrets().then(setCredentials).catch(err => {
-               showToast("Failed to load server secrets: " + err.message, "error");
-           });
-       } else {
-           // Local mode secrets
-       }
-    }
-  }, [secretsManagerOpen, user]);
+    api.getMe().then(userStore.setUser).catch(() => {}); 
+  }, []); // Run once
 
   // --- Handlers ---
 
-  const showToast = (message: string, type: 'success'|'error'|'info') => {
-    setToast({ message, type });
-  };
-
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
-    setSelectedEdge(null);
-    setIsRightPanelOpen(true);
-  }, []);
+    ui.setSelectedNodeId(node.id);
+  }, [ui]);
   
-  const handleRunNode = async (nodeName: string) => {
-     if (!runnerRef.current) {
-         // Create a temporary runner just for this op context
-         const currentData = flowToWorkflow(workflowData, nodes, edges);
-         const runner = new WorkflowRunner(currentData, (state) => {
-             // We don't update full execution UI for single node runs usually,
-             // but here we can partial update if needed.
-         });
-         await runner.executeNode(nodeName); 
-     } else {
-         await runnerRef.current.executeNode(nodeName);
-     }
-  };
-  
-  const handlePinNode = (nodeName: string) => {
-      setWorkflowData(prev => {
-         const newPin = { ...(prev.pinData || {}) };
-         if (newPin[nodeName]) {
-             delete newPin[nodeName];
-             showToast(`Unpinned data for ${nodeName}`, "info");
-         } else {
-             const result = executionState.nodeResults[nodeName]?.output;
-             if (result) {
-                 newPin[nodeName] = result;
-                 showToast(`Pinned data for ${nodeName}`, "success");
-             } else {
-                 showToast("No execution data available to pin", "error");
-                 return prev;
-             }
-         }
-         return { ...prev, pinData: newPin };
-      });
-  };
-
   const handlePaneClick = useCallback(() => {
-    setSelectedNodeId(null);
-    setSelectedEdge(null);
-    setIsRightPanelOpen(false);
-  }, []);
+    ui.setSelectedNodeId(null);
+    ui.setSelectedEdge(null);
+    ui.setPanelOpen('isRightPanelOpen', false);
+  }, [ui]);
 
   const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
-      setSelectedEdge(edge);
-      setConditionModalOpen(true);
-  }, []);
-
-  const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ 
-        ...params, 
-        type: 'default', 
-        animated: true, 
-        style: { stroke: '#64748b', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#64748b' }
-    }, eds));
-    
-    setWorkflowData(prev => {
-        const newData = flowToWorkflow(prev, nodes, [...edges, { ...params, id: `e-${params.source}-${params.target}` } as Edge]);
-        return newData;
-    });
-  }, [nodes, edges, setEdges]);
+      ui.setSelectedEdge(edge);
+  }, [ui]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -218,181 +146,102 @@ const AppContent: React.FC = () => {
         },
       };
 
-      setNodes((nds) => {
-          const newNodes = nds.concat(newNode);
-          const newData = flowToWorkflow(workflowData, newNodes, edges);
-          setWorkflowData(newData);
-          return newNodes;
-      });
+      const newNodes = wfStore.nodes.concat(newNode);
+      wfStore.setNodes(newNodes);
+      const newData = flowToWorkflow(wfStore.workflowData, newNodes, wfStore.edges);
+      wfStore.updateWorkflowData(newData); // This also layouts if needed, or we just set data
     },
-    [project, setNodes, edges, workflowData]
+    [project, wfStore]
   );
 
-  const handleSaveNode = (updatedNode: NodeDefinition) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === selectedNodeId) {
-            return {
-                ...node,
-                id: updatedNode.name, 
-                data: { ...node.data, ...updatedNode },
-            };
-        }
-        return node;
-      })
-    );
-    
-    setWorkflowData(prev => {
-        const updatedNodes = prev.nodes.map(n => n.name === selectedNodeId ? updatedNode : n);
-        
-        if (updatedNode.name !== selectedNodeId) {
-             const newConns = { ...prev.connections };
-             if (selectedNodeId && newConns[selectedNodeId]) {
-                 newConns[updatedNode.name] = newConns[selectedNodeId];
-                 delete newConns[selectedNodeId];
-             }
-             Object.keys(newConns).forEach(key => {
-                 newConns[key].forEach(group => {
-                     group.forEach(rule => {
-                         if (rule.node === selectedNodeId) rule.node = updatedNode.name;
-                     });
-                 });
-             });
-             return { ...prev, nodes: updatedNodes, connections: newConns };
-        }
-        return { ...prev, nodes: updatedNodes };
-    });
-
-    if (updatedNode.name !== selectedNodeId) {
-        setSelectedNodeId(updatedNode.name);
-    }
-  };
-
-  const handleDeleteNode = (nodeName: string) => {
-    if (!confirm(`Delete node ${nodeName}?`)) return;
-    setNodes((nds) => nds.filter((n) => n.id !== nodeName));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeName && e.target !== nodeName));
-    setWorkflowData(prev => {
-        const newNodes = prev.nodes.filter(n => n.name !== nodeName);
-        const newConns = { ...prev.connections };
-        delete newConns[nodeName];
-        Object.keys(newConns).forEach(key => {
-            newConns[key] = newConns[key].map(group => group.filter(rule => rule.node !== nodeName)).filter(g => g.length > 0);
-            if (newConns[key].length === 0) delete newConns[key];
-        });
-        return { ...prev, nodes: newNodes, connections: newConns };
-    });
-    setIsRightPanelOpen(false);
-    showToast("Node deleted", "info");
-  };
-
   const updateYaml = (newContent: string): boolean => {
-    try {
-      const parsed = yaml.load(newContent) as WorkflowDefinition;
-      if (!parsed || typeof parsed !== 'object') throw new Error("Invalid YAML");
-      
-      setWorkflowData(parsed);
-      const { nodes: flowNodes, edges: flowEdges } = workflowToFlow(parsed);
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-      return true;
-    } catch (e: any) {
-      showToast(`YAML Error: ${e.message}`, "error");
-      return false;
-    }
+    return wfStore.setWorkflowFromYaml(newContent);
   };
 
-  const handleLayout = () => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
-    setNodes([...layoutedNodes]);
-    setEdges([...layoutedEdges]);
+  // --- Execution Logic ---
+  // We keep the runner instantiation here as it holds 'runtime' class state not suitable for plain JSON store
+  
+  const handleRunNode = async (nodeName: string) => {
+     if (!runnerRef.current) {
+         const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
+         const runner = new WorkflowRunner(currentData, (state) => {
+             // Optional: Update execution store for single node run visualization?
+             // execStore.setExecutionState(state);
+         });
+         await runner.executeNode(nodeName); 
+     } else {
+         await runnerRef.current.executeNode(nodeName);
+     }
   };
 
-  // --- Execution ---
+  const handleNextStep = () => runnerRef.current?.nextStep();
+  const handleResume = () => runnerRef.current?.resume();
+  const handleSubmitInput = (data: any) => runnerRef.current?.submitInput(data);
 
   const handleRunWorkflow = async (mode: 'run' | 'step' = 'run') => {
-    if (executionState.isRunning && !executionState.isPaused && !executionState.waitingForInput) {
-        showToast("Workflow is already running", "info");
+    if (execStore.executionState.isRunning && !execStore.executionState.isPaused && !execStore.executionState.waitingForInput) {
+        ui.showToast("Workflow is already running", "info");
         return;
     }
 
-    const currentData = flowToWorkflow(workflowData, nodes, edges);
+    const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
     
     // Validation
     const tester = new WorkflowTester(currentData);
     const report = tester.runTest();
     if (!report.isValid) {
-        setTestReport(report);
-        setTestReportOpen(true);
-        showToast("Validation failed. Check report.", "error");
+        ui.setTestReport(report);
+        ui.setModalOpen('testReportOpen', true);
+        ui.showToast("Validation failed. Check report.", "error");
         return;
     }
 
-    setExecutionPanelOpen(true);
+    ui.setPanelOpen('executionPanelOpen', true);
     
-    if (runMode === 'cloud') {
-        // --- Server Side Execution ---
-        if (!user) {
-            showToast("Login required for cloud execution", "error");
-            setAuthModalOpen(true);
+    if (execStore.runMode === 'cloud') {
+        if (!userStore.user) {
+            ui.showToast("Login required for cloud execution", "error");
+            ui.setModalOpen('authModalOpen', true);
             return;
         }
 
-        setExecutionState(prev => ({ 
-            ...prev, 
+        execStore.setExecutionState({
+            ...execStore.executionState,
             isRunning: true, 
             isPaused: false, 
             waitingForInput: false,
             logs: ["Submitting to server..."] 
-        }));
+        });
 
         try {
-            const response = await api.executeWorkflow(currentData, currentWorkflowId || undefined);
-            
-            // Map server results to local state format
-            setExecutionState({
+            const response = await api.executeWorkflow(currentData, wfStore.currentWorkflowId || undefined);
+            execStore.setExecutionState({
                 isRunning: false,
                 isPaused: false,
                 waitingForInput: false,
                 nodeResults: response.results,
                 logs: response.logs
             });
-            
-            // Sync status visual
-            setNodes(nds => nds.map(n => {
-                const res = response.results[n.id];
-                if (res) {
-                    return { ...n, data: { ...n.data, executionStatus: res.status } };
-                }
-                return { ...n, data: { ...n.data, executionStatus: undefined } };
-            }));
+            // Update node status visuals
+            updateNodeStatuses(response.results);
 
         } catch (e: any) {
-            setExecutionState(prev => ({
-                ...prev,
+            execStore.updateExecutionState({
                 isRunning: false,
-                logs: [...prev.logs, `Server Error: ${e.message}`]
-            }));
-            showToast("Server execution failed", "error");
+                logs: [...execStore.executionState.logs, `Server Error: ${e.message}`]
+            });
+            ui.showToast("Server execution failed", "error");
         }
 
     } else {
-        // --- Browser Side Execution ---
-        const previousResults = executionState.nodeResults;
-        
+        const previousResults = execStore.executionState.nodeResults;
         const runner = new WorkflowRunner(currentData, (state) => {
-            setNodes(nds => nds.map(n => {
-                const res = state.nodeResults[n.id];
-                if (res) {
-                    return { ...n, data: { ...n.data, executionStatus: res.status } };
-                }
-                return { ...n, data: { ...n.data, executionStatus: undefined } };
-            }));
-            setExecutionState(state);
+            updateNodeStatuses(state.nodeResults);
+            execStore.setExecutionState(state);
         }, previousResults);
 
         runnerRef.current = runner;
-        setExecutionState({ ...runner['state'], isRunning: true });
+        execStore.setExecutionState({ ...runner.state, isRunning: true });
         
         try {
             await runner.execute(mode);
@@ -406,149 +255,42 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleNextStep = () => {
-    if (runnerRef.current) {
-        runnerRef.current.nextStep();
-    }
-  };
-
-  const handleResume = () => {
-    if (runnerRef.current) {
-        runnerRef.current.resume();
-    }
-  };
-
-  const handleSubmitInput = (data: any) => {
-    if (runnerRef.current) {
-        runnerRef.current.submitInput(data);
-    }
-  };
-
-  const handleSaveConnection = (edgeId: string, conditions: string[]) => {
-      setEdges(eds => eds.map(e => {
-          if (e.id === edgeId) {
-              return {
-                  ...e,
-                  label: conditions.length > 0 ? 'Condition' : undefined,
-                  data: { ...e.data, when: conditions },
-                  style: conditions.length > 0 ? { stroke: '#eab308', strokeWidth: 2 } : { stroke: '#64748b', strokeWidth: 2 },
-                  markerEnd: {
-                    type: MarkerType.ArrowClosed, 
-                    color: conditions.length > 0 ? '#eab308' : '#64748b',
-                    width: 20,
-                    height: 20,
-                  }
-              };
+  const updateNodeStatuses = (results: any) => {
+      const newNodes = wfStore.nodes.map(n => {
+          const res = results[n.id];
+          if (res) {
+              return { ...n, data: { ...n.data, executionStatus: res.status } };
           }
-          return e;
-      }));
-      setConditionModalOpen(false);
-  };
-
-  const handleDeleteConnection = (edgeId: string) => {
-      setEdges(eds => eds.filter(e => e.id !== edgeId));
-      setConditionModalOpen(false);
-  };
-
-  const handleConfigSave = (partial: Partial<WorkflowDefinition>) => {
-      setWorkflowData(prev => ({ ...prev, ...partial }));
-  };
-
-  const handleToolsSave = (tools: any[]) => {
-      setWorkflowData(prev => ({ ...prev, tools }));
-  };
-
-  // --- Auth & Server Operations ---
-
-  const handleLogin = (u: User) => {
-      setUser(u);
-      showToast(`Welcome back, ${u.username}`, "success");
-  };
-
-  const handleLogout = () => {
-      api.logout();
-      setUser(null);
-      setCredentials([]);
-      showToast("Logged out successfully", "info");
-  };
-
-  const handleSaveWorkflow = async () => {
-      if (!user) {
-          showToast("Please login to save workflows to server", "info");
-          setAuthModalOpen(true);
-          return;
-      }
-      
-      const currentData = flowToWorkflow(workflowData, nodes, edges);
-      try {
-          if (currentWorkflowId) {
-              await api.updateWorkflow(currentWorkflowId, currentData.name, currentData);
-              showToast("Workflow saved to server", "success");
-          } else {
-              const created = await api.createWorkflow(currentData.name, currentData);
-              setCurrentWorkflowId(created.id);
-              showToast("New workflow created on server", "success");
-          }
-      } catch (e: any) {
-          showToast(e.message, "error");
-      }
-  };
-
-  const handleLoadWorkflow = (wf: WorkflowDefinition, id: string) => {
-      setWorkflowData(wf);
-      const { nodes: flowNodes, edges: flowEdges } = workflowToFlow(wf);
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-      setCurrentWorkflowId(id);
-      showToast(`Loaded workflow: ${wf.name}`, "success");
+          return { ...n, data: { ...n.data, executionStatus: undefined } };
+      });
+      wfStore.setNodes(newNodes);
   };
 
   // --- Render ---
 
   const selectedNodeData = useMemo(() => {
-      if (!selectedNodeId) return null;
-      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!ui.selectedNodeId) return null;
+      const node = wfStore.nodes.find(n => n.id === ui.selectedNodeId);
       return node ? { ...node.data, name: node.id } as NodeDefinition : null;
-  }, [selectedNodeId, nodes]);
-
-  const availableCreds = useMemo(() => {
-      return [...credentials];
-  }, [credentials]);
+  }, [ui.selectedNodeId, wfStore.nodes]);
 
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       
-      {/* Header Toolbar */}
-      <HeaderToolbar
-        user={user}
-        runMode={runMode}
-        setRunMode={setRunMode}
-        executionState={executionState}
-        onLayout={handleLayout}
-        onOpenWorkflowList={() => setWorkflowListOpen(true)}
-        onSaveWorkflow={handleSaveWorkflow}
-        onRunWorkflow={handleRunWorkflow}
-        onOpenApiManager={() => setApiManagerOpen(true)}
-        onOpenToolsManager={() => setToolsManagerOpen(true)}
-        onOpenSecretsManager={() => setSecretsManagerOpen(true)}
-        onOpenConfig={() => setConfigModalOpen(true)}
-        onOpenCopilot={() => setCopilotOpen(true)}
-        onOpenAuth={() => setAuthModalOpen(true)}
-        onOpenProfile={() => setUserProfileOpen(true)}
-      />
+      {/* Header Toolbar - Now leaner, gets state from Store */}
+      <HeaderToolbar onRunWorkflow={handleRunWorkflow} />
 
       {/* Main Workspace */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar */}
         <Sidebar />
 
         {/* Canvas Area */}
         <div className="flex-1 relative bg-slate-50 dark:bg-slate-950/50" ref={reactFlowWrapper}>
            <ReactFlow
-              nodes={nodes}
-              edges={edges}
+              nodes={wfStore.nodes}
+              edges={wfStore.edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
@@ -567,7 +309,7 @@ const AppContent: React.FC = () => {
               <Background gap={15} size={1} color="#cbd5e1" className="dark:opacity-20" />
               <Controls className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md" />
               <Panel position="bottom-left" className="bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400">
-                 {nodes.length} nodes • {edges.length} connections
+                 {wfStore.nodes.length} nodes • {wfStore.edges.length} connections
               </Panel>
               <NodeInfoTooltip />
            </ReactFlow>
@@ -575,41 +317,38 @@ const AppContent: React.FC = () => {
            {/* Floating Yaml Toggle */}
            <div className="absolute bottom-6 right-6 z-10 flex gap-2">
                <button 
-                  onClick={() => setHelpModalOpen(true)}
+                  onClick={() => ui.setModalOpen('helpModalOpen', true)}
                   className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
                   title="Help"
                >
                    <HelpCircle size={20} />
                </button>
                <button 
-                  onClick={() => setShowYamlView(!showYamlView)}
+                  onClick={() => ui.setPanelOpen('showYamlView', !ui.showYamlView)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg font-bold text-xs transition-all ${
-                      showYamlView 
+                      ui.showYamlView 
                       ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' 
                       : 'bg-white text-slate-700 dark:bg-slate-800 dark:text-slate-200'
                   }`}
                >
-                   {showYamlView ? <Beaker size={16} /> : <FileJson size={16} />}
-                   {showYamlView ? 'Visual View' : 'YAML View'}
+                   {ui.showYamlView ? <Beaker size={16} /> : <FileJson size={16} />}
+                   {ui.showYamlView ? 'Visual View' : 'YAML View'}
                </button>
            </div>
            
            {/* Yaml Editor Overlay */}
-           {showYamlView && (
+           {ui.showYamlView && (
                <div className="absolute inset-0 z-20 animate-in slide-in-from-bottom duration-300">
                    <YamlView 
-                        yamlContent={yaml.dump(workflowData)} 
+                        yamlContent={yaml.dump(wfStore.workflowData)} 
                         onUpdate={updateYaml} 
-                        notify={showToast}
+                        notify={ui.showToast}
                    />
                </div>
            )}
 
            {/* Execution Panel */}
            <ExecutionPanel 
-               isOpen={executionPanelOpen} 
-               onClose={() => setExecutionPanelOpen(false)}
-               state={executionState}
                onNextStep={handleNextStep}
                onResume={handleResume}
                onSubmitInput={handleSubmitInput}
@@ -617,84 +356,25 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Right Editor Panel */}
-        {isRightPanelOpen && selectedNodeData && (
+        {ui.isRightPanelOpen && selectedNodeData && (
             <div className="w-[450px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-20 flex-shrink-0 animate-in slide-in-from-right duration-300">
                 <EditorPanel 
                     selectedNode={selectedNodeData}
-                    onClose={() => setIsRightPanelOpen(false)}
-                    onSave={handleSaveNode}
-                    onDelete={handleDeleteNode}
-                    availableCredentials={availableCreds}
-                    onOpenSecretsManager={() => setSecretsManagerOpen(true)}
-                    executionState={executionState}
-                    workflowData={workflowData}
-                    // Pass Single Node execution handlers
                     onRunNode={() => handleRunNode(selectedNodeData.name)}
-                    onPinData={() => handlePinNode(selectedNodeData.name)}
                 />
             </div>
         )}
       </div>
 
-      {/* Centralized Modals Manager */}
-      <ModalsManager
-        configModalOpen={configModalOpen}
-        setConfigModalOpen={setConfigModalOpen}
-        workflowData={workflowData}
-        onConfigSave={handleConfigSave}
-        
-        secretsManagerOpen={secretsManagerOpen}
-        setSecretsManagerOpen={setSecretsManagerOpen}
-        credentials={credentials}
-        setCredentials={setCredentials}
-        user={user}
-        notify={showToast}
-        
-        toolsManagerOpen={toolsManagerOpen}
-        setToolsManagerOpen={setToolsManagerOpen}
-        onToolsSave={handleToolsSave}
-        
-        apiManagerOpen={apiManagerOpen}
-        setApiManagerOpen={setApiManagerOpen}
-        
-        copilotOpen={copilotOpen}
-        setCopilotOpen={setCopilotOpen}
-        currentYaml={yaml.dump(workflowData)}
-        onApplyYaml={updateYaml}
-        
-        helpModalOpen={helpModalOpen}
-        setHelpModalOpen={setHelpModalOpen}
-        
-        conditionModalOpen={conditionModalOpen}
-        setConditionModalOpen={setConditionModalOpen}
-        selectedEdge={selectedEdge}
-        onSaveConnection={handleSaveConnection}
-        onDeleteConnection={handleDeleteConnection}
-        
-        testReportOpen={testReportOpen}
-        setTestReportOpen={setTestReportOpen}
-        testReport={testReport}
-        
-        workflowListOpen={workflowListOpen}
-        setWorkflowListOpen={setWorkflowListOpen}
-        onLoadWorkflow={handleLoadWorkflow}
-        currentWorkflowId={currentWorkflowId}
-        
-        authModalOpen={authModalOpen}
-        setAuthModalOpen={setAuthModalOpen}
-        onLoginSuccess={handleLogin}
-        
-        userProfileOpen={userProfileOpen}
-        setUserProfileOpen={setUserProfileOpen}
-        onLogout={handleLogout}
-      />
+      {/* Centralized Modals Manager - Now pure composition without logic */}
+      <ModalsManager />
 
       {/* Toast Notifications */}
-      {toast && (
+      {ui.toast && (
         <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(null)} 
+            message={ui.toast.message} 
+            type={ui.toast.type} 
+            onClose={() => ui.showToast('', 'info') /* Hacky clear, store handles null */} 
         />
       )}
     </div>

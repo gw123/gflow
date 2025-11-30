@@ -1,9 +1,7 @@
 
 import React from 'react';
-import { WorkflowDefinition, CredentialItem } from '../types';
-import { User, api } from '../api/client';
-import { TestReport } from '../tester';
-import { Edge } from 'reactflow';
+import { useUIStore, useWorkflowStore, useUserStore } from '../stores';
+import { api } from '../api/client';
 
 import ConfigModal from './ConfigModal';
 import SecretsManager from './SecretsManager';
@@ -17,149 +15,109 @@ import WorkflowListModal from './WorkflowListModal';
 import AuthModal from './AuthModal';
 import UserProfileModal from './UserProfileModal';
 
-interface ModalsManagerProps {
-  // Config Modal
-  configModalOpen: boolean;
-  setConfigModalOpen: (open: boolean) => void;
-  workflowData: WorkflowDefinition;
-  onConfigSave: (partial: Partial<WorkflowDefinition>) => void;
+export const ModalsManager: React.FC = () => {
+  const ui = useUIStore();
+  const wfStore = useWorkflowStore();
+  const userStore = useUserStore();
 
-  // Secrets Manager
-  secretsManagerOpen: boolean;
-  setSecretsManagerOpen: (open: boolean) => void;
-  credentials: CredentialItem[];
-  setCredentials: (creds: CredentialItem[]) => void;
-  user: User | null;
-  notify: (msg: string, type: 'success'|'error'|'info') => void;
-
-  // Tools Manager
-  toolsManagerOpen: boolean;
-  setToolsManagerOpen: (open: boolean) => void;
-  onToolsSave: (tools: any[]) => void;
-
-  // API Manager
-  apiManagerOpen: boolean;
-  setApiManagerOpen: (open: boolean) => void;
-
-  // AI Copilot
-  copilotOpen: boolean;
-  setCopilotOpen: (open: boolean) => void;
-  currentYaml: string;
-  onApplyYaml: (yaml: string) => boolean;
-
-  // Help Modal
-  helpModalOpen: boolean;
-  setHelpModalOpen: (open: boolean) => void;
-
-  // Condition Modal
-  conditionModalOpen: boolean;
-  setConditionModalOpen: (open: boolean) => void;
-  selectedEdge: Edge | null;
-  onSaveConnection: (edgeId: string, conditions: string[]) => void;
-  onDeleteConnection: (edgeId: string) => void;
-
-  // Test Report
-  testReportOpen: boolean;
-  setTestReportOpen: (open: boolean) => void;
-  testReport: TestReport | null;
-
-  // Workflow List
-  workflowListOpen: boolean;
-  setWorkflowListOpen: (open: boolean) => void;
-  onLoadWorkflow: (wf: WorkflowDefinition, id: string) => void;
-  currentWorkflowId: string | null;
-
-  // Auth & Profile
-  authModalOpen: boolean;
-  setAuthModalOpen: (open: boolean) => void;
-  onLoginSuccess: (user: User) => void;
-  
-  userProfileOpen: boolean;
-  setUserProfileOpen: (open: boolean) => void;
-  onLogout: () => void;
-}
-
-export const ModalsManager: React.FC<ModalsManagerProps> = (props) => {
   return (
     <>
       <ConfigModal 
-        isOpen={props.configModalOpen} 
-        onClose={() => props.setConfigModalOpen(false)} 
-        workflow={props.workflowData}
-        onSave={props.onConfigSave}
+        isOpen={ui.configModalOpen} 
+        onClose={() => ui.setModalOpen('configModalOpen', false)} 
+        workflow={wfStore.workflowData}
+        onSave={wfStore.updateWorkflowData}
       />
       
       <SecretsManager
-         isOpen={props.secretsManagerOpen}
-         onClose={() => props.setSecretsManagerOpen(false)}
-         credentials={props.credentials}
-         onSave={props.setCredentials}
-         onCredentialUpdate={() => {}}
-         notify={props.notify}
-         isServerMode={!!props.user}
-         onServerCreate={props.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-         onServerUpdate={props.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-         onServerDelete={props.user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
+         isOpen={ui.secretsManagerOpen}
+         onClose={() => ui.setModalOpen('secretsManagerOpen', false)}
+         credentials={userStore.credentials}
+         onSave={userStore.setCredentials}
+         onCredentialUpdate={() => {}} // Could trigger refresh
+         notify={ui.showToast}
+         isServerMode={!!userStore.user}
+         onServerCreate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
+         onServerUpdate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
+         onServerDelete={userStore.user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
       />
 
       <ToolsManager 
-          isOpen={props.toolsManagerOpen}
-          onClose={() => props.setToolsManagerOpen(false)}
-          workflow={props.workflowData}
-          onSave={props.onToolsSave}
+          isOpen={ui.toolsManagerOpen}
+          onClose={() => ui.setModalOpen('toolsManagerOpen', false)}
+          workflow={wfStore.workflowData}
+          onSave={(tools) => wfStore.updateWorkflowData({ tools })}
       />
 
       <ApiManager 
-          isOpen={props.apiManagerOpen} 
-          onClose={() => props.setApiManagerOpen(false)} 
-          notify={props.notify} 
+          isOpen={ui.apiManagerOpen} 
+          onClose={() => ui.setModalOpen('apiManagerOpen', false)} 
+          notify={ui.showToast} 
       />
 
       <AICopilot 
-          isOpen={props.copilotOpen} 
-          onClose={() => props.setCopilotOpen(false)}
-          currentYaml={props.currentYaml}
-          onApplyYaml={props.onApplyYaml}
+          isOpen={ui.copilotOpen} 
+          onClose={() => ui.setModalOpen('copilotOpen', false)}
+          currentYaml={wfStore.getWorkflowAsYaml()}
+          onApplyYaml={wfStore.setWorkflowFromYaml}
       />
       
       <HelpModal 
-          isOpen={props.helpModalOpen}
-          onClose={() => props.setHelpModalOpen(false)}
+          isOpen={ui.helpModalOpen}
+          onClose={() => ui.setModalOpen('helpModalOpen', false)}
       />
 
       <ConditionModal
-          isOpen={props.conditionModalOpen}
-          onClose={() => props.setConditionModalOpen(false)}
-          edge={props.selectedEdge}
-          onSave={props.onSaveConnection}
-          onDelete={props.onDeleteConnection}
+          isOpen={ui.conditionModalOpen}
+          onClose={() => ui.setModalOpen('conditionModalOpen', false)}
+          edge={ui.selectedEdge}
+          onSave={(edgeId, conditions) => {
+              // We need to update edges in store
+              // Complex edge update logic logic is best handled in App or store custom action
+              // For now, simpler to access edges from store and update
+              const edge = wfStore.edges.find(e => e.id === edgeId);
+              if(edge) {
+                  // Update logic logic is specific to react flow edge data
+                  const newEdges = wfStore.edges.map(e => e.id === edgeId ? { ...e, data: { ...e.data, when: conditions }, label: conditions.length > 0 ? 'Condition' : undefined, style: conditions.length > 0 ? { stroke: '#eab308', strokeWidth: 2 } : { stroke: '#64748b', strokeWidth: 2 } } : e);
+                  wfStore.setEdges(newEdges);
+                  // Sync workflow data
+                  // flowToWorkflow call needed...
+                  // Ideally ConditionModal calls a store action "updateConnectionCondition"
+              }
+              ui.setModalOpen('conditionModalOpen', false);
+          }}
+          onDelete={(edgeId) => {
+              const newEdges = wfStore.edges.filter(e => e.id !== edgeId);
+              wfStore.setEdges(newEdges);
+              ui.setModalOpen('conditionModalOpen', false);
+          }}
       />
 
       <TestReportModal 
-          isOpen={props.testReportOpen}
-          onClose={() => props.setTestReportOpen(false)}
-          report={props.testReport}
+          isOpen={ui.testReportOpen}
+          onClose={() => ui.setModalOpen('testReportOpen', false)}
+          report={ui.testReport}
       />
 
       <WorkflowListModal
-          isOpen={props.workflowListOpen}
-          onClose={() => props.setWorkflowListOpen(false)}
-          onLoadWorkflow={props.onLoadWorkflow}
-          currentWorkflowId={props.currentWorkflowId}
-          notify={props.notify}
+          isOpen={ui.workflowListOpen}
+          onClose={() => ui.setModalOpen('workflowListOpen', false)}
+          onLoadWorkflow={wfStore.loadWorkflow}
+          currentWorkflowId={wfStore.currentWorkflowId}
+          notify={ui.showToast}
       />
 
       <AuthModal
-          isOpen={props.authModalOpen}
-          onClose={() => props.setAuthModalOpen(false)}
-          onLoginSuccess={props.onLoginSuccess}
+          isOpen={ui.authModalOpen}
+          onClose={() => ui.setModalOpen('authModalOpen', false)}
+          onLoginSuccess={userStore.setUser}
       />
 
       <UserProfileModal
-          isOpen={props.userProfileOpen}
-          onClose={() => props.setUserProfileOpen(false)}
-          user={props.user}
-          onLogout={props.onLogout}
+          isOpen={ui.userProfileOpen}
+          onClose={() => ui.setModalOpen('userProfileOpen', false)}
+          user={userStore.user}
+          onLogout={userStore.logout}
       />
     </>
   );

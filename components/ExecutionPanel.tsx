@@ -1,24 +1,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User, Image as ImageIcon, Download } from 'lucide-react';
-import { WorkflowExecutionState, PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../types';
+import { PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../types';
+import { useExecutionStore, useUIStore } from '../stores';
 
 interface ExecutionPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  state: WorkflowExecutionState;
   onNextStep?: () => void;
   onResume?: () => void;
   onSubmitInput?: (data: any) => void;
 }
 
-const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state, onNextStep, onResume, onSubmitInput }) => {
+const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ onNextStep, onResume, onSubmitInput }) => {
+  const { executionState } = useExecutionStore();
+  const { executionPanelOpen, setPanelOpen } = useUIStore();
+  
   const [selectedNodeName, setSelectedNodeName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'output' | 'input' | 'logs' | 'error'>('output');
   
   // Input Form State
   const [inputFormData, setInputFormData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const isOpen = executionPanelOpen;
+  const state = executionState;
 
   // Reset selection when panel opens/closes or state resets
   useEffect(() => {
@@ -111,7 +115,6 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
   const renderJson = (data: any) => {
       if (data === undefined || data === null) return <span className="text-slate-500 italic">Empty</span>;
       
-      // Helper to truncate long strings (like Base64 images) in JSON view
       const replacer = (key: string, value: any) => {
           if (typeof value === 'string' && value.length > 200) {
               return value.substring(0, 50) + `... [${value.length} chars truncated]`;
@@ -142,7 +145,6 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
                   
                   <form onSubmit={handleInputSubmit} className="space-y-4">
                       {config.fields.map(field => {
-                          // Parse custom style if present
                           const inputStyle = field.style || {};
 
                           return (
@@ -263,7 +265,7 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ isOpen, onClose, state,
                 )}
             </div>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-500">
+        <button onClick={() => setPanelOpen('executionPanelOpen', false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-500">
             <X size={18} />
         </button>
       </div>

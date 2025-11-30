@@ -16,7 +16,8 @@
     "js-yaml": "^4.1.1",
     "dagre": "^0.8.5",
     "markdown-to-jsx": "^7.1.9",
-    "@google/genai": "^1.30.0"
+    "@google/genai": "^1.30.0",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

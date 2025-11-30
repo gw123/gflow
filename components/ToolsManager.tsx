@@ -35,7 +35,7 @@ const ToolsManager: React.FC<ToolsManagerProps> = ({ isOpen, onClose, workflow, 
       setEditingIndex(index);
       setFormName(tool.name);
       setFormDesc(tool.description);
-      setFormType(tool.type);
+      setFormType(tool.type as 'js' | 'http');
       setFormContent(tool.content);
       setFormParams(tool.parameters || '{}');
   };

@@ -1,4 +1,5 @@
 
+import { ComponentType } from 'react';
 
 export interface StorageConfig {
   name: string;
@@ -165,4 +166,21 @@ export interface NodeRunnerContext {
 
 export interface NodeRunner {
   run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>>;
+}
+
+// --- Registry Types (New) ---
+
+export interface NodeVisuals {
+  icon: ComponentType<any>;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+export interface NodePlugin {
+  type: string;
+  category: string; // 'trigger' | 'action' | 'ai' | 'control' | 'system' | 'data' | 'human' | 'plugin'
+  template: NodeDefinition;
+  runner: NodeRunner;
+  visuals: NodeVisuals;
 }
