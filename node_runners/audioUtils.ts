@@ -27,7 +27,7 @@ export async function decodeAudioData(
   try {
     // Try decoding as standard container format (wav, mp3, ogg)
     // We clone the buffer because decodeAudioData detaches it
-    return await ctx.decodeAudioData(data.buffer.slice(0));
+    return await ctx.decodeAudioData(data.buffer.slice(0) as ArrayBuffer);
   } catch (e) {
     // Fallback: Assume raw 16-bit PCM (Little Endian)
     // This is typically what our MediaCapture node produces via pcmToGeminiBlob
@@ -90,5 +90,5 @@ export function downsampleTo16000(inputData: Float32Array, inputSampleRate: numb
 export function pcmToGeminiBlob(pcmData: Float32Array): string {
     const pcm16 = floatTo16BitPCM(pcmData);
     const bytes = new Uint8Array(pcm16.buffer);
-    return arrayBufferToBase64(bytes.buffer);
+    return arrayBufferToBase64(bytes.buffer as ArrayBuffer);
 }

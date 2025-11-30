@@ -9,7 +9,7 @@ import ReactFlow, {
   Node,
   Connection,
   addEdge,
-  Panel,
+  // Panel, // Removed to avoid JSX type issues
   ReactFlowProvider,
   useReactFlow,
   MarkerType,
@@ -303,14 +303,16 @@ const AppContent: React.FC = () => {
               fitView
               attributionPosition="bottom-right"
               snapToGrid
-              snapGrid={[15, 15]}
               defaultEdgeOptions={{ type: 'default', animated: true }}
            >
               <Background gap={15} size={1} color="#cbd5e1" className="dark:opacity-20" />
               <Controls className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md" />
-              <Panel position="bottom-left" className="bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400">
+              <div 
+                style={{ position: 'absolute', left: 15, bottom: 15, zIndex: 4 }}
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400"
+              >
                  {wfStore.nodes.length} nodes • {wfStore.edges.length} connections
-              </Panel>
+              </div>
               <NodeInfoTooltip />
            </ReactFlow>
            
