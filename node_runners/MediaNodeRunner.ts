@@ -68,6 +68,7 @@ export class MediaNodeRunner implements NodeRunner {
             output: {
                 mode,
                 duration,
+                fps,
                 audioData: audioChunks, // Array of base64 chunks
                 videoFrames: videoFrames, // Array of base64 images
                 timestamp: new Date().toISOString()

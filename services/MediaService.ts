@@ -256,56 +256,136 @@ export class VideoService {
   async playVideoFrames(frames: string[], fps: number = 2) {
       if (!frames || frames.length === 0) return;
 
-      // Create overlay
+      // Better Overlay UI
       const overlay = document.createElement('div');
-      overlay.style.position = 'fixed';
-      overlay.style.bottom = '20px';
-      overlay.style.right = '20px';
-      overlay.style.width = '320px';
-      overlay.style.height = '240px';
-      overlay.style.zIndex = '9999';
-      overlay.style.backgroundColor = '#000';
-      overlay.style.borderRadius = '8px';
-      overlay.style.overflow = 'hidden';
-      overlay.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-      overlay.style.border = '2px solid #3b82f6';
+      Object.assign(overlay.style, {
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          width: '100%',
+          height: '100%',
+          zIndex: '9999',
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(5px)',
+          animation: 'fadeIn 0.2s ease-out'
+      });
       
+      const container = document.createElement('div');
+      Object.assign(container.style, {
+          position: 'relative',
+          padding: '12px',
+          backgroundColor: '#1e293b',
+          borderRadius: '12px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          border: '1px solid #334155',
+          maxWidth: '90vw',
+          maxHeight: '90vh'
+      });
+
       const img = document.createElement('img');
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      overlay.appendChild(img);
+      Object.assign(img.style, {
+          maxWidth: '100%',
+          maxHeight: '70vh',
+          borderRadius: '8px',
+          display: 'block',
+          objectFit: 'contain'
+      });
+      container.appendChild(img);
       
+      // Progress Bar
+      const progressContainer = document.createElement('div');
+      Object.assign(progressContainer.style, {
+          width: '100%',
+          height: '6px',
+          backgroundColor: '#334155',
+          marginTop: '15px',
+          borderRadius: '3px',
+          overflow: 'hidden'
+      });
+      const progressBar = document.createElement('div');
+      Object.assign(progressBar.style, {
+          width: '0%',
+          height: '100%',
+          backgroundColor: '#3b82f6',
+          transition: 'width 0.1s linear'
+      });
+      progressContainer.appendChild(progressBar);
+      container.appendChild(progressContainer);
+
+      // Info text
+      const infoText = document.createElement('div');
+      infoText.innerText = `Loading Video...`;
+      Object.assign(infoText.style, {
+          color: '#94a3b8',
+          fontSize: '12px',
+          marginTop: '8px',
+          textAlign: 'center',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          fontWeight: '500'
+      });
+      container.appendChild(infoText);
+
       // Close button
       const closeBtn = document.createElement('button');
-      closeBtn.innerText = '×';
-      closeBtn.style.position = 'absolute';
-      closeBtn.style.top = '5px';
-      closeBtn.style.right = '5px';
-      closeBtn.style.background = 'rgba(0,0,0,0.5)';
-      closeBtn.style.color = 'white';
-      closeBtn.style.border = 'none';
-      closeBtn.style.borderRadius = '50%';
-      closeBtn.style.width = '24px';
-      closeBtn.style.height = '24px';
-      closeBtn.style.cursor = 'pointer';
-      closeBtn.onclick = () => document.body.removeChild(overlay);
-      overlay.appendChild(closeBtn);
+      closeBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      `;
+      Object.assign(closeBtn.style, {
+          position: 'absolute',
+          top: '-15px',
+          right: '-15px',
+          background: '#ef4444',
+          color: 'white',
+          border: '4px solid #0f172a',
+          borderRadius: '50%',
+          width: '36px',
+          height: '36px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      });
+      
+      let stopped = false;
+      closeBtn.onclick = () => {
+          stopped = true;
+          if (document.body.contains(overlay)) {
+              document.body.removeChild(overlay);
+          }
+      };
+      container.appendChild(closeBtn);
 
+      overlay.appendChild(container);
       document.body.appendChild(overlay);
 
       const interval = 1000 / fps;
       
       for (let i = 0; i < frames.length; i++) {
+          if (stopped) break;
           img.src = `data:image/jpeg;base64,${frames[i]}`;
+          const progress = ((i + 1) / frames.length) * 100;
+          progressBar.style.width = `${progress}%`;
+          
+          const currentTime = Math.round((i+1)/fps * 10) / 10;
+          const totalTime = Math.round(frames.length/fps * 10) / 10;
+          infoText.innerText = `Frame ${i + 1} / ${frames.length} • ${currentTime}s / ${totalTime}s`;
+          
           await new Promise(resolve => setTimeout(resolve, interval));
       }
 
-      // Auto remove after play + delay
-      setTimeout(() => {
-          if (document.body.contains(overlay)) {
-              document.body.removeChild(overlay);
-          }
-      }, 1000);
+      // Auto close after a short delay if not stopped
+      if (!stopped) {
+          infoText.innerText = "Playback Finished";
+          setTimeout(() => {
+              if (document.body.contains(overlay)) {
+                  document.body.removeChild(overlay);
+              }
+          }, 1500);
+      }
   }
 }

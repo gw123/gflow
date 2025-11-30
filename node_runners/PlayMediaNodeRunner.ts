@@ -9,7 +9,7 @@ export class PlayMediaNodeRunner implements NodeRunner {
     const params = interpolate(node.parameters, context);
     
     const mediaType = params.mediaType || 'audio'; // audio, video
-    const data = params.data; // Can be base64 string, array of base64 strings, or URL
+    let data = params.data; // Can be base64 string, array of base64 strings, URL, or MediaCapture object
     
     // Environment Check
     if (typeof window === 'undefined') {
@@ -25,6 +25,11 @@ export class PlayMediaNodeRunner implements NodeRunner {
     try {
         if (mediaType === 'audio') {
             const audioService = new AudioService();
+            // Handle if user passed the whole MediaCapture object
+            if (!Array.isArray(data) && typeof data === 'object' && data.audioData) {
+                data = data.audioData;
+            }
+
             const chunks = Array.isArray(data) ? data : [data];
             
             for (let i = 0; i < chunks.length; i++) {
@@ -55,11 +60,21 @@ export class PlayMediaNodeRunner implements NodeRunner {
             await audioService.cleanup();
         } else if (mediaType === 'video') {
             const videoService = new VideoService();
-            if (Array.isArray(data)) {
+            
+            let frames = data;
+            let fps = Number(params.fps) || 2;
+
+            // Smart detection: If data is an object from MediaCapture, extract frames and fps
+            if (!Array.isArray(data) && typeof data === 'object' && data.videoFrames) {
+                frames = data.videoFrames;
+                if (data.fps) fps = data.fps;
+                log(`Detected MediaCapture output. Using extracted FPS: ${fps}`);
+            }
+
+            if (Array.isArray(frames)) {
                 // Assume Frames
-                const fps = Number(params.fps) || 2;
-                log(`Replaying ${data.length} video frames at ${fps} fps...`);
-                await videoService.playVideoFrames(data, fps);
+                log(`Replaying ${frames.length} video frames at ${fps} fps...`);
+                await videoService.playVideoFrames(frames, fps);
             } else if (typeof data === 'string' && data.startsWith('http')) {
                 // URL Video
                 log(`Opening video URL in new tab (Auto-play in workflow not fully supported for URLs yet): ${data}`);
