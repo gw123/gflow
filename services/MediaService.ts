@@ -253,7 +253,7 @@ export class VideoService {
     this.frameRate = fps;
   }
 
-  async playVideoFrames(frames: string[], fps: number = 2) {
+  async playVideoFrames(frames: string[], fps: number = 2, audioData?: string[]) {
       if (!frames || frames.length === 0) return;
 
       // Better Overlay UI
@@ -318,7 +318,7 @@ export class VideoService {
 
       // Info text
       const infoText = document.createElement('div');
-      infoText.innerText = `Loading Video...`;
+      infoText.innerText = `Loading Video${audioData ? ' & Audio' : ''}...`;
       Object.assign(infoText.style, {
           color: '#94a3b8',
           fontSize: '12px',
@@ -352,8 +352,11 @@ export class VideoService {
       });
       
       let stopped = false;
+      let audioService: AudioService | null = null;
+
       closeBtn.onclick = () => {
           stopped = true;
+          if (audioService) audioService.cleanup();
           if (document.body.contains(overlay)) {
               document.body.removeChild(overlay);
           }
@@ -362,6 +365,22 @@ export class VideoService {
 
       overlay.appendChild(container);
       document.body.appendChild(overlay);
+
+      // --- Start Audio Setup ---
+      if (audioData && audioData.length > 0) {
+          try {
+              audioService = new AudioService();
+              await audioService.initialize();
+              // Queue all audio chunks to play sequentially on the WebAudio timeline
+              // We pass 16000 because capture downsamples to 16k
+              for (const chunk of audioData) {
+                  await audioService.playAudioBuffer(chunk, 16000); 
+              }
+          } catch(e) {
+              console.error("Failed to start audio playback", e);
+          }
+      }
+      // --- End Audio Setup ---
 
       const interval = 1000 / fps;
       
@@ -378,9 +397,15 @@ export class VideoService {
           await new Promise(resolve => setTimeout(resolve, interval));
       }
 
-      // Auto close after a short delay if not stopped
+      // Auto close/cleanup
       if (!stopped) {
           infoText.innerText = "Playback Finished";
+          if (audioService) {
+              // Optionally wait a bit? Audio timeline might be longer than video frame count estimate
+              // But for now we close resources
+              setTimeout(() => audioService?.cleanup(), 500); 
+          }
+          
           setTimeout(() => {
               if (document.body.contains(overlay)) {
                   document.body.removeChild(overlay);

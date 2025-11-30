@@ -305,7 +305,7 @@ const AppContent: React.FC = () => {
               snapToGrid
               defaultEdgeOptions={{ type: 'default', animated: true }}
            >
-              <Background {...({ gap: 15, size: 1, color: "#cbd5e1", className: "dark:opacity-20" } as any)} />
+              <Background gap={15} size={1} color="#cbd5e1" className="dark:opacity-20" />
               <Controls className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md" />
               <div 
                 style={{ position: 'absolute', left: 15, bottom: 15, zIndex: 4 }}

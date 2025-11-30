@@ -23,22 +23,38 @@ export class PlayMediaNodeRunner implements NodeRunner {
     log(`Playing ${mediaType}...`);
 
     try {
-        if (mediaType === 'audio') {
-            const audioService = new AudioService();
-            // Handle if user passed the whole MediaCapture object
-            if (!Array.isArray(data) && typeof data === 'object' && data.audioData) {
-                data = data.audioData;
-            }
+        // Smart detection: If data is an object from MediaCapture
+        let videoFrames: string[] | null = null;
+        let audioData: string[] | null = null;
+        let fps = Number(params.fps) || 2;
 
-            const chunks = Array.isArray(data) ? data : [data];
+        if (!Array.isArray(data) && typeof data === 'object') {
+            if (data.videoFrames) videoFrames = data.videoFrames;
+            if (data.audioData) audioData = data.audioData;
+            if (data.fps) fps = data.fps;
+        } else if (mediaType === 'video' && Array.isArray(data)) {
+            videoFrames = data;
+        } else if (mediaType === 'audio') {
+            audioData = Array.isArray(data) ? data : [data];
+        }
+
+        // Logic Branching
+        if (videoFrames && videoFrames.length > 0) {
+            // Video Mode (with optional Audio)
+            const videoService = new VideoService();
+            log(`Replaying ${videoFrames.length} video frames at ${fps} fps${audioData ? ' with audio' : ''}...`);
             
-            for (let i = 0; i < chunks.length; i++) {
-                const chunk = chunks[i];
+            // Pass audio data to video player for synchronized start
+            await videoService.playVideoFrames(videoFrames, fps, audioData || undefined);
+
+        } else if (audioData && audioData.length > 0) {
+            // Audio Only Mode
+            const audioService = new AudioService();
+            
+            for (let i = 0; i < audioData.length; i++) {
+                const chunk = audioData[i];
                 if (typeof chunk !== 'string') continue;
                 
-                // Check if it's a URL or Base64
-                // AudioService.playAudioBuffer expects Base64
-                // If URL, use HTML5 Audio
                 if (chunk.startsWith('http')) {
                     log(`Playing audio from URL: ${chunk}`);
                     await new Promise((resolve, reject) => {
@@ -48,47 +64,27 @@ export class PlayMediaNodeRunner implements NodeRunner {
                         audio.play().catch(reject);
                     });
                 } else {
-                    // Assume Base64 PCM/WAV
-                    // Pass 16000 explicitly as our Capture node downsamples to 16k
+                    // Assume Base64 PCM/WAV (16k from capture)
                     const duration = await audioService.playAudioBuffer(chunk, 16000);
                     log(`Playing audio chunk (${duration.toFixed(2)}s)...`);
-                    
-                    // CRITICAL: Wait for playback to complete before moving on or cleaning up
                     await new Promise(resolve => setTimeout(resolve, duration * 1000));
                 }
             }
             await audioService.cleanup();
-        } else if (mediaType === 'video') {
-            const videoService = new VideoService();
-            
-            let frames = data;
-            let fps = Number(params.fps) || 2;
 
-            // Smart detection: If data is an object from MediaCapture, extract frames and fps
-            if (!Array.isArray(data) && typeof data === 'object' && data.videoFrames) {
-                frames = data.videoFrames;
-                if (data.fps) fps = data.fps;
-                log(`Detected MediaCapture output. Using extracted FPS: ${fps}`);
-            }
-
-            if (Array.isArray(frames)) {
-                // Assume Frames
-                log(`Replaying ${frames.length} video frames at ${fps} fps...`);
-                await videoService.playVideoFrames(frames, fps);
-            } else if (typeof data === 'string' && data.startsWith('http')) {
-                // URL Video
-                log(`Opening video URL in new tab (Auto-play in workflow not fully supported for URLs yet): ${data}`);
-                window.open(data, '_blank');
-            } else {
-                log("Unsupported video data format. Provide an array of base64 frames or a URL.");
-            }
+        } else if (typeof data === 'string' && data.startsWith('http')) {
+            // URL Fallback
+            log(`Opening media URL: ${data}`);
+            window.open(data, '_blank');
+        } else {
+            log("Unsupported media format or empty data.");
         }
 
         return {
             status: 'success',
             inputs: params,
             output: { played: true },
-            logs: [`Finished playing ${mediaType}`]
+            logs: [`Finished playing media`]
         };
 
     } catch (e: any) {
