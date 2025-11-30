@@ -89,10 +89,27 @@ export const TEMPLATE_LIBRARY: Record<string, TemplateCategory> = {
     description: "Artificial Intelligence nodes",
     templates: [
       {
+        name: "LangChain Agent",
+        type: "langchain_agent",
+        desc: "AI Agent with tool support and Langfuse observability.",
+        parameters: { 
+            goal: "Summarize the last email and check calendar.", 
+            tools: ["search", "calculator", "calendar"], 
+            temperature: 0.2
+        },
+        credentials: { openai_api_key: "", langfuse_keys: {} },
+        parameterDefinitions: [
+            { name: "goal", type: "string", defaultValue: "Solve a task", description: "The primary objective for the agent" },
+            { name: "tools", type: "object", defaultValue: ["search"], description: "Array of tool names enabled for this agent" },
+            { name: "temperature", type: "number", defaultValue: 0.2, description: "Model temperature" },
+            { name: "maxSteps", type: "number", defaultValue: 5, description: "Maximum reasoning steps" }
+        ]
+      },
+      {
         name: "ChatGPT",
         type: "chatgpt",
         parameters: { model: "gpt-3.5-turbo", prompt: "Hello!" },
-        credentials: { openai_api_key: "" },
+        credentials: { openai_api_key: "", langfuse_keys: {} },
         parameterDefinitions: [
             { name: "model", type: "string", options: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"], defaultValue: "gpt-3.5-turbo" },
             { name: "prompt", type: "string", defaultValue: "Hello!" }

@@ -12,22 +12,13 @@ import ReactFlow, {
   Panel,
   ReactFlowProvider,
   useReactFlow,
-  ConnectionLineType,
-  MarkerType,
-  NodeChange,
-  EdgeChange,
-  applyNodeChanges,
-  applyEdgeChanges
+  MarkerType
 } from 'reactflow';
 import yaml from 'js-yaml';
-import { 
-  Settings, FileJson, Braces, Box, LayoutDashboard, Database, 
-  Upload, Download, Key, Sparkles, Play, HelpCircle, 
-  Beaker, Save, FolderOpen, UserCircle, LogIn, StepForward, LogOut, Cloud, Laptop, Globe
-} from 'lucide-react';
+import { FileJson, HelpCircle, Beaker } from 'lucide-react';
 
 import { WorkflowDefinition, NodeDefinition, CredentialItem, WorkflowExecutionState } from './types';
-import { workflowToFlow, flowToWorkflow, getLayoutedElements, NODE_WIDTH, NODE_HEIGHT } from './utils';
+import { workflowToFlow, flowToWorkflow, getLayoutedElements } from './utils';
 import { SAMPLE_YAML } from './constants';
 import { NODE_TEMPLATES } from './nodes';
 import { WorkflowRunner } from './runner';
@@ -35,22 +26,15 @@ import { WorkflowTester, TestReport } from './tester';
 import { api, User } from './api/client';
 
 import EditorPanel from './components/EditorPanel';
-import ConfigModal from './components/ConfigModal';
 import YamlView from './components/YamlView';
 import Sidebar from './components/Sidebar';
-import SecretsManager from './components/SecretsManager';
 import Toast from './components/Toast';
-import AICopilot from './components/AICopilot';
 import NodeInfoTooltip from './components/NodeInfoTooltip';
 import ExecutionPanel from './components/ExecutionPanel';
-import HelpModal from './components/HelpModal';
-import ConditionModal from './components/ConditionModal';
 import CustomNode from './components/CustomNode';
-import TestReportModal from './components/TestReportModal';
-import WorkflowListModal from './components/WorkflowListModal';
-import AuthModal from './components/AuthModal';
-import UserProfileModal from './components/UserProfileModal';
-import ApiManager from './components/ApiManager';
+
+import { HeaderToolbar } from './components/HeaderToolbar';
+import { ModalsManager } from './components/ModalsManager';
 
 const AppContent: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -63,9 +47,11 @@ const AppContent: React.FC = () => {
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [showYamlView, setShowYamlView] = useState(false);
+  
+  // Modals State
   const [configModalOpen, setConfigModalOpen] = useState(false);
-  const [configTab, setConfigTab] = useState<'global'|'storages'|'codes'|'pinData'>('global');
   const [secretsManagerOpen, setSecretsManagerOpen] = useState(false);
+  const [toolsManagerOpen, setToolsManagerOpen] = useState(false);
   const [workflowListOpen, setWorkflowListOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
@@ -138,7 +124,6 @@ const AppContent: React.FC = () => {
     setSelectedNodeId(node.id);
     setSelectedEdge(null);
     setIsRightPanelOpen(true);
-    // Execute single node handling: handled by Editor Panel actions
   }, []);
   
   const handleRunNode = async (nodeName: string) => {
@@ -149,10 +134,7 @@ const AppContent: React.FC = () => {
              // We don't update full execution UI for single node runs usually,
              // but here we can partial update if needed.
          });
-         // This is a bit complex without refactoring Runner to be stateless.
-         // For now, let's assume global runner is fine or create on fly.
          await runner.executeNode(nodeName); 
-         // Update UI logs?
      } else {
          await runnerRef.current.executeNode(nodeName);
      }
@@ -161,7 +143,6 @@ const AppContent: React.FC = () => {
   const handlePinNode = (nodeName: string) => {
       setWorkflowData(prev => {
          const newPin = { ...(prev.pinData || {}) };
-         // Toggle: if exists remove, else add from current execution if avail
          if (newPin[nodeName]) {
              delete newPin[nodeName];
              showToast(`Unpinned data for ${nodeName}`, "info");
@@ -397,8 +378,6 @@ const AppContent: React.FC = () => {
 
     } else {
         // --- Browser Side Execution ---
-        
-        // Preserve previous results to allow partial re-runs or single node runs to build up
         const previousResults = executionState.nodeResults;
         
         const runner = new WorkflowRunner(currentData, (state) => {
@@ -475,6 +454,10 @@ const AppContent: React.FC = () => {
       setWorkflowData(prev => ({ ...prev, ...partial }));
   };
 
+  const handleToolsSave = (tools: any[]) => {
+      setWorkflowData(prev => ({ ...prev, tools }));
+  };
+
   // --- Auth & Server Operations ---
 
   const handleLogin = (u: User) => {
@@ -538,134 +521,23 @@ const AppContent: React.FC = () => {
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       
       {/* Header Toolbar */}
-      <header className="h-14 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm z-20">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-500 font-bold text-lg tracking-tight">
-             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <LayoutDashboard size={20} />
-             </div>
-             G-Flow
-          </div>
-          
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2" />
-          
-          <div className="flex items-center gap-1">
-             <button 
-                onClick={handleLayout}
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                title="Auto Layout"
-             >
-                <Box size={18} />
-             </button>
-             <button 
-                onClick={() => setWorkflowListOpen(true)}
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                title="Open Workflow"
-             >
-                <FolderOpen size={18} />
-             </button>
-             <button 
-                onClick={handleSaveWorkflow}
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                title={user ? "Save to Cloud" : "Login to Save"}
-             >
-                {user ? <Save size={18} /> : <Upload size={18} />}
-             </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-           {/* Run Mode Switch */}
-           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700 mr-2">
-               <button 
-                  onClick={() => setRunMode('local')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${runMode === 'local' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}
-               >
-                   <Laptop size={12} /> Local
-               </button>
-               <button 
-                  onClick={() => setRunMode('cloud')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${runMode === 'cloud' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}
-               >
-                   <Cloud size={12} /> Cloud
-               </button>
-           </div>
-
-           <button 
-              onClick={() => handleRunWorkflow('run')}
-              disabled={executionState.isRunning && !executionState.isPaused && !executionState.waitingForInput}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-xs transition-all shadow-sm ${
-                  executionState.isRunning && !executionState.waitingForInput
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-              }`}
-           >
-              <Play size={14} className={executionState.isRunning ? "animate-pulse" : "fill-current"} /> 
-              {executionState.isRunning ? 'Running...' : `Run (${runMode})`}
-           </button>
-
-           <button 
-              onClick={() => handleRunWorkflow('step')}
-              disabled={executionState.isRunning || runMode === 'cloud'}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-xs transition-all shadow-sm border ${
-                  (executionState.isRunning || runMode === 'cloud')
-                  ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-900 dark:border-slate-800' 
-                  : 'bg-white border-blue-200 text-blue-600 hover:bg-blue-50 dark:bg-slate-800 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-slate-700'
-              }`}
-              title="Step Run (Debug Local)"
-           >
-              <StepForward size={14} /> 
-           </button>
-
-           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2" />
-
-           <button 
-                onClick={() => setApiManagerOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
-                title="API Manager"
-           >
-                <Globe size={14} /> APIs
-           </button>
-
-           <button 
-                onClick={() => setSecretsManagerOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
-           >
-                <Key size={14} /> Secrets
-           </button>
-
-           <button 
-                onClick={() => setConfigModalOpen(true)}
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                title="Global Config"
-           >
-                <Settings size={18} />
-           </button>
-
-           <button 
-                onClick={() => setCopilotOpen(true)}
-                className="flex items-center gap-1.5 pl-2 pr-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-full shadow-md transition-all text-xs font-bold"
-           >
-                <Sparkles size={14} /> Copilot
-           </button>
-
-           {user ? (
-               <button onClick={() => setUserProfileOpen(true)} className="ml-2">
-                   <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-xs border border-blue-200 dark:border-blue-800">
-                       {user.username.substring(0, 2).toUpperCase()}
-                   </div>
-               </button>
-           ) : (
-               <button 
-                  onClick={() => setAuthModalOpen(true)}
-                  className="ml-2 p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
-                  title="Login"
-               >
-                   <UserCircle size={22} />
-               </button>
-           )}
-        </div>
-      </header>
+      <HeaderToolbar
+        user={user}
+        runMode={runMode}
+        setRunMode={setRunMode}
+        executionState={executionState}
+        onLayout={handleLayout}
+        onOpenWorkflowList={() => setWorkflowListOpen(true)}
+        onSaveWorkflow={handleSaveWorkflow}
+        onRunWorkflow={handleRunWorkflow}
+        onOpenApiManager={() => setApiManagerOpen(true)}
+        onOpenToolsManager={() => setToolsManagerOpen(true)}
+        onOpenSecretsManager={() => setSecretsManagerOpen(true)}
+        onOpenConfig={() => setConfigModalOpen(true)}
+        onOpenCopilot={() => setCopilotOpen(true)}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenProfile={() => setUserProfileOpen(true)}
+      />
 
       {/* Main Workspace */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -764,78 +636,57 @@ const AppContent: React.FC = () => {
         )}
       </div>
 
-      {/* Modals */}
-      <ConfigModal 
-        isOpen={configModalOpen} 
-        onClose={() => setConfigModalOpen(false)} 
-        workflow={workflowData}
-        onSave={handleConfigSave}
-      />
-      
-      <SecretsManager
-         isOpen={secretsManagerOpen}
-         onClose={() => setSecretsManagerOpen(false)}
-         credentials={credentials}
-         onSave={setCredentials}
-         onCredentialUpdate={() => {}}
-         notify={showToast}
-         isServerMode={!!user}
-         onServerCreate={user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-         onServerUpdate={user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-         onServerDelete={user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
-      />
-
-      <ApiManager 
-          isOpen={apiManagerOpen} 
-          onClose={() => setApiManagerOpen(false)} 
-          notify={showToast} 
-      />
-
-      <AICopilot 
-          isOpen={copilotOpen} 
-          onClose={() => setCopilotOpen(false)}
-          currentYaml={yaml.dump(workflowData)}
-          onApplyYaml={updateYaml}
-      />
-      
-      <HelpModal 
-          isOpen={helpModalOpen}
-          onClose={() => setHelpModalOpen(false)}
-      />
-
-      <ConditionModal
-          isOpen={conditionModalOpen}
-          onClose={() => setConditionModalOpen(false)}
-          edge={selectedEdge}
-          onSave={handleSaveConnection}
-          onDelete={handleDeleteConnection}
-      />
-
-      <TestReportModal 
-          isOpen={testReportOpen}
-          onClose={() => setTestReportOpen(false)}
-          report={testReport}
-      />
-
-      <WorkflowListModal
-          isOpen={workflowListOpen}
-          onClose={() => setWorkflowListOpen(false)}
-          onLoadWorkflow={handleLoadWorkflow}
-          currentWorkflowId={currentWorkflowId}
-          notify={showToast}
-      />
-
-      <AuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          onLoginSuccess={handleLogin}
-      />
-
-      <UserProfileModal
-          isOpen={userProfileOpen}
-          onClose={() => setUserProfileOpen(false)}
-          user={user}
-          onLogout={handleLogout}
+      {/* Centralized Modals Manager */}
+      <ModalsManager
+        configModalOpen={configModalOpen}
+        setConfigModalOpen={setConfigModalOpen}
+        workflowData={workflowData}
+        onConfigSave={handleConfigSave}
+        
+        secretsManagerOpen={secretsManagerOpen}
+        setSecretsManagerOpen={setSecretsManagerOpen}
+        credentials={credentials}
+        setCredentials={setCredentials}
+        user={user}
+        notify={showToast}
+        
+        toolsManagerOpen={toolsManagerOpen}
+        setToolsManagerOpen={setToolsManagerOpen}
+        onToolsSave={handleToolsSave}
+        
+        apiManagerOpen={apiManagerOpen}
+        setApiManagerOpen={setApiManagerOpen}
+        
+        copilotOpen={copilotOpen}
+        setCopilotOpen={setCopilotOpen}
+        currentYaml={yaml.dump(workflowData)}
+        onApplyYaml={updateYaml}
+        
+        helpModalOpen={helpModalOpen}
+        setHelpModalOpen={setHelpModalOpen}
+        
+        conditionModalOpen={conditionModalOpen}
+        setConditionModalOpen={setConditionModalOpen}
+        selectedEdge={selectedEdge}
+        onSaveConnection={handleSaveConnection}
+        onDeleteConnection={handleDeleteConnection}
+        
+        testReportOpen={testReportOpen}
+        setTestReportOpen={setTestReportOpen}
+        testReport={testReport}
+        
+        workflowListOpen={workflowListOpen}
+        setWorkflowListOpen={setWorkflowListOpen}
+        onLoadWorkflow={handleLoadWorkflow}
+        currentWorkflowId={currentWorkflowId}
+        
+        authModalOpen={authModalOpen}
+        setAuthModalOpen={setAuthModalOpen}
+        onLoginSuccess={handleLogin}
+        
+        userProfileOpen={userProfileOpen}
+        setUserProfileOpen={setUserProfileOpen}
+        onLogout={handleLogout}
       />
 
       {/* Toast Notifications */}

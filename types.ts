@@ -17,6 +17,14 @@ export interface CodeSnippet {
   code: string;
 }
 
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  type: string;
+  content: string;
+  parameters?: string;
+}
+
 export interface NodeParameter {
   [key: string]: any;
 }
@@ -87,6 +95,7 @@ export interface WorkflowDefinition {
   storages?: StorageConfig[];
   codes?: CodeSnippet[];
   credentials?: CredentialItem[];
+  tools?: ToolDefinition[];
   nodes: NodeDefinition[];
   global?: Record<string, any>;
   connections?: WorkflowConnections;

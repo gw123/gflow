@@ -8,6 +8,20 @@ export interface CredentialDefinition {
 
 export const CREDENTIAL_DEFINITIONS: CredentialDefinition[] = [
   {
+    name: "langfuse",
+    type: "observability",
+    value: {
+      publicKey: "pk-lf-1ce4f91e-0d51-4526-a137-f878463dd564",
+      secretKey: "sk-lf-6e26b63b-96ea-4793-974c-e83fe6c73be8",
+      baseUrl: "https://cloud.langfuse.com"
+    },
+    validation: {
+      publicKey: "^pk-lf-[a-z0-9-]+$",
+      secretKey: "^sk-lf-[a-z0-9-]+$",
+      baseUrl: "^https?://.+$"
+    }
+  },
+  {
     name: "mysql",
     type: "database",
     value: {
@@ -127,7 +141,6 @@ export const CREDENTIAL_DEFINITIONS: CredentialDefinition[] = [
         authSecret: "example-jwt-secret"
       }
     }
-    // Validation commented out in source, kept minimal here or handled structurally
   },
   {
     name: "openai",

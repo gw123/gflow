@@ -13,6 +13,7 @@ import { InteractionNodeRunner } from './InteractionNodeRunner';
 import { MediaNodeRunner } from './MediaNodeRunner';
 import { PlayMediaNodeRunner } from './PlayMediaNodeRunner';
 import { AiImageNodeRunner } from './AiImageNodeRunner';
+import { LangChainNodeRunner } from './LangChainNodeRunner';
 
 // Registry
 const Runners: Record<string, NodeRunner> = {
@@ -34,6 +35,7 @@ const Runners: Record<string, NodeRunner> = {
   'prompt_template': new LlmNodeRunner(),
   'ai_low_code': new LlmNodeRunner(),
   'ai_image_gen': new AiImageNodeRunner(),
+  'langchain_agent': new LangChainNodeRunner(),
   
   // Control Flow
   'if': new ControlNodeRunner(),

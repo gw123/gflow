@@ -6,7 +6,8 @@ import {
   Settings, GitBranch, Cloud, MessageSquare, 
   Server, Bell, Shuffle, Code, Bug, Terminal,
   Globe, Clock, Search, CheckCircle, AlertCircle, Loader2,
-  Play, Video, Info, User, Plug, Activity, Volume2, Image
+  Play, Video, Info, User, Plug, Activity, Volume2, Image,
+  Workflow // Import Workflow icon for LangChain
 } from 'lucide-react';
 import { NodeDefinition } from '../types';
 
@@ -24,6 +25,7 @@ const getNodeStyles = (type: string) => {
     
     chatgpt: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' },
     ai_image_gen: { icon: Image, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' },
+    langchain_agent: { icon: Workflow, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' },
     tts: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' },
     agent: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' },
     ai_low_code: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' },
