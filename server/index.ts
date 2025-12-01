@@ -1,17 +1,24 @@
-
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import cron from 'node-cron';
+// Strict import from the TS engine file
 import { ServerWorkflowEngine } from './engine';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const DATA_DIR = path.join(__dirname, 'data');
+const WORKFLOWS_FILE = path.join(DATA_DIR, 'workflows.json');
+const SECRETS_FILE = path.join(DATA_DIR, 'secrets.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const APIS_FILE = path.join(DATA_DIR, 'apis.json');
 
-// Use require for JSON loading in Node environment to be safe
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR);
+}
+
+// JSON Helper
 const readJson = (file: string) => {
   if (!fs.existsSync(file)) return [];
   try {
@@ -32,15 +39,53 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json() as any);
 
-const DATA_DIR = path.join(__dirname, 'data');
-const WORKFLOWS_FILE = path.join(DATA_DIR, 'workflows.json');
-const SECRETS_FILE = path.join(DATA_DIR, 'secrets.json');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const APIS_FILE = path.join(DATA_DIR, 'apis.json');
+// --- SCHEDULER SYSTEM ---
+// Map to store active cron jobs
+const activeJobs = new Map<string, any>();
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR);
-}
+const loadAndScheduleWorkflows = () => {
+    console.log("Loading scheduled workflows...");
+    const workflows = readJson(WORKFLOWS_FILE);
+    
+    // Clear existing jobs
+    activeJobs.forEach(job => job.stop());
+    activeJobs.clear();
+
+    workflows.forEach((wfRecord: any) => {
+        const wf = wfRecord.content;
+        const timerNode = wf.nodes.find((n: any) => n.type === 'timer');
+        
+        if (timerNode && timerNode.parameters) {
+            let schedule = null;
+            if (timerNode.parameters.cron) {
+                schedule = timerNode.parameters.cron;
+            } else if (timerNode.parameters.secondsInterval) {
+                // Simple interval handling (fallback for demo)
+                if (timerNode.parameters.secondsInterval >= 60) {
+                   schedule = "* * * * *"; // Run every minute for intervals >= 60s
+                }
+            }
+
+            if (schedule && cron.validate(schedule)) {
+                console.log(`Scheduling workflow [${wf.name}] with cron: ${schedule}`);
+                const job = cron.schedule(schedule, async () => {
+                    console.log(`[Cron] Triggering workflow ${wf.name}`);
+                    try {
+                        const engine = new ServerWorkflowEngine(wf);
+                        await engine.run();
+                    } catch (err) {
+                        console.error(`[Cron] Error executing ${wf.name}:`, err);
+                    }
+                });
+                activeJobs.set(wfRecord.id, job);
+            }
+        }
+    });
+};
+
+// Initialize Scheduler
+loadAndScheduleWorkflows();
+
 
 // --- SERVER EXECUTION API ---
 app.post('/api/execute', async (req, res) => {
@@ -62,13 +107,12 @@ app.post('/api/execute', async (req, res) => {
         const result = await engine.run();
         res.json(result);
     } catch (e: any) {
+        console.error("Execution Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// --- Existing APIs (Preserved) ---
-
-// Proxy API
+// --- Proxy API ---
 app.post('/api/proxy', async (req, res) => {
     const { method, url, headers, body, params } = req.body;
     try {
@@ -89,14 +133,22 @@ app.post('/api/proxy', async (req, res) => {
     }
 });
 
-// Auth
+// --- Auth APIs ---
 app.post('/api/auth/register', (req, res) => {
   const users = readJson(USERS_FILE);
   const { username, password, email } = req.body;
   if (users.find((u: any) => u.username === username)) return res.status(400).json({ error: 'Username exists' });
-  const newUser = { id: Date.now().toString(), username, password, email, createdAt: new Date().toISOString() };
+  
+  const newUser = { 
+      id: Date.now().toString(), 
+      username, 
+      password, 
+      email, 
+      createdAt: new Date().toISOString() 
+  };
   users.push(newUser);
   writeJson(USERS_FILE, users);
+  
   const { password: _, ...u } = newUser;
   res.json(u);
 });
@@ -126,34 +178,42 @@ app.get('/api/auth/me', (req, res) => {
   }
 });
 
-// CRUD
+// --- Workflow CRUD ---
 app.get('/api/workflows', (req, res) => res.json(readJson(WORKFLOWS_FILE).map((w: any) => ({ id: w.id, name: w.name, updatedAt: w.updatedAt }))));
+
 app.get('/api/workflows/:id', (req, res) => {
     const w = readJson(WORKFLOWS_FILE).find((w: any) => w.id === req.params.id);
     w ? res.json(w) : res.status(404).json({error: 'Not found'});
 });
+
 app.post('/api/workflows', (req, res) => {
     const w = { id: Date.now().toString(), name: req.body.name, content: req.body.content, updatedAt: new Date().toISOString() };
     const all = readJson(WORKFLOWS_FILE);
     all.push(w);
     writeJson(WORKFLOWS_FILE, all);
+    loadAndScheduleWorkflows();
     res.json(w);
 });
+
 app.put('/api/workflows/:id', (req, res) => {
     const all = readJson(WORKFLOWS_FILE);
     const idx = all.findIndex((w: any) => w.id === req.params.id);
     if(idx !== -1) {
         all[idx] = { ...all[idx], ...req.body, updatedAt: new Date().toISOString() };
         writeJson(WORKFLOWS_FILE, all);
+        loadAndScheduleWorkflows();
         res.json(all[idx]);
     } else res.status(404).json({error: 'Not found'});
 });
+
 app.delete('/api/workflows/:id', (req, res) => {
     const all = readJson(WORKFLOWS_FILE).filter((w: any) => w.id !== req.params.id);
     writeJson(WORKFLOWS_FILE, all);
+    loadAndScheduleWorkflows();
     res.json({success: true});
 });
 
+// --- Secrets API ---
 app.get('/api/secrets', (req, res) => res.json(readJson(SECRETS_FILE)));
 app.post('/api/secrets', (req, res) => {
     const all = readJson(SECRETS_FILE);
@@ -169,6 +229,7 @@ app.delete('/api/secrets/:id', (req, res) => {
     res.json({success: true});
 });
 
+// --- APIs API ---
 app.get('/api/apis', (req, res) => res.json(readJson(APIS_FILE)));
 app.post('/api/apis', (req, res) => {
     const all = readJson(APIS_FILE);
@@ -184,4 +245,4 @@ app.delete('/api/apis/:id', (req, res) => {
     res.json({success: true});
 });
 
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
