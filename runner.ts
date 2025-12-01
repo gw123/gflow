@@ -1,35 +1,53 @@
 
-import { WorkflowDefinition, WorkflowExecutionState, NodeExecutionResult } from './types';
-import { getRunner, evaluateCondition } from './node_runners';
+import { WorkflowDefinition, WorkflowExecutionState, NodeExecutionResult, NodeDefinition } from './types';
 import { WorkflowEngine } from './core/WorkflowEngine';
-
-// --- Frontend Adapter ---
+import { Registry } from './registry';
+import { evaluateCondition } from './node_runners/utils';
+import './builtins'; // Ensure main thread has registry for UI runners
 
 export class WorkflowRunner {
   private engine: WorkflowEngine;
+  public state: WorkflowExecutionState;
+  private onUpdateCallback: (state: WorkflowExecutionState) => void;
 
   constructor(
     workflow: WorkflowDefinition, 
     onUpdate: (state: WorkflowExecutionState) => void,
     initialResults?: Record<string, NodeExecutionResult>
   ) {
+    this.onUpdateCallback = onUpdate;
+    
+    // Initial State
+    this.state = {
+        isRunning: false,
+        isPaused: false,
+        waitingForInput: false,
+        nodeResults: initialResults || {},
+        logs: []
+    };
+
+    // Instantiate Engine directly on Main Thread
     this.engine = new WorkflowEngine(
-        // Cast local types to core types (they should be compatible)
-        workflow as any, 
+        workflow,
         {
-            onUpdate: (s) => onUpdate(s as WorkflowExecutionState),
-            getRunner: (type) => getRunner(type) as any,
-            evaluateCondition: (c, ctx) => evaluateCondition(c, ctx)
+            onUpdate: (newState) => {
+                this.state = newState;
+                this.onUpdateCallback(newState);
+            },
+            getRunner: (type) => Registry.getRunner(type),
+            evaluateCondition: (condition, context) => evaluateCondition(condition, context)
         },
-        { nodeResults: initialResults as any }
+        this.state
     );
   }
 
-  // Proxy properties for the UI
-  get state() { return this.engine.state as WorkflowExecutionState; }
-
-  public execute(mode: 'run' | 'step' = 'run') {
-      return this.engine.execute(mode);
+  public async execute(mode: 'run' | 'step' = 'run') {
+      // Async execution without blocking main thread (engine handles yielding)
+      try {
+          await this.engine.execute(mode);
+      } catch (e) {
+          console.error("Workflow Execution Failed", e);
+      }
   }
 
   public nextStep() {
@@ -44,63 +62,43 @@ export class WorkflowRunner {
       this.engine.submitInput(data);
   }
 
-  // Helper for single node execution (Visual test)
+  public terminate() {
+      this.engine.terminate();
+  }
+
   public async executeNode(nodeName: string) {
-      // Create a temporary mini-workflow or just leverage the runner logic directly?
-      // Since WorkflowEngine is designed for full flows, we can manually trigger the runner
-      // This bypasses the engine's queue but uses the same runner infrastructure.
-      // This keeps single-node runs simple and visual.
+      const node = this.engine['workflow'].nodes.find(n => n.name === nodeName);
+      if (!node) return;
+
+      // Single node execution for debugging
+      const runner = Registry.getRunner(node.type);
       
-      const nodeDef = (this.engine as any).workflow.nodes.find((n: any) => n.name === nodeName);
-      if(!nodeDef) return;
-
-      const state = this.engine.state;
-      state.nodeResults[nodeName] = {
-          nodeName: nodeName,
-          status: 'running',
-          startTime: Date.now(),
-          logs: []
-      } as any;
-      (this.engine as any).notify();
-
-      const runner = getRunner(nodeDef.type);
-      const inputs: any = { '$P': {} };
-      // Hydrate inputs from existing state
-      Object.values(state.nodeResults).forEach((res: any) => {
-          if (res.output) {
+      // Construct a mock context
+      // Note: This won't have full upstream inputs unless workflow ran previously
+      // We try to grab what we can from current state
+      const inputs: Record<string, any> = { '$P': {} };
+      Object.values(this.state.nodeResults).forEach(res => {
+          if (res.status === 'success' && res.output) {
               inputs[res.nodeName] = res.output;
               inputs['$P'] = { ...inputs['$P'], ...res.output };
           }
       });
 
-      const ctx = {
-          workflow: (this.engine as any).workflow,
-          executionState: state,
-          global: (this.engine as any).workflow.global || {},
-          inputs,
-          log: (msg: string) => {
-              if (state.nodeResults[nodeName]) {
-                  state.nodeResults[nodeName].logs.push(msg);
-                  (this.engine as any).notify();
-              }
-          }
+      const context = {
+          workflow: this.engine['workflow'],
+          executionState: this.state,
+          global: this.engine['workflow'].global || {},
+          inputs: inputs,
+          waitForInput: undefined, // Single node usually doesn't wait
+          log: (m: string) => console.log(`[SingleRun] ${m}`)
       };
 
       try {
-          const res = await runner.run(nodeDef, ctx as any);
-          state.nodeResults[nodeName] = {
-              ...state.nodeResults[nodeName],
-              status: res.status || 'success',
-              endTime: Date.now(),
-              inputs: res.inputs,
-              output: res.output,
-              logs: res.logs || state.nodeResults[nodeName].logs,
-              error: res.error
-          } as any;
-      } catch(e: any) {
-          state.nodeResults[nodeName].status = 'error';
-          state.nodeResults[nodeName].error = e.message;
+          const result = await runner.run(node, context);
+          console.log("Node Result:", result);
+          // Optionally update UI with this result?
+      } catch (e) {
+          console.error("Single Node Error:", e);
       }
-      (this.engine as any).notify();
   }
 }

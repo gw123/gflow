@@ -2,16 +2,6 @@
 import { Registry } from './registry';
 import { NodePlugin } from './types';
 
-// Icons
-import { 
-  Zap, Bot, Database, Layers, File, Box, 
-  Settings, GitBranch, Cloud, MessageSquare, 
-  Server, Bell, Shuffle, Code, Bug, Terminal,
-  Globe, Clock, Search, CheckCircle, AlertCircle, Loader2,
-  Play, Video, Info, User, Plug, Activity, Volume2, Image,
-  Workflow
-} from 'lucide-react';
-
 // Runners
 import { JsNodeRunner } from './node_runners/JsNodeRunner';
 import { ManualNodeRunner } from './node_runners/ManualNodeRunner';
@@ -39,7 +29,7 @@ const plugins: NodePlugin[] = [
             global: { start_time: "={{ $P.startTime }}" }
         },
         runner: new ManualNodeRunner(),
-        visuals: { icon: Play, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
+        visuals: { icon: 'Play', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     },
     {
         type: 'webhook',
@@ -54,7 +44,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new HttpNodeRunner(),
-        visuals: { icon: Globe, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
+        visuals: { icon: 'Globe', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     },
     {
         type: 'timer',
@@ -65,7 +55,7 @@ const plugins: NodePlugin[] = [
             parameters: { secondsInterval: 60 }
         },
         runner: new TimeNodeRunner(),
-        visuals: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
+        visuals: { icon: 'Clock', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     },
     {
         type: 'media_capture',
@@ -82,7 +72,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new MediaNodeRunner(),
-        visuals: { icon: Video, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
+        visuals: { icon: 'Video', color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
     },
 
     // --- Action ---
@@ -101,7 +91,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new HttpNodeRunner(),
-        visuals: { icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
+        visuals: { icon: 'Globe', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
         type: 'wait',
@@ -112,7 +102,7 @@ const plugins: NodePlugin[] = [
             parameters: { seconds: 5 }
         },
         runner: new TimeNodeRunner(),
-        visuals: { icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
+        visuals: { icon: 'Clock', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
         type: 'js',
@@ -123,7 +113,7 @@ const plugins: NodePlugin[] = [
             parameters: { code: "return { result: 'Hello ' + input.name };" }
         },
         runner: new JsNodeRunner(),
-        visuals: { icon: Code, color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
+        visuals: { icon: 'Code', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
     },
     {
         type: 'code_search',
@@ -134,7 +124,7 @@ const plugins: NodePlugin[] = [
             parameters: { query: "search query" }
         },
         runner: new JsNodeRunner(), // Reusing JS runner for now or implement specific
-        visuals: { icon: Search, color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
+        visuals: { icon: 'Search', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
     },
     {
         type: 'play_media',
@@ -151,7 +141,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new PlayMediaNodeRunner(),
-        visuals: { icon: Volume2, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
+        visuals: { icon: 'Volume2', color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
     },
 
     // --- AI ---
@@ -176,7 +166,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new LangChainNodeRunner(),
-        visuals: { icon: Workflow, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' }
+        visuals: { icon: 'Workflow', color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' }
     },
     {
         type: 'chatgpt',
@@ -192,7 +182,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new LlmNodeRunner(),
-        visuals: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
         type: 'ai_image_gen',
@@ -210,7 +200,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new AiImageNodeRunner(),
-        visuals: { icon: Image, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'Image', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
         type: 'tts',
@@ -221,7 +211,7 @@ const plugins: NodePlugin[] = [
             parameters: { text: "Hello world" }
         },
         runner: new LlmNodeRunner(),
-        visuals: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
         type: 'agent',
@@ -232,7 +222,7 @@ const plugins: NodePlugin[] = [
             parameters: { role: "You are a helpful assistant" }
         },
         runner: new LlmNodeRunner(),
-        visuals: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
         type: 'ai_low_code',
@@ -243,7 +233,7 @@ const plugins: NodePlugin[] = [
             parameters: { instruction: "Create a form" }
         },
         runner: new LlmNodeRunner(),
-        visuals: { icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
         type: 'prompt_template',
@@ -254,7 +244,7 @@ const plugins: NodePlugin[] = [
             parameters: { template: "Hello {{name}}", name: "World" }
         },
         runner: new LlmNodeRunner(),
-        visuals: { icon: File, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
+        visuals: { icon: 'File', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
 
     // --- Control ---
@@ -267,7 +257,7 @@ const plugins: NodePlugin[] = [
             parameters: { condition: "={{ $P.value > 10 }}" }
         },
         runner: new ControlNodeRunner(),
-        visuals: { icon: GitBranch, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
+        visuals: { icon: 'GitBranch', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
     {
         type: 'switch',
@@ -278,7 +268,7 @@ const plugins: NodePlugin[] = [
             parameters: { value: "={{ $P.category }}" }
         },
         runner: new ControlNodeRunner(),
-        visuals: { icon: Shuffle, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
+        visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
     {
         type: 'loop',
@@ -289,7 +279,7 @@ const plugins: NodePlugin[] = [
             parameters: { items: "={{ $P.items }}" }
         },
         runner: new ControlNodeRunner(),
-        visuals: { icon: Shuffle, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
+        visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
 
     // --- System ---
@@ -302,7 +292,7 @@ const plugins: NodePlugin[] = [
             parameters: { command: "echo 'hello'" }
         },
         runner: new SystemNodeRunner(),
-        visuals: { icon: Terminal, color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
+        visuals: { icon: 'Terminal', color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
     },
     {
         type: 'docker',
@@ -318,7 +308,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new SystemNodeRunner(),
-        visuals: { icon: Box, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
+        visuals: { icon: 'Box', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
         type: 'docker_compose',
@@ -329,7 +319,7 @@ const plugins: NodePlugin[] = [
             parameters: { file: "docker-compose.yml" }
         },
         runner: new SystemNodeRunner(),
-        visuals: { icon: Box, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
+        visuals: { icon: 'Box', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
         type: 'git',
@@ -344,7 +334,7 @@ const plugins: NodePlugin[] = [
             ]
         },
         runner: new SystemNodeRunner(),
-        visuals: { icon: GitBranch, color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
+        visuals: { icon: 'GitBranch', color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
     },
 
     // --- Data ---
@@ -353,35 +343,35 @@ const plugins: NodePlugin[] = [
         category: 'data',
         template: { name: "MySQL", type: "mysql", parameters: { sql: "SELECT * FROM table" } },
         runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: Database, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
+        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
     {
         type: 'pg',
         category: 'data',
         template: { name: "PostgreSQL", type: "pg", parameters: { sql: "SELECT * FROM table" } },
         runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: Database, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
+        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
     {
         type: 'redis',
         category: 'data',
         template: { name: "Redis", type: "redis", parameters: { command: "GET key" } },
         runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: Layers, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800' }
+        visuals: { icon: 'Layers', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800' }
     },
     {
         type: 'feishu_bitable',
         category: 'data',
         template: { name: "Feishu Bitable", type: "feishu_bitable", parameters: { app_token: "" } },
         runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: Database, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
+        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
     {
         type: 'text2sql',
         category: 'data',
         template: { name: "Text to SQL", type: "text2sql", parameters: { prompt: "Find users" } },
         runner: new LlmNodeRunner(), // Use LLM mock
-        visuals: { icon: Database, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
+        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
 
     // --- Human ---
@@ -399,7 +389,7 @@ const plugins: NodePlugin[] = [
             }
         },
         runner: new InteractionNodeRunner(),
-        visuals: { icon: User, color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-800' }
+        visuals: { icon: 'User', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-800' }
     },
 
     // --- Plugin ---
@@ -412,7 +402,7 @@ const plugins: NodePlugin[] = [
             parameters: { endpoint: "localhost:50051" }
         },
         runner: new GrpcNodeRunner(),
-        visuals: { icon: Plug, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' }
+        visuals: { icon: 'Plug', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' }
     }
 ];
 

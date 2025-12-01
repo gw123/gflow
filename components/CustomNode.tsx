@@ -1,15 +1,16 @@
 
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Activity } from 'lucide-react';
 import { NodeDefinition } from '../types';
 import { Registry } from '../registry';
+import { IconMap } from './icons';
 import '../builtins'; // Ensure registration
 
 const CustomNode = ({ data, selected }: NodeProps) => {
   const nodeData = data as NodeDefinition & { label: string, executionStatus?: string };
   const styles = Registry.getVisuals(nodeData.type);
-  const Icon = styles.icon;
+  const Icon = IconMap[styles.icon] || Activity;
 
   const statusColor = 
       nodeData.executionStatus === 'running' ? 'ring-2 ring-blue-500 ring-offset-2' :

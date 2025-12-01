@@ -1,6 +1,6 @@
 
 export function base64ToUint8Array(base64: string): Uint8Array {
-  const binaryString = window.atob(base64);
+  const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) {
@@ -16,7 +16,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return window.btoa(binary);
+  return btoa(binary);
 }
 
 export async function decodeAudioData(

@@ -11,6 +11,7 @@ import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { AutoForm } from './AutoForm';
 import { JsonEditor, BodyEditor, KeyValueMapEditor, ValueInput } from './ui/Editors';
+import { IconMap } from './icons';
 
 // --- Variable Explorer Component ---
 
@@ -405,8 +406,9 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
   // Resolve Schema from Registry
   const nodePlugin = selectedNode ? Registry.get(selectedNode.type) : undefined;
   const pluginParams = nodePlugin?.template.parameterDefinitions; 
-  // Note: builtins.ts uses parameterDefinitions on the template object. 
-  // Ensure types.ts NodeDefinition includes this or [key:string]: any
+  
+  // Resolve Icon
+  const Icon = nodePlugin ? (IconMap[nodePlugin.visuals.icon] || Settings) : Settings;
 
   if (!selectedNode || !formData) {
       return (
@@ -422,7 +424,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
         <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className={`p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${nodePlugin?.visuals.color || 'text-slate-500'}`}>
-                {nodePlugin ? <nodePlugin.visuals.icon size={20} /> : <Settings size={20} />}
+                <Icon size={20} />
             </div>
             <div className="flex-1 min-w-0">
                 <Input

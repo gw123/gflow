@@ -171,7 +171,7 @@ export interface NodeRunner {
 // --- Registry Types (New) ---
 
 export interface NodeVisuals {
-  icon: ComponentType<any>;
+  icon: string; // Changed from ComponentType to string to be Worker-safe
   color: string;
   bg: string;
   border: string;

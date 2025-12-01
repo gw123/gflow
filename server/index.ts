@@ -1,7 +1,6 @@
 
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
@@ -31,7 +30,7 @@ const app = express();
 const PORT = 3001;
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json() as any);
 
 const DATA_DIR = path.join(__dirname, 'data');
 const WORKFLOWS_FILE = path.join(DATA_DIR, 'workflows.json');

@@ -1,51 +1,32 @@
 
-
 import React from 'react';
-import { 
-  Zap, Bot, Database, Layers, File, Box, 
-  Settings, GitBranch, Cloud, MessageSquare, 
-  Server, Bell, Shuffle, Code, Bug, Terminal,
-  Globe, Clock, Search, Plug
-} from 'lucide-react';
 import { TEMPLATE_LIBRARY } from '../nodes';
+import { IconMap } from './icons';
+import { Terminal } from 'lucide-react';
+import { Registry } from '../registry';
 
-// Map category keys to Lucide icons
-const CATEGORY_ICONS: Record<string, any> = {
-  trigger: Zap,
-  llm: Bot,
-  database: Database,
-  cache: Layers,
-  file: File,
-  docker: Box,
-  system: Settings,
-  git: GitBranch,
-  storage: Cloud,
-  feishu: MessageSquare,
-  mq: Server,
-  notification: Bell,
-  control: Shuffle,
-  code: Code,
-  debug: Bug,
-  plugin: Plug
-};
-
-// Fallback icons for specific node types if needed, 
-// though we mostly rely on category icons now or generic ones.
-const NODE_ICONS: Record<string, any> = {
-  webhook: Globe,
-  http: Globe,
-  timer: Clock,
-  chatgpt: Bot,
-  tts: Bot,
-  agent: Bot,
-  mysql: Database,
-  pg: Database,
-  redis: Layers,
-  docker: Box,
-  js: Code,
-  code_search: Search,
-  debug: Bug,
-  grpc_plugin: Plug
+// Map category keys to IconMap keys
+const CATEGORY_ICON_NAMES: Record<string, string> = {
+  trigger: 'Zap',
+  llm: 'Bot',
+  database: 'Database',
+  cache: 'Layers',
+  file: 'File',
+  docker: 'Box',
+  system: 'Settings',
+  git: 'GitBranch',
+  storage: 'Cloud',
+  feishu: 'MessageSquare',
+  mq: 'Server',
+  notification: 'Bell',
+  control: 'Shuffle',
+  code: 'Code',
+  debug: 'Bug',
+  plugin: 'Plug',
+  action: 'Play',
+  ai: 'Bot',
+  data: 'Database',
+  human: 'User'
 };
 
 const Sidebar = () => {
@@ -63,7 +44,8 @@ const Sidebar = () => {
       
       <div className="flex-1 overflow-y-auto p-2 space-y-6 scrollbar-thin">
         {Object.entries(TEMPLATE_LIBRARY).map(([key, category]) => {
-           const CategoryIcon = CATEGORY_ICONS[key] || Terminal;
+           const iconName = CATEGORY_ICON_NAMES[key] || 'Terminal';
+           const CategoryIcon = IconMap[iconName] || Terminal;
 
            return (
              <div key={key} className="px-2">
@@ -79,8 +61,8 @@ const Sidebar = () => {
 
                 <div className="grid grid-cols-1 gap-2">
                   {category.templates.map((template) => {
-                    // Use specific icon or fallback to category icon
-                    const NodeIcon = NODE_ICONS[template.type] || CategoryIcon;
+                    const visuals = Registry.getVisuals(template.type);
+                    const NodeIcon = visuals ? (IconMap[visuals.icon] || CategoryIcon) : CategoryIcon;
                     
                     return (
                       <div

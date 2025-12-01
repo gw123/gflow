@@ -1,6 +1,5 @@
 
 import { NodePlugin, NodeRunner, NodeVisuals } from './types';
-import { Activity } from 'lucide-react';
 import { DefaultRunner } from './node_runners/DefaultRunner';
 
 class NodeRegistry {
@@ -32,7 +31,7 @@ class NodeRegistry {
     getVisuals(type: string): NodeVisuals {
         const plugin = this.plugins.get(type);
         return plugin ? plugin.visuals : {
-            icon: Activity,
+            icon: 'Activity', // Use string identifier
             color: 'text-slate-600',
             bg: 'bg-slate-50 dark:bg-slate-900/20',
             border: 'border-slate-200 dark:border-slate-800'

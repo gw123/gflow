@@ -76,9 +76,6 @@ export class WorkflowEngine {
 
         try {
             // 1. Identify Start Nodes (or Resume Point)
-            // Ideally we should persist the queue for full resume, but for now we restart BFS logic
-            // In a robust system, we would calculate the 'frontier' based on existing results.
-            
             const startNodes = this.workflow.nodes.filter(n => ['manual', 'webhook', 'timer'].includes(n.type));
             const queue: string[] = startNodes.map(n => n.name);
             
@@ -87,11 +84,6 @@ export class WorkflowEngine {
             }
 
             const processed = new Set<string>();
-            
-            // Re-populate processed based on successful results if we are effectively resuming logic
-            // (Note: simple BFS restart might re-run paths unless we check existing results)
-            // For this implementation, we will skip nodes that are already 'success' in current results
-            // to support basic "resume from crash" behavior if needed.
             
             // Gather inputs from previous results
             const nodeInputs: Record<string, any> = { '$P': {} };
@@ -103,9 +95,17 @@ export class WorkflowEngine {
             });
 
             while (queue.length > 0) {
+                // Yield to Event Loop to allow UI updates (Vital for Main Thread execution)
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                // Check termination signal
+                if (!this.state.isRunning) {
+                    this.log("Execution stopped by user.");
+                    break;
+                }
+
                 const currentName = queue.shift()!;
                 
-                // If already successfully executed in this session, skip execution but process edges
                 const existingResult = this.state.nodeResults[currentName];
                 const alreadyDone = existingResult?.status === 'success';
 
@@ -215,14 +215,19 @@ export class WorkflowEngine {
                 processed.add(currentName);
             }
 
-            this.log("Workflow execution finished.");
+            if (this.state.isRunning) {
+                this.log("Workflow execution finished.");
+            }
 
         } catch (e: any) {
             this.log(`Critical Engine Error: ${e.message}`);
         } finally {
-            this.state.isRunning = false;
-            this.state.isPaused = false;
-            this.notify();
+            // Only stop if we are not waiting for input
+            if (!this.state.waitingForInput) {
+                this.state.isRunning = false;
+                this.state.isPaused = false;
+                this.notify();
+            }
         }
     }
 
@@ -252,5 +257,10 @@ export class WorkflowEngine {
     public resume() {
         this.mode = 'run';
         if (this.stepResolver) this.stepResolver();
+    }
+
+    public terminate() {
+        this.state.isRunning = false;
+        if (this.stepResolver) this.stepResolver(); // Unblock loop so it can see isRunning=false
     }
 }

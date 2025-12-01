@@ -1,17 +1,15 @@
 
-
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult, InputFieldDefinition } from '../types';
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
+import { InputFieldDefinition } from '../types'; // UI types
 import { interpolate } from './utils';
 
 export class InteractionNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const params = interpolate(node.parameters, context);
     
-    // Construct the form configuration from parameters
     const title = params.title || node.name;
     const description = params.description || "Please provide the requested information below.";
     
-    // Expect fields to be defined in parameters, or default to a simple text input
     let fields: InputFieldDefinition[] = params.fields;
     
     if (!fields || !Array.isArray(fields) || fields.length === 0) {
@@ -26,7 +24,6 @@ export class InteractionNodeRunner implements NodeRunner {
     }
 
     if (context.waitForInput) {
-        // This will pause the workflow until submitInput is called
         const userInput = await context.waitForInput({
             nodeName: node.name,
             title,

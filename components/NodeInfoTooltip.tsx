@@ -2,9 +2,11 @@
 import React, { useMemo } from 'react';
 import { useNodes, useViewport } from 'reactflow';
 import { NODE_TEMPLATES } from '../nodes';
-import { NODE_WIDTH, NODE_HEIGHT } from '../utils';
-import { Info, Database, Globe, Box, Terminal, Code, Bot } from 'lucide-react';
+import { NODE_WIDTH } from '../utils';
+import { IconMap } from './icons';
+import { Info } from 'lucide-react';
 import { NodeDefinition } from '../types';
+import { Registry } from '../registry';
 
 const NodeInfoTooltip = () => {
   const nodes = useNodes();
@@ -20,21 +22,14 @@ const NodeInfoTooltip = () => {
 
   const nodeData = selectedNode.data as unknown as NodeDefinition;
   const template = NODE_TEMPLATES[nodeData.type];
+  
+  // Resolve visual config
+  const visuals = Registry.getVisuals(nodeData.type);
+  const Icon = IconMap[visuals.icon] || Info;
 
   // Calculate position to render directly above the node in the canvas coordinate system
-  // React Flow nodes have absolute positions (relative to the flow), so we can position this absolutely.
   const top = selectedNode.position.y - 10; 
   const left = selectedNode.position.x + NODE_WIDTH / 2;
-
-  // Determine icon
-  const getIcon = (type: string) => {
-    if (type.includes('http') || type.includes('webhook')) return <Globe size={14} />;
-    if (type.includes('sql') || type.includes('pg') || type.includes('db')) return <Database size={14} />;
-    if (type.includes('docker')) return <Box size={14} />;
-    if (type.includes('chat') || type.includes('ai')) return <Bot size={14} />;
-    if (type.includes('js') || type.includes('code')) return <Code size={14} />;
-    return <Info size={14} />;
-  };
 
   return (
     <div
@@ -42,14 +37,14 @@ const NodeInfoTooltip = () => {
         position: 'absolute',
         transform: `translate(${left}px, ${top}px) translate(-50%, -100%)`,
         zIndex: 1000,
-        pointerEvents: 'none', // Pass through clicks so it doesn't interfere too much
+        pointerEvents: 'none',
       }}
       className="mb-2"
     >
         <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-3 w-64 animate-in fade-in zoom-in-95 duration-200 origin-bottom">
             <div className="flex items-center gap-2 mb-2 border-b border-slate-200 dark:border-slate-700 pb-2">
                 <span className="p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md">
-                    {getIcon(nodeData.type)}
+                    <Icon size={14} />
                 </span>
                 <div>
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">{nodeData.name}</h4>
