@@ -192,6 +192,7 @@ const getRunner = (type: string): NodeRunner => {
  */
 export class ServerWorkflowEngine {
     private engine: CoreEngine;
+    private lastLogCount: number = 0;
 
     constructor(workflow: WorkflowDefinition) {
         this.engine = new CoreEngine(
@@ -199,7 +200,12 @@ export class ServerWorkflowEngine {
             {
                 // Engine Callbacks
                 onUpdate: (state) => { 
-                    // Optional: Hook for real-time websockets updates in the future
+                    // Log new messages to server console
+                    if (state.logs.length > this.lastLogCount) {
+                        const newLogs = state.logs.slice(this.lastLogCount);
+                        newLogs.forEach(l => console.log(`[Workflow: ${workflow.name}] ${l}`));
+                        this.lastLogCount = state.logs.length;
+                    }
                 },
                 getRunner: getRunner,
                 evaluateCondition: (cond, ctx) => {
