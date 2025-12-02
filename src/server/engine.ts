@@ -2,8 +2,8 @@
 import axios from 'axios';
 import vm from 'vm';
 // Fix: Import from ../src/core because server is at root and core is in src/core
-import { WorkflowEngine as CoreEngine } from '../src/core/WorkflowEngine';
-import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../src/core/types';
+import { WorkflowEngine as CoreEngine } from '../core/WorkflowEngine';
+import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
 
 /**
  * Server-Side Node Runner Implementations

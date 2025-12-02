@@ -4,8 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import cron from 'node-cron';
-// Strict import from the TS engine file
+import { fileURLToPath } from 'url';
 import { ServerWorkflowEngine } from './engine';
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, 'data');
 const WORKFLOWS_FILE = path.join(DATA_DIR, 'workflows.json');
