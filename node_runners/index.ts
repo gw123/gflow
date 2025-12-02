@@ -8,3 +8,6 @@ export const getRunner = (type: string): NodeRunner => {
 };
 
 export { interpolate, evaluateCondition } from './utils';
+// Re-export new runners for any legacy code importing from here
+export { TtsNodeRunner } from '../src/runners/TtsNodeRunner';
+export { LlmNodeRunner } from '../src/runners/LlmNodeRunner';

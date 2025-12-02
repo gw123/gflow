@@ -18,7 +18,7 @@ import {
     LangChainNodeRunner,
     LlmNodeRunner, 
     TtsNodeRunner
-} from './src/runners';
+} from './runners';
 
 const plugins: NodePlugin[] = [
     // --- Trigger ---

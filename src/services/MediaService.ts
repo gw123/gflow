@@ -1,5 +1,5 @@
 
-import { decodeAudioData, downsampleTo16000, base64ToUint8Array } from '../src/runners/audioUtils';
+import { decodeAudioData, downsampleTo16000, base64ToUint8Array } from '../runners/audioUtils';
 
 export class AudioService {
   private audioContext: AudioContext | null = null;

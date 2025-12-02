@@ -36,9 +36,6 @@ export class LlmNodeRunner implements NodeRunner {
     // 1. Handle Prompt Template (Synchronous)
     if (node.type === 'prompt_template') {
         const template = params.template || "";
-        // In a real template engine, we might do internal variable replacement here.
-        // Since 'interpolate' already ran on all params using global/inputs context,
-        // if the template string itself had {{ $P.var }}, it is already replaced.
         return {
             status: 'success',
             inputs: params,

@@ -4,7 +4,7 @@ import { Registry } from '../registry';
 import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
 import '../builtins'; // Load all plugins into Registry
 import { MainMessage, WorkerMessage } from './types';
-import { evaluateCondition } from '../src/runners/utils';
+import { evaluateCondition } from '../runners/utils'; // Correct relative import
 
 // Define nodes that MUST run on the main thread (UI/DOM dependent)
 const UI_NODE_TYPES = new Set(['media_capture', 'play_media', 'ai_image_gen']);

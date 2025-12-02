@@ -2,7 +2,7 @@
 import { WorkflowDefinition, WorkflowExecutionState, NodeExecutionResult, NodeDefinition } from './types';
 import { WorkflowEngine } from './core/WorkflowEngine';
 import { Registry } from './registry';
-import { evaluateCondition } from './src/runners/utils';
+import { evaluateCondition } from './runners/utils';
 import './builtins'; // Ensure main thread has registry for UI runners
 
 export class WorkflowRunner {

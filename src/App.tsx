@@ -3,16 +3,11 @@ import React, { useCallback, useEffect, useRef, useMemo } from 'react';
 import ReactFlow, {
   Controls,
   Background,
-  useNodesState,
-  useEdgesState,
   Edge,
   Node,
   Connection,
-  addEdge,
-  // Panel, // Removed to avoid JSX type issues
   ReactFlowProvider,
   useReactFlow,
-  MarkerType,
   applyNodeChanges,
   applyEdgeChanges
 } from 'reactflow';
@@ -54,13 +49,11 @@ const AppContent: React.FC = () => {
   const runnerRef = useRef<WorkflowRunner | null>(null);
 
   // Sync React Flow Internal State with Store
-  // We allow ReactFlow to handle interactions, but we sync changes back to store
   const onNodesChange = useCallback(
     (changes: any) => {
         const nextNodes = applyNodeChanges(changes, wfStore.nodes);
         wfStore.setNodes(nextNodes);
         
-        // If drag ended, update workflow data structure
         if (changes.some((c: any) => c.type === 'position' && !c.dragging)) {
              const newWf = flowToWorkflow(wfStore.workflowData, nextNodes, wfStore.edges);
              wfStore.updateWorkflowData(newWf);
@@ -96,7 +89,7 @@ const AppContent: React.FC = () => {
 
     // Check Auth
     api.getMe().then(userStore.setUser).catch(() => {}); 
-  }, []); // Run once
+  }, []);
 
   // --- Handlers ---
 
@@ -149,7 +142,7 @@ const AppContent: React.FC = () => {
       const newNodes = wfStore.nodes.concat(newNode);
       wfStore.setNodes(newNodes);
       const newData = flowToWorkflow(wfStore.workflowData, newNodes, wfStore.edges);
-      wfStore.updateWorkflowData(newData); // This also layouts if needed, or we just set data
+      wfStore.updateWorkflowData(newData);
     },
     [project, wfStore]
   );
@@ -159,14 +152,12 @@ const AppContent: React.FC = () => {
   };
 
   // --- Execution Logic ---
-  // We keep the runner instantiation here as it holds 'runtime' class state not suitable for plain JSON store
   
   const handleRunNode = async (nodeName: string) => {
      if (!runnerRef.current) {
          const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
          const runner = new WorkflowRunner(currentData, (state) => {
              // Optional: Update execution store for single node run visualization?
-             // execStore.setExecutionState(state);
          });
          await runner.executeNode(nodeName); 
      } else {
@@ -222,7 +213,6 @@ const AppContent: React.FC = () => {
                 nodeResults: response.results,
                 logs: response.logs
             });
-            // Update node status visuals
             updateNodeStatuses(response.results);
 
         } catch (e: any) {
@@ -278,15 +268,11 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      
-      {/* Header Toolbar - Now leaner, gets state from Store */}
       <HeaderToolbar onRunWorkflow={handleRunWorkflow} />
 
-      {/* Main Workspace */}
       <div className="flex-1 flex overflow-hidden relative">
         <Sidebar />
 
-        {/* Canvas Area */}
         <div className="flex-1 relative bg-slate-50 dark:bg-slate-950/50" ref={reactFlowWrapper}>
            <ReactFlow
               nodes={wfStore.nodes}
@@ -317,7 +303,6 @@ const AppContent: React.FC = () => {
               <NodeInfoTooltip />
            </ReactFlow>
            
-           {/* Floating Yaml Toggle */}
            <div className="absolute bottom-6 right-6 z-10 flex gap-2">
                <button 
                   onClick={() => ui.setModalOpen('helpModalOpen', true)}
@@ -339,7 +324,6 @@ const AppContent: React.FC = () => {
                </button>
            </div>
            
-           {/* Yaml Editor Overlay */}
            {ui.showYamlView && (
                <div className="absolute inset-0 z-20 animate-in slide-in-from-bottom duration-300">
                    <YamlView 
@@ -350,7 +334,6 @@ const AppContent: React.FC = () => {
                </div>
            )}
 
-           {/* Execution Panel */}
            <ExecutionPanel 
                onNextStep={handleNextStep}
                onResume={handleResume}
@@ -358,7 +341,6 @@ const AppContent: React.FC = () => {
            />
         </div>
 
-        {/* Right Editor Panel */}
         {ui.isRightPanelOpen && selectedNodeData && (
             <div className="w-[450px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-20 flex-shrink-0 animate-in slide-in-from-right duration-300">
                 <EditorPanel 
@@ -369,15 +351,13 @@ const AppContent: React.FC = () => {
         )}
       </div>
 
-      {/* Centralized Modals Manager - Now pure composition without logic */}
       <ModalsManager />
 
-      {/* Toast Notifications */}
       {ui.toast && (
         <Toast 
             message={ui.toast.message} 
             type={ui.toast.type} 
-            onClose={() => ui.showToast('', 'info') /* Hacky clear, store handles null */} 
+            onClose={() => ui.showToast('', 'info')} 
         />
       )}
     </div>

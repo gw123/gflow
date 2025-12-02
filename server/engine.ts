@@ -1,7 +1,9 @@
+
 import axios from 'axios';
 import vm from 'vm';
-import { WorkflowEngine as CoreEngine } from '../core/WorkflowEngine';
-import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
+// Fix: Import from ../src/core because server is at root and core is in src/core
+import { WorkflowEngine as CoreEngine } from '../src/core/WorkflowEngine';
+import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../src/core/types';
 
 /**
  * Server-Side Node Runner Implementations
@@ -28,7 +30,8 @@ const safeEval = (code: string, context: any) => {
         const vmContext = vm.createContext(sandbox);
         // Timeout prevents infinite loops
         return script.runInContext(vmContext, { timeout: 1000 });
-    } catch (e) {
+    } catch (e: any) {
+        console.error(`[Server Interpolation Error] Failed to evaluate: "${code}"`, e.message);
         return undefined; 
     }
 };
