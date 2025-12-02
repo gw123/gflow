@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, FileText, Trash2, Calendar, FolderOpen, Loader2 } from 'lucide-react';
-import { api, WorkflowSummary } from '../../api/client';
-import { WorkflowDefinition } from '../../types';
-import { SAMPLE_YAML } from '../../constants';
+import { api, WorkflowSummary } from '../api/client';
+import { WorkflowDefinition } from '../types';
+import { SAMPLE_YAML } from '../constants';
 import yaml from 'js-yaml';
 
 interface WorkflowListModalProps {

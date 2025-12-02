@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Save, Wrench, Code, Globe, HelpCircle } from 'lucide-react';
-import { ToolDefinition, WorkflowDefinition } from '../../types';
+import { ToolDefinition, WorkflowDefinition } from '../types';
 
 interface ToolsManagerProps {
   isOpen: boolean;

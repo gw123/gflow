@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save, Trash2, Code, List, AlertCircle, Link, Info, Copy, ChevronRight, ChevronDown, Play, Database, FileText, Settings, ExternalLink } from 'lucide-react';
-import { NodeDefinition, PluginParameterDefinition, InputFieldDefinition } from '../../types';
+import { NodeDefinition, PluginParameterDefinition, InputFieldDefinition } from '../types';
 import { FormBuilder } from './FormBuilder';
-import { useUIStore, useWorkflowStore, useExecutionStore, useUserStore } from '../../stores';
-import { Registry } from '../../registry';
+import { useUIStore, useWorkflowStore, useExecutionStore, useUserStore } from '../stores';
+import { Registry } from '../registry';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';

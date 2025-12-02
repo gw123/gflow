@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { TEMPLATE_LIBRARY } from '../../nodes';
+import { TEMPLATE_LIBRARY } from '../nodes';
 import { IconMap } from './icons';
 import { Terminal } from 'lucide-react';
-import { Registry } from '../../registry';
+import { Registry } from '../registry';
 
 // Map category keys to IconMap keys
 const CATEGORY_ICON_NAMES: Record<string, string> = {

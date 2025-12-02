@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, AlertTriangle } from 'lucide-react';
+import { Copy, Check, AlertTriangle, X } from 'lucide-react';
 import yaml from 'js-yaml';
 
 interface YamlViewProps {
   yamlContent: string;
   onUpdate: (newYaml: string) => boolean;
   notify: (message: string, type: 'success' | 'error' | 'info') => void;
+  onClose?: () => void;
 }
 
-const YamlView: React.FC<YamlViewProps> = ({ yamlContent, onUpdate, notify }) => {
+const YamlView: React.FC<YamlViewProps> = ({ yamlContent, onUpdate, notify, onClose }) => {
   const [content, setContent] = useState(yamlContent);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +89,15 @@ const YamlView: React.FC<YamlViewProps> = ({ yamlContent, onUpdate, notify }) =>
             >
                 {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
             </button>
+            {onClose && (
+                <button
+                    onClick={onClose}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-slate-700 rounded transition"
+                    title="Close"
+                >
+                    <X size={16} />
+                </button>
+            )}
         </div>
       </div>
       <div className="flex-1 relative">

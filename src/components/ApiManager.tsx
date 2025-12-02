@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Play, Clock, Globe, Code, List, Loader2, Send, Search, FileText, AlertCircle, Check, AlignLeft } from 'lucide-react';
-import { api, ApiRequest } from '../../api/client';
+import { api, ApiRequest } from '../api/client';
 
 interface ApiManagerProps {
   isOpen: boolean;

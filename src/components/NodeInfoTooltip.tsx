@@ -1,12 +1,12 @@
 
 import React, { useMemo } from 'react';
 import { useNodes, useViewport } from 'reactflow';
-import { NODE_TEMPLATES } from '../../nodes';
-import { NODE_WIDTH } from '../../utils';
+import { NODE_TEMPLATES } from '../nodes';
+import { NODE_WIDTH } from '../utils';
 import { IconMap } from './icons';
 import { Info } from 'lucide-react';
-import { NodeDefinition } from '../../types';
-import { Registry } from '../../registry';
+import { NodeDefinition } from '../types';
+import { Registry } from '../registry';
 
 const NodeInfoTooltip = () => {
   const nodes = useNodes();

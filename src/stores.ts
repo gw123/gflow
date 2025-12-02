@@ -70,7 +70,14 @@ export const useUIStore = create<UIState>((set) => ({
   isRightPanelOpen: false,
   executionPanelOpen: false,
   showYamlView: false,
-  setPanelOpen: (panel, isOpen) => set({ [panel]: isOpen }),
+  setPanelOpen: (panel, isOpen) => {
+    console.log(`[UIStore] Setting panel '${panel}' to ${isOpen}`);
+    set((state) => ({ ...state, [panel]: isOpen }));
+    console.log(`[UIStore] Panel '${panel}' state updated`);
+    const newState = useUIStore.getState();
+    console.log(`[UIStore] Full state after update:`, newState);
+    console.log(`[UIStore] executionPanelOpen value after update:`, newState.executionPanelOpen);
+  },
 
   selectedNodeId: null,
   setSelectedNodeId: (id) => set({ selectedNodeId: id, isRightPanelOpen: !!id, selectedEdge: null }),

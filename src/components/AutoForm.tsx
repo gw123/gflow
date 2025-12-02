@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PluginParameterDefinition } from '../../types';
+import { PluginParameterDefinition } from '../types';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Switch } from './ui/Switch';

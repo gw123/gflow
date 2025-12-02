@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User, Image as ImageIcon, Download } from 'lucide-react';
-import { PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../../types';
-import { useExecutionStore, useUIStore } from '../../stores';
+import { PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../types';
+import { useExecutionStore, useUIStore } from '../stores';
 
 interface ExecutionPanelProps {
   onNextStep?: () => void;
@@ -14,6 +14,9 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ onNextStep, onResume, o
   const { executionState } = useExecutionStore();
   const { executionPanelOpen, setPanelOpen } = useUIStore();
   
+  console.log(`[ExecutionPanel] Render triggered - executionPanelOpen: ${executionPanelOpen}`);
+  console.log(`[ExecutionPanel] useUIStore state:`, useUIStore.getState());
+  
   const [selectedNodeName, setSelectedNodeName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'output' | 'input' | 'logs' | 'error'>('output');
   
@@ -24,8 +27,16 @@ const ExecutionPanel: React.FC<ExecutionPanelProps> = ({ onNextStep, onResume, o
   const isOpen = executionPanelOpen;
   const state = executionState;
 
+  console.log(`[ExecutionPanel] Component state - isOpen: ${isOpen}`);
+  
+  // Add effect to log when executionPanelOpen changes
+  useEffect(() => {
+    console.log(`[ExecutionPanel] executionPanelOpen changed to: ${executionPanelOpen}`);
+  }, [executionPanelOpen]);
+
   // Reset selection when panel opens/closes or state resets
   useEffect(() => {
+      console.log(`[ExecutionPanel] useEffect - isOpen changed to: ${isOpen}`);
       if (!isOpen) setSelectedNodeName(null);
   }, [isOpen]);
 

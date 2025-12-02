@@ -4,9 +4,9 @@ import {
   LayoutDashboard, Box, FolderOpen, Save, Upload, Laptop, Cloud, Play, 
   StepForward, Globe, Wrench, Key, Settings, Sparkles, UserCircle
 } from 'lucide-react';
-import { useUserStore, useUIStore, useWorkflowStore, useExecutionStore } from '../../stores';
-import { api } from '../../api/client';
-import { flowToWorkflow } from '../../utils';
+import { useUserStore, useUIStore, useWorkflowStore, useExecutionStore } from '../stores';
+import { api } from '../api/client';
+import { flowToWorkflow } from '../utils';
 
 interface HeaderToolbarProps {
   onRunWorkflow: (mode: 'run' | 'step') => void;

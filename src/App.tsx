@@ -154,6 +154,8 @@ const AppContent: React.FC = () => {
   // --- Execution Logic ---
   
   const handleRunNode = async (nodeName: string) => {
+    console.log(`[App] handleRunNode called for node: ${nodeName}`);
+    
      if (!runnerRef.current) {
          const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
          const runner = new WorkflowRunner(currentData, (state) => {
@@ -165,13 +167,28 @@ const AppContent: React.FC = () => {
      }
   };
 
-  const handleNextStep = () => runnerRef.current?.nextStep();
-  const handleResume = () => runnerRef.current?.resume();
-  const handleSubmitInput = (data: any) => runnerRef.current?.submitInput(data);
+  const handleNextStep = () => {
+    console.log("[App] handleNextStep called");
+    return runnerRef.current?.nextStep();
+  };
+  
+  const handleResume = () => {
+    console.log("[App] handleResume called");
+    return runnerRef.current?.resume();
+  };
+  
+  const handleSubmitInput = (data: any) => {
+    console.log("[App] handleSubmitInput called with data:", data);
+    return runnerRef.current?.submitInput(data);
+  };
 
   const handleRunWorkflow = async (mode: 'run' | 'step' = 'run') => {
+    console.log(`[App] handleRunWorkflow called with mode: ${mode}`);
+    console.log(`[App] Current execution state - isRunning: ${execStore.executionState.isRunning}, isPaused: ${execStore.executionState.isPaused}, waitingForInput: ${execStore.executionState.waitingForInput}`);
+    
     if (execStore.executionState.isRunning && !execStore.executionState.isPaused && !execStore.executionState.waitingForInput) {
         ui.showToast("Workflow is already running", "info");
+        console.log(`[App] Workflow already running, showing toast`);
         return;
     }
 
@@ -184,10 +201,13 @@ const AppContent: React.FC = () => {
         ui.setTestReport(report);
         ui.setModalOpen('testReportOpen', true);
         ui.showToast("Validation failed. Check report.", "error");
+        console.log(`[App] Workflow validation failed, showing test report`);
         return;
     }
 
+    console.log(`[App] Opening execution panel`);
     ui.setPanelOpen('executionPanelOpen', true);
+    // Note: ui.executionPanelOpen may not reflect the new value immediately due to React's asynchronous state updates
     
     if (execStore.runMode === 'cloud') {
         if (!userStore.user) {
@@ -221,6 +241,7 @@ const AppContent: React.FC = () => {
                 logs: [...execStore.executionState.logs, `Server Error: ${e.message}`]
             });
             ui.showToast("Server execution failed", "error");
+            console.log(`[App] Cloud execution failed: ${e.message}`);
         }
 
     } else {
@@ -234,9 +255,11 @@ const AppContent: React.FC = () => {
         execStore.setExecutionState({ ...runner.state, isRunning: true });
         
         try {
+            console.log(`[App] Starting local workflow execution`);
             await runner.execute(mode);
+            console.log(`[App] Local workflow execution completed`);
         } catch (e) {
-            console.error(e);
+            console.error("[App] Error during workflow execution:", e);
         } finally {
             if (!runner.state.waitingForInput && !runner.state.isPaused) {
                 runnerRef.current = null;
@@ -246,6 +269,7 @@ const AppContent: React.FC = () => {
   };
 
   const updateNodeStatuses = (results: any) => {
+      console.log("[App] updateNodeStatuses called with results:", results);
       const newNodes = wfStore.nodes.map(n => {
           const res = results[n.id];
           if (res) {
@@ -330,6 +354,7 @@ const AppContent: React.FC = () => {
                         yamlContent={yaml.dump(wfStore.workflowData)} 
                         onUpdate={updateYaml} 
                         notify={ui.showToast}
+                        onClose={() => ui.setPanelOpen('showYamlView', false)}
                    />
                </div>
            )}
