@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, LogIn, UserPlus, Loader2, AlertCircle } from 'lucide-react';
-import { api, User } from '../api/client';
+import { api, User } from '../../api/client';
 
 interface AuthModalProps {
   isOpen: boolean;

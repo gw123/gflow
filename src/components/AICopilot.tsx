@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Play, Loader2, Check, AlertTriangle, ArrowRight, Wand2, Bug } from 'lucide-react';
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import Markdown from 'markdown-to-jsx';
-import { TEMPLATE_LIBRARY } from '../nodes';
-import { CREDENTIAL_DEFINITIONS } from '../credential_definitions';
+import { TEMPLATE_LIBRARY } from '../../nodes';
+import { CREDENTIAL_DEFINITIONS } from '../../credential_definitions';
 
 interface AICopilotProps {
   isOpen: boolean;

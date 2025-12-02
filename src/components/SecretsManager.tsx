@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, Save, Key, Search, AlertCircle, Loader2 } from 'lucide-react';
-import { CredentialItem } from '../types';
-import { CREDENTIAL_DEFINITIONS, CredentialDefinition } from '../credential_definitions';
+import { CredentialItem } from '../../types';
+import { CREDENTIAL_DEFINITIONS, CredentialDefinition } from '../../credential_definitions';
 
 interface SecretsManagerProps {
   isOpen: boolean;

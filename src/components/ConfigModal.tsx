@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Save, Check, AlertCircle } from 'lucide-react';
-import { WorkflowDefinition } from '../types';
+import { WorkflowDefinition } from '../../types';
 
 interface ConfigModalProps {
   isOpen: boolean;

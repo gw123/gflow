@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, X, ChevronUp, ChevronDown, Settings, Check } from 'lucide-react';
-import { InputFieldDefinition } from '../types';
+import { InputFieldDefinition } from '../../types';
 
 interface FormBuilderProps {
   fields: InputFieldDefinition[];

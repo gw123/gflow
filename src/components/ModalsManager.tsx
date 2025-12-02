@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { useUIStore, useWorkflowStore, useUserStore } from '../stores';
-import { api } from '../api/client';
+import { useUIStore, useWorkflowStore, useUserStore } from '../../stores';
+import { api } from '../../api/client';
 
 import ConfigModal from './ConfigModal';
 import SecretsManager from './SecretsManager';

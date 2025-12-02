@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { X, User, LogOut, Calendar, Mail, Shield } from 'lucide-react';
-import { User as UserType } from '../api/client';
+import { User as UserType } from '../../api/client';
 
 interface UserProfileModalProps {
   isOpen: boolean;

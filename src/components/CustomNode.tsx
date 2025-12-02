@@ -2,10 +2,10 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { CheckCircle, AlertCircle, Loader2, Activity } from 'lucide-react';
-import { NodeDefinition } from '../types';
-import { Registry } from '../registry';
+import { NodeDefinition } from '../../types';
+import { Registry } from '../../registry';
 import { IconMap } from './icons';
-import '../builtins'; // Ensure registration
+import '../../builtins'; // Ensure registration
 
 const CustomNode = ({ data, selected }: NodeProps) => {
   const nodeData = data as NodeDefinition & { label: string, executionStatus?: string };

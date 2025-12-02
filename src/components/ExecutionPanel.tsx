@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Clock, Terminal, Activity, ChevronRight, Layers, ArrowRight, FileJson, FileText, Play, StepForward, PauseCircle, Send, User, Image as ImageIcon, Download } from 'lucide-react';
-import { PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../types';
-import { useExecutionStore, useUIStore } from '../stores';
+import { PendingInputConfig, InputFieldDefinition, NodeExecutionResult } from '../../types';
+import { useExecutionStore, useUIStore } from '../../stores';
 
 interface ExecutionPanelProps {
   onNextStep?: () => void;

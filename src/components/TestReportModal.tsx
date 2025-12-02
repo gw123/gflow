@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, Shield, Activity, Zap } from 'lucide-react';
-import { TestReport } from '../tester';
+import { TestReport } from '../../tester';
 
 interface TestReportModalProps {
   isOpen: boolean;
