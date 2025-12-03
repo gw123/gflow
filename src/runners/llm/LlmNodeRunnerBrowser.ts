@@ -1,6 +1,5 @@
-
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate } from '../utils';
 import { GoogleGenAI } from "@google/genai";
 
 // Mock Langfuse Web SDK to avoid fs dependency issues in browser
@@ -28,7 +27,7 @@ class LangfuseSpanMock {
     end(data: any) {}
 }
 
-export class LlmNodeRunner implements NodeRunner {
+export class LlmNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const params = interpolate(node.parameters, context);
     const { log } = context;
@@ -49,7 +48,9 @@ export class LlmNodeRunner implements NodeRunner {
     }
 
     // 2. Real LLM Execution (Gemini)
-    if (!process.env.API_KEY) {
+    // Get API key from window.env for browser environment
+    const apiKey = (window as any).env?.API_KEY || params.API_KEY;
+    if (!apiKey) {
         return { status: 'error', error: "API Key missing. Please check your environment configuration.", logs: ["Missing API_KEY"] };
     }
 
@@ -95,7 +96,7 @@ export class LlmNodeRunner implements NodeRunner {
     }
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
         
         const response = await ai.models.generateContent({
             model: model,

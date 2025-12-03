@@ -11,18 +11,18 @@ export const getRunner = (type: string): NodeRunner => {
 
 export { interpolate, evaluateCondition } from './utils';
 
-export { AiImageNodeRunner } from './AiImageNodeRunner';
-export { ControlNodeRunner } from './ControlNodeRunner';
-export { DefaultRunner } from './DefaultRunner';
-export { GrpcNodeRunner } from './GrpcNodeRunner';
-export { HttpNodeRunner } from './HttpNodeRunner';
-export { InteractionNodeRunner } from './InteractionNodeRunner';
-export { JsNodeRunner } from './JsNodeRunner';
-export { LangChainNodeRunner } from './LangChainNodeRunner';
-export { LlmNodeRunner } from './LlmNodeRunner';
-export { ManualNodeRunner } from './ManualNodeRunner';
-export { MediaNodeRunner } from './MediaNodeRunner';
-export { PlayMediaNodeRunner } from './PlayMediaNodeRunner';
-export { SystemNodeRunner } from './SystemNodeRunner';
-export { TimeNodeRunner } from './TimeNodeRunner';
-export { TtsNodeRunner } from './TtsNodeRunner';
+export { AiImageNodeRunnerProxy as AiImageNodeRunner } from './ai-image';
+export { ControlNodeRunnerProxy as ControlNodeRunner } from './control';
+export { DefaultRunnerProxy as DefaultRunner } from './default';
+export { GrpcNodeRunnerProxy as GrpcNodeRunner } from './grpc';
+export { HttpNodeRunnerProxy as HttpNodeRunner } from './http';
+export { InteractionNodeRunnerProxy as InteractionNodeRunner } from './interaction';
+export { JsNodeRunnerProxy as JsNodeRunner } from './js';
+export { LangChainNodeRunnerProxy as LangChainNodeRunner } from './langchain';
+export { LlmNodeRunnerProxy as LlmNodeRunner } from './llm';
+export { ManualNodeRunnerProxy as ManualNodeRunner } from './manual';
+export { MediaNodeRunnerProxy as MediaNodeRunner } from './media';
+export { PlayMediaNodeRunnerProxy as PlayMediaNodeRunner } from './play-media';
+export { SystemNodeRunnerProxy as SystemNodeRunner } from './system';
+export { TimeNodeRunnerProxy as TimeNodeRunner } from './time';
+export { TtsNodeRunnerProxy as TtsNodeRunner } from './tts';

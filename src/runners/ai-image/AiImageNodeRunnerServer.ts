@@ -1,9 +1,14 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate } from '../utils';
+import * as fs from 'fs';
+import * as path from 'path';
 
-export class AiImageNodeRunner implements NodeRunner {
+/**
+ * Server implementation of AI Image Node Runner
+ * Uses Google Gemini API for image generation with server-side storage
+ */
+export class AiImageNodeRunnerServer implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
     const params = interpolate(node.parameters, context);
@@ -17,7 +22,8 @@ export class AiImageNodeRunner implements NodeRunner {
     }
 
     const outputFormat = params.outputFormat || 'data_uri';
-    const shouldDownload = params.download === true;
+    const shouldSave = params.download === true || params.save === true;
+    const savePath = params.savePath || './generated_images';
 
     if (!prompt) {
         return { status: 'error', error: "Prompt is required", logs: ["Prompt parameter is missing"] };
@@ -74,16 +80,23 @@ export class AiImageNodeRunner implements NodeRunner {
         log(`[4/5] Image decoded successfully. Size: ${Math.round(base64Image.length / 1024)}KB`);
 
         const dataUri = `data:${mimeType};base64,${base64Image}`;
+        let savedPath = null;
 
-        // Auto-download logic
-        if (shouldDownload && typeof window !== 'undefined') {
-            log("[5/5] Downloading image file...");
-            const link = document.createElement('a');
-            link.href = dataUri;
-            link.download = `gemini_image_${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        // Save to file logic for server
+        if (shouldSave) {
+            // Create directory if it doesn't exist
+            if (!fs.existsSync(savePath)) {
+                fs.mkdirSync(savePath, { recursive: true });
+            }
+            
+            const filename = `gemini_image_${Date.now()}.png`;
+            savedPath = path.join(savePath, filename);
+            
+            // Convert base64 to buffer and write to file
+            const buffer = Buffer.from(base64Image, 'base64');
+            fs.writeFileSync(savedPath, buffer);
+            
+            log(`[5/5] Image saved to: ${savedPath}`);
         } else {
             log("[5/5] Processing complete.");
         }
@@ -98,7 +111,8 @@ export class AiImageNodeRunner implements NodeRunner {
                 result: mainOutput, // The primary output based on format choice
                 image: dataUri, // Always provide Data URI for UI preview compatibility
                 rawBase64: base64Image, // Always provide raw base64 for advanced use
-                mimeType: mimeType
+                mimeType: mimeType,
+                savedPath: savedPath // Path where image was saved (server-only)
             },
             logs: [`Generated image successfully. Size: ${Math.round(base64Image.length / 1024)}KB`]
         };

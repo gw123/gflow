@@ -1,8 +1,7 @@
-
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate, validateSchema } from './utils';
-import type { Schema } from './utils';
-import { api } from '../api/client';
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate, validateSchema } from '../utils';
+import type { Schema } from '../utils';
+import { api } from '../../api/client';
 
 export class HttpNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {

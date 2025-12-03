@@ -1,6 +1,5 @@
-
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate } from '../utils';
 
 export class SystemNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {

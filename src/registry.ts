@@ -1,6 +1,6 @@
 
 import { NodePlugin, NodeRunner, NodeVisuals } from './types';
-import { DefaultRunner } from './runners/DefaultRunner';
+import { DefaultRunner } from './runners';
 
 class NodeRegistry {
     private plugins: Map<string, NodePlugin> = new Map();

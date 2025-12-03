@@ -8,7 +8,7 @@ import { HttpNodeRunnerProxy } from '../runners/http';
 import { JsNodeRunnerProxy } from '../runners/js';
 import { TimeNodeRunnerProxy } from '../runners/time';
 import { ControlNodeRunnerProxy } from '../runners/control';
-import { DefaultRunner } from '../runners/DefaultRunner';
+import { DefaultRunnerProxy } from '../runners/default';
 import { interpolate as sharedInterpolate } from '../runners/utils';
 
 /**
@@ -218,7 +218,7 @@ const getRunner = (type: string): NodeRunner => {
         case 'foreach':
             return new ControlNodeRunnerProxy();
         default:
-            return new DefaultRunner();
+            return new DefaultRunnerProxy();
     }
 };
 

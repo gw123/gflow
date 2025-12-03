@@ -1,9 +1,8 @@
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate } from '../utils';
+import { AudioService, VideoService } from '../../services/MediaService';
 
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
-import { AudioService, VideoService } from '../services/MediaService';
-
-export class PlayMediaNodeRunner implements NodeRunner {
+export class PlayMediaNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
     const params = interpolate(node.parameters, context);

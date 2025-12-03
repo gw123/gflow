@@ -1,10 +1,9 @@
+import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
+import { interpolate } from '../utils';
+import { AudioService, VideoService } from '../../services/MediaService';
+import { pcmToGeminiBlob } from '../audioUtils';
 
-import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../types';
-import { interpolate } from './utils';
-import { AudioService, VideoService } from '../services/MediaService';
-import { pcmToGeminiBlob } from './audioUtils';
-
-export class MediaNodeRunner implements NodeRunner {
+export class MediaNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
     const params = interpolate(node.parameters, context);
