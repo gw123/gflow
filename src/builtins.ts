@@ -2,13 +2,16 @@
 import { Registry } from './registry';
 import { NodePlugin } from './types';
 
-// Importing Optimized Runners from src/runners
-import { 
-    JsNodeRunner,
+// Import new proxy runners
+import { HttpNodeRunnerProxy } from './runners/http';
+import { JsNodeRunnerProxy } from './runners/js';
+import { TimeNodeRunnerProxy } from './runners/time';
+import { ControlNodeRunnerProxy } from './runners/control';
+import { LlmNodeRunnerProxy } from './runners/llm';
+
+// Import runners that haven't been refactored yet
+import {
     ManualNodeRunner,
-    HttpNodeRunner,
-    TimeNodeRunner,
-    ControlNodeRunner,
     SystemNodeRunner,
     GrpcNodeRunner,
     InteractionNodeRunner,
@@ -16,7 +19,6 @@ import {
     PlayMediaNodeRunner,
     AiImageNodeRunner,
     LangChainNodeRunner,
-    LlmNodeRunner, 
     TtsNodeRunner
 } from './runners';
 
@@ -46,7 +48,7 @@ const plugins: NodePlugin[] = [
                 { name: "path", type: "string", defaultValue: "my-hook" }
             ]
         },
-        runner: new HttpNodeRunner(),
+        runner: new HttpNodeRunnerProxy(),
         visuals: { icon: 'Globe', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     },
     {
@@ -57,7 +59,7 @@ const plugins: NodePlugin[] = [
             type: "timer",
             parameters: { secondsInterval: 60 }
         },
-        runner: new TimeNodeRunner(),
+        runner: new TimeNodeRunnerProxy(),
         visuals: { icon: 'Clock', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     },
     {
@@ -93,7 +95,7 @@ const plugins: NodePlugin[] = [
                 { name: "body", type: "object", defaultValue: {} }
             ]
         },
-        runner: new HttpNodeRunner(),
+        runner: new HttpNodeRunnerProxy(),
         visuals: { icon: 'Globe', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
@@ -104,7 +106,7 @@ const plugins: NodePlugin[] = [
             type: "wait",
             parameters: { seconds: 5 }
         },
-        runner: new TimeNodeRunner(),
+        runner: new TimeNodeRunnerProxy(),
         visuals: { icon: 'Clock', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
     },
     {
@@ -115,7 +117,7 @@ const plugins: NodePlugin[] = [
             type: "js",
             parameters: { code: "return { result: 'Hello ' + input.name };" }
         },
-        runner: new JsNodeRunner(),
+        runner: new JsNodeRunnerProxy(),
         visuals: { icon: 'Code', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
     },
     {
@@ -126,7 +128,7 @@ const plugins: NodePlugin[] = [
             type: "code_search",
             parameters: { query: "search query" }
         },
-        runner: new JsNodeRunner(), // Reusing JS runner for now or implement specific
+        runner: new JsNodeRunnerProxy(), // Reusing JS runner for now
         visuals: { icon: 'Search', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
     },
     {
@@ -155,9 +157,9 @@ const plugins: NodePlugin[] = [
             name: "LangChain Agent",
             type: "langchain_agent",
             desc: "AI Agent with tool support and Langfuse observability.",
-            parameters: { 
-                goal: "Summarize the last email and check calendar.", 
-                tools: ["search", "calculator", "calendar"], 
+            parameters: {
+                goal: "Summarize the last email and check calendar.",
+                tools: ["search", "calculator", "calendar"],
                 temperature: 0.2
             },
             credentials: { openai_api_key: "", langfuse_keys: {} },
@@ -185,7 +187,7 @@ const plugins: NodePlugin[] = [
                 { name: "prompt", type: "string", defaultValue: "Hello!" }
             ]
         },
-        runner: new LlmNodeRunner(), // Using Real Optimized Runner
+        runner: new LlmNodeRunnerProxy(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -230,7 +232,7 @@ const plugins: NodePlugin[] = [
             type: "agent",
             parameters: { role: "You are a helpful assistant", prompt: "How can I help?" }
         },
-        runner: new LlmNodeRunner(), // Using Real Optimized Runner
+        runner: new LlmNodeRunnerProxy(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -241,7 +243,7 @@ const plugins: NodePlugin[] = [
             type: "ai_low_code",
             parameters: { instruction: "Create a form" }
         },
-        runner: new LlmNodeRunner(), // Using Real Optimized Runner
+        runner: new LlmNodeRunnerProxy(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -252,7 +254,7 @@ const plugins: NodePlugin[] = [
             type: "prompt_template",
             parameters: { template: "Hello {{name}}", name: "World" }
         },
-        runner: new LlmNodeRunner(), // Using Real Optimized Runner
+        runner: new LlmNodeRunnerProxy(),
         visuals: { icon: 'File', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
 
@@ -265,7 +267,7 @@ const plugins: NodePlugin[] = [
             type: "if",
             parameters: { condition: "={{ $P.value > 10 }}" }
         },
-        runner: new ControlNodeRunner(),
+        runner: new ControlNodeRunnerProxy(),
         visuals: { icon: 'GitBranch', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
     {
@@ -276,7 +278,7 @@ const plugins: NodePlugin[] = [
             type: "switch",
             parameters: { value: "={{ $P.category }}" }
         },
-        runner: new ControlNodeRunner(),
+        runner: new ControlNodeRunnerProxy(),
         visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
     {
@@ -287,7 +289,7 @@ const plugins: NodePlugin[] = [
             type: "loop",
             parameters: { items: "={{ $P.items }}" }
         },
-        runner: new ControlNodeRunner(),
+        runner: new ControlNodeRunnerProxy(),
         visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
     },
 
@@ -379,7 +381,7 @@ const plugins: NodePlugin[] = [
         type: 'text2sql',
         category: 'data',
         template: { name: "Text to SQL", type: "text2sql", parameters: { prompt: "Find users" } },
-        runner: new LlmNodeRunner(), // Using Real Optimized Runner
+        runner: new LlmNodeRunnerProxy(),
         visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
 
@@ -390,11 +392,11 @@ const plugins: NodePlugin[] = [
         template: {
             name: "User Form",
             type: "user_interaction",
-            parameters: { 
-                title: "Approval", 
+            parameters: {
+                title: "Approval",
                 fields: [
                     { key: "approved", label: "Approve?", type: "boolean", required: true }
-                ] 
+                ]
             }
         },
         runner: new InteractionNodeRunner(),

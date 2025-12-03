@@ -4,6 +4,12 @@ import vm from 'vm';
 // Fix: Import from ../src/core because server is at root and core is in src/core
 import { WorkflowEngine as CoreEngine } from '../core/WorkflowEngine';
 import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
+import { HttpNodeRunnerProxy } from '../runners/http';
+import { JsNodeRunnerProxy } from '../runners/js';
+import { TimeNodeRunnerProxy } from '../runners/time';
+import { ControlNodeRunnerProxy } from '../runners/control';
+import { DefaultRunner } from '../runners/DefaultRunner';
+import { interpolate as sharedInterpolate } from '../runners/utils';
 
 /**
  * Server-Side Node Runner Implementations
@@ -186,324 +192,33 @@ const safeEval = (code: string, context: any) => {
     }
 };
 
-const interpolate = (template: any, context: any): any => {
-    if (typeof template === 'string') {
-        const raw = template.trim();
-        // Handle {{ }} interpolation
-        if (raw.includes('{{')) {
-            return raw.replace(/\{\{\s*(.*?)\s*\}\}/g, (_, expr) => {
-                const res = safeEval(expr, context);
-                if (typeof res === 'object' && res !== null) return JSON.stringify(res);
-                return String(res ?? "");
-            });
-        }
-        // Handle direct expression starting with =
-        if (raw.startsWith('=')) {
-            const res = safeEval(raw, context);
-            return res !== undefined ? res : raw;
-        }
-        return template;
-    } else if (Array.isArray(template)) {
-        return template.map(i => interpolate(i, context));
-    } else if (typeof template === 'object' && template !== null) {
-        const res: any = {};
-        for (const key in template) {
-            res[key] = interpolate(template[key], context);
-        }
-        return res;
-    }
-    return template;
-};
-
-// --- Server Specific Runners ---
-
-class ServerHttpRunner implements NodeRunner {
-    async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
-        if (!params.url) {
-            context.log('⚠ Skipped: No URL provided');
-            return { status: 'skipped', output: { error: "No URL provided" }, logs: ["Missing URL"] };
-        }
-
-        const method = params.method || 'GET';
-        context.log(`→ ${method} ${params.url}`);
-
-        if (params.headers && Object.keys(params.headers).length > 0) {
-            context.log(`  Headers: ${Object.keys(params.headers).join(', ')}`);
-        }
-
-        if (params.body) {
-            const bodyPreview = typeof params.body === 'object'
-                ? JSON.stringify(params.body).substring(0, 50)
-                : String(params.body).substring(0, 50);
-            context.log(`  Body: ${bodyPreview}${bodyPreview.length >= 50 ? '...' : ''}`);
-        }
-
-        const startTime = Date.now();
-
-        try {
-            const resp = await axios({
-                method: method,
-                url: params.url,
-                headers: params.headers,
-                data: params.body,
-                validateStatus: () => true,
-                timeout: 30000
-            });
-
-            const duration = Date.now() - startTime;
-            const isError = resp.status >= 400;
-
-            context.log(`← ${resp.status} ${resp.statusText} (${duration}ms)`);
-
-            if (resp.data) {
-                const dataPreview = typeof resp.data === 'object'
-                    ? JSON.stringify(resp.data).substring(0, 80)
-                    : String(resp.data).substring(0, 80);
-                context.log(`  Response: ${dataPreview}${dataPreview.length >= 80 ? '...' : ''}`);
-            }
-
-            return {
-                status: isError ? 'error' : 'success',
-                inputs: params,
-                output: {
-                    status: resp.status,
-                    data: resp.data,
-                    headers: resp.headers
-                },
-                logs: [`${method} ${params.url} → ${resp.status} (${duration}ms)`],
-                error: isError ? `HTTP Error ${resp.status}: ${resp.statusText}` : undefined
-            };
-        } catch (e: any) {
-            const duration = Date.now() - startTime;
-            context.log(`✗ Request failed after ${duration}ms: ${e.message}`);
-            return {
-                status: 'error',
-                error: e.message,
-                logs: [`Request failed: ${e.message}`]
-            };
-        }
-    }
-}
-
-class ServerJsRunner implements NodeRunner {
-    async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
-        const code = params.code || "";
-        const input = params.input || context.inputs;
-
-        // Log code preview
-        const codeLines = code.split('\n').filter((l: string) => l.trim());
-        context.log(`→ Executing JavaScript (${codeLines.length} lines)`);
-        if (codeLines.length > 0 && codeLines.length <= 3) {
-            codeLines.forEach((line: string) => context.log(`  | ${line.trim()}`));
-        } else if (codeLines.length > 3) {
-            context.log(`  | ${codeLines[0].trim()}`);
-            context.log(`  | ... (${codeLines.length - 2} more lines)`);
-            context.log(`  | ${codeLines[codeLines.length - 1].trim()}`);
-        }
-
-        // Log input keys
-        if (input && typeof input === 'object') {
-            const inputKeys = Object.keys(input);
-            if (inputKeys.length > 0) {
-                context.log(`  Input vars: ${inputKeys.slice(0, 5).join(', ')}${inputKeys.length > 5 ? '...' : ''}`);
-            }
-        }
-
-        const startTime = Date.now();
-        const logs: string[] = [];
-
-        try {
-            // Using Node's native VM module
-            const sandbox = {
-                input,
-                console: {
-                    log: (m: any) => {
-                        const msg = String(m);
-                        logs.push(msg);
-                        context.log(`  [console.log] ${msg}`);
-                    },
-                    error: (m: any) => {
-                        const msg = `[Error] ${String(m)}`;
-                        logs.push(msg);
-                        context.log(`  [console.error] ${String(m)}`);
-                    },
-                    info: (m: any) => {
-                        const msg = `[Info] ${String(m)}`;
-                        logs.push(msg);
-                        context.log(`  [console.info] ${String(m)}`);
-                    },
-                    warn: (m: any) => {
-                        const msg = `[Warn] ${String(m)}`;
-                        logs.push(msg);
-                        context.log(`  [console.warn] ${String(m)}`);
-                    }
-                },
-                // Add standard globals
-                setTimeout, clearTimeout,
-                Buffer, Math, JSON, Date, parseInt, parseFloat, String, Number, Boolean, Array, Object
-            };
-
-            const vmContext = vm.createContext(sandbox);
-
-            // Wrap code in an IIFE to allow 'return' statements
-            const script = new vm.Script(`
-                (function() {
-                    ${code}
-                })()
-            `);
-
-            // Execution timeout 5s
-            const result = script.runInContext(vmContext, { timeout: 5000 });
-            const duration = Date.now() - startTime;
-
-            context.log(`← Completed in ${duration}ms`);
-
-            // Log result preview
-            if (result !== undefined) {
-                const resultStr = typeof result === 'object'
-                    ? JSON.stringify(result).substring(0, 80)
-                    : String(result).substring(0, 80);
-                context.log(`  Result: ${resultStr}${resultStr.length >= 80 ? '...' : ''}`);
-            }
-
-            return {
-                status: 'success',
-                inputs: params,
-                output: result,
-                logs: [`Script executed in ${duration}ms`, ...logs]
-            };
-        } catch (e: any) {
-            const duration = Date.now() - startTime;
-            context.log(`✗ Runtime error after ${duration}ms: ${e.message}`);
-
-            // Try to extract line number from error
-            if (e.stack) {
-                const lineMatch = e.stack.match(/<anonymous>:(\d+):(\d+)/);
-                if (lineMatch) {
-                    context.log(`  at line ${parseInt(lineMatch[1]) - 2}, column ${lineMatch[2]}`);
-                }
-            }
-
-            return {
-                status: 'error',
-                error: e.message,
-                logs: [`Runtime Error: ${e.message}`, ...logs]
-            };
-        }
-    }
-}
-
-class ServerDefaultRunner implements NodeRunner {
-    async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
-
-        // Handle Wait/Timer logic
-        if (node.type === 'wait') {
-            const seconds = Number(params.seconds) || 1;
-            context.log(`⏳ Waiting ${seconds} second${seconds !== 1 ? 's' : ''}...`);
-            const startTime = Date.now();
-            await new Promise(r => setTimeout(r, seconds * 1000));
-            const actualWait = Date.now() - startTime;
-            context.log(`✓ Wait completed (actual: ${actualWait}ms)`);
-            return {
-                status: 'success',
-                inputs: params,
-                output: { waited: seconds, actualMs: actualWait },
-                logs: [`Waited ${seconds}s (${actualWait}ms)`]
-            };
-        }
-
-        // Handle Timer/Trigger nodes
-        if (node.type === 'timer' || node.type === 'manual' || node.type === 'webhook') {
-            context.log(`⚡ Trigger activated: ${node.type}`);
-            if (params.cron) {
-                context.log(`  Cron: ${params.cron}`);
-            }
-            // IMPORTANT: Merge params into output so they propagate to $P for downstream conditions
-            return {
-                status: 'success',
-                inputs: params,
-                output: {
-                    ...params,  // Include all trigger parameters in output
-                    triggered: true,
-                    type: node.type,
-                    timestamp: new Date().toISOString()
-                },
-                logs: [`Trigger: ${node.type}`]
-            };
-        }
-
-        // Handle Set/Transform nodes
-        if (node.type === 'set' || node.type === 'transform') {
-            context.log(`→ Setting values`);
-            const output = params.values || params.data || params;
-            if (typeof output === 'object') {
-                Object.keys(output).forEach(key => {
-                    const val = output[key];
-                    const valStr = typeof val === 'object' ? JSON.stringify(val).substring(0, 50) : String(val).substring(0, 50);
-                    context.log(`  ${key}: ${valStr}`);
-                });
-            }
-            return {
-                status: 'success',
-                inputs: params,
-                output: output,
-                logs: [`Set ${Object.keys(output).length} value(s)`]
-            };
-        }
-
-        // Handle Condition/If nodes
-        if (node.type === 'if' || node.type === 'condition' || node.type === 'switch') {
-            context.log(`🔀 Evaluating condition`);
-            if (params.condition) {
-                context.log(`  Condition: ${String(params.condition).substring(0, 50)}`);
-            }
-            return {
-                status: 'success',
-                inputs: params,
-                output: { evaluated: true, ...params },
-                logs: [`Condition evaluated`]
-            };
-        }
-
-        // Handle Loop nodes
-        if (node.type === 'loop' || node.type === 'foreach') {
-            const items = params.items || params.array || [];
-            context.log(`🔄 Loop over ${Array.isArray(items) ? items.length : 0} items`);
-            return {
-                status: 'success',
-                inputs: params,
-                output: { items, count: Array.isArray(items) ? items.length : 0 },
-                logs: [`Loop: ${Array.isArray(items) ? items.length : 0} items`]
-            };
-        }
-
-        // General pass-through for other nodes
-        context.log(`→ Executing ${node.type} node`);
-        if (params && Object.keys(params).length > 0) {
-            const paramKeys = Object.keys(params);
-            context.log(`  Parameters: ${paramKeys.slice(0, 5).join(', ')}${paramKeys.length > 5 ? '...' : ''}`);
-        }
-
-        return {
-            status: 'success',
-            inputs: params,
-            output: { ...params, _nodeType: node.type, _executed: true },
-            logs: [`Executed ${node.type}`]
-        };
-    }
-}
+// Use shared interpolate from runners/utils
+const interpolate = sharedInterpolate;
 
 // --- Runner Factory ---
 
+/**
+ * Get the appropriate runner for a node type.
+ * Uses shared proxy runners for cross-platform code.
+ */
 const getRunner = (type: string): NodeRunner => {
     switch (type) {
         case 'http':
-        case 'webhook': return new ServerHttpRunner();
-        case 'js': return new ServerJsRunner();
-        default: return new ServerDefaultRunner();
+        case 'webhook':
+            return new HttpNodeRunnerProxy();
+        case 'js':
+            return new JsNodeRunnerProxy();
+        case 'wait':
+        case 'timer':
+            return new TimeNodeRunnerProxy();
+        case 'if':
+        case 'condition':
+        case 'switch':
+        case 'loop':
+        case 'foreach':
+            return new ControlNodeRunnerProxy();
+        default:
+            return new DefaultRunner();
     }
 };
 
