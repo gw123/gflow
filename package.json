@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "tsx src/server/index.ts",
+    "dev:server:new": "tsx src/server/index.new.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
+    "dev:all:new": "concurrently \"npm run dev\" \"npm run dev:server:new\"",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "tsx src/server/index.ts"
+    "server": "tsx src/server/index.ts",
+    "server:new": "tsx src/server/index.new.ts",
+    "db:migrate": "tsx -e \"import('./src/server/db').then(m => m.createDatabaseFromEnv().then(db => db.migrate().then(() => db.close())))\""
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
     "@vitejs/plugin-react": "^5.1.1",
     "axios": "^1.13.2",
+    "better-sqlite3": "^11.6.0",
+    "pg": "^8.13.1",
     "body-parser": "^2.2.1",
     "cors": "^2.8.5",
     "dagre": "^0.8.5",
@@ -35,9 +41,11 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "@types/cors": "^2.8.14",
     "@types/express": "^4.17.18",
     "@types/node": "^22.14.0",
+    "@types/pg": "^8.11.10",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^8.2.2",
     "ts-node": "^10.9.2",
