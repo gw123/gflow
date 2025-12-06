@@ -3,6 +3,7 @@ import { interpolate } from '../utils';
 
 // --- Protobuf Type Definitions (Simulation) ---
 
+
 // Corresponds to 'message Value' in proto
 interface ProtoValue {
     kind: 'string_value' | 'int_value' | 'double_value' | 'bool_value' | 'bytes_value' | 'list_value' | 'map_value' | 'null_value';
@@ -94,15 +95,15 @@ function mapToProto(obj: any): Record<string, ProtoValue> {
 export class GrpcNodeRunner implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
         const { log } = context;
-        
+
         // 1. Parameter Interpolation
         const params = interpolate(node.parameters, context);
         const endpoint = params.endpoint || 'localhost:50051';
-        
+
         // Simulated Metadata Check
         const kind = node.meta?.kind || 'UnknownPlugin';
         log(`[gRPC Manager] Preparing execution for plugin '${kind}' at ${endpoint}`);
-        
+
         try {
             // ----------------------------------------------------------------
             // Step 1: HealthCheck
@@ -118,13 +119,13 @@ export class GrpcNodeRunner implements NodeRunner {
             const initRequest = {
                 node_json: JSON.stringify(node),
                 // We serialize the workflow definition for context if needed
-                workflow_entity_json: JSON.stringify({ 
-                    name: context.workflow.name, 
-                    trace_id: "trace-" + Date.now() 
+                workflow_entity_json: JSON.stringify({
+                    name: context.workflow.name,
+                    trace_id: "trace-" + Date.now()
                 }),
                 server_endpoint: "https://api.workflow-engine.com"
             };
-            
+
             await this.simulateInit(initRequest, log);
 
             // ----------------------------------------------------------------
@@ -137,7 +138,7 @@ export class GrpcNodeRunner implements NodeRunner {
                 parent_output: mapToProto(context.inputs), // Current context inputs map to parent_output
                 global_vars: mapToProto(context.global)
             };
-            
+
             log(`[gRPC Client] Sending RunRequest with ${Object.keys(runRequest.parameters).length} parameters...`);
             // Log trace context injection (simulation)
             log(`[gRPC Metadata] Injecting trace_id: ${context.executionState.nodeResults[node.name]?.startTime || Date.now()}`);
@@ -150,7 +151,7 @@ export class GrpcNodeRunner implements NodeRunner {
                 output: output,
                 // In a real branching scenario, the runner might use branchIndex to determine next steps.
                 // For now we just return it in output for the engine to potentially use.
-                logs: context.executionState.nodeResults[node.name]?.logs || [] 
+                logs: context.executionState.nodeResults[node.name]?.logs || []
             };
 
         } catch (e: any) {
@@ -168,7 +169,7 @@ export class GrpcNodeRunner implements NodeRunner {
     private async simulateHealthCheck(endpoint: string, log: (msg: string) => void) {
         log(`[HealthCheck] Pinging ${endpoint}...`);
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         // Simulate failure if endpoint contains "fail"
         if (endpoint.includes('fail')) {
             throw new Error(`Plugin unhealthy: Connection refused at ${endpoint}`);
@@ -181,14 +182,14 @@ export class GrpcNodeRunner implements NodeRunner {
         // Simulate payload overhead calculation
         const payloadSize = request.node_json.length + request.workflow_entity_json.length;
         log(`[Init] Sending config payload (${Math.round(payloadSize / 1024)}KB)`);
-        
+
         await new Promise(resolve => setTimeout(resolve, 400));
         log(`[Init] Plugin initialized successfully`);
     }
 
     private async simulateRunStream(request: any, log: (msg: string) => void): Promise<{ output: any, branchIndex: number }> {
         // Simulate a gRPC stream with multiple messages
-        
+
         // Message 1: Log
         await new Promise(resolve => setTimeout(resolve, 300));
         const logMsg1: RunResponse = { type: ResponseType.LOG, log_message: "Validating input parameters..." };
@@ -206,7 +207,7 @@ export class GrpcNodeRunner implements NodeRunner {
 
         // Message 4: Result
         await new Promise(resolve => setTimeout(resolve, 200));
-        
+
         // Mock result based on inputs
         const resultData = {
             processed: true,
@@ -215,17 +216,17 @@ export class GrpcNodeRunner implements NodeRunner {
             echo: Object.keys(request.parameters).length > 0 ? "Param received" : "No params"
         };
 
-        const resultMsg: RunResponse = { 
-            type: ResponseType.RESULT, 
+        const resultMsg: RunResponse = {
+            type: ResponseType.RESULT,
             result_json: JSON.stringify(resultData),
-            branch_index: 0 
+            branch_index: 0
         };
 
         log(`[Plugin Result] Stream closed. Branch: ${resultMsg.branch_index}`);
-        
-        return { 
-            output: resultData, 
-            branchIndex: resultMsg.branch_index || 0 
+
+        return {
+            output: resultData,
+            branchIndex: resultMsg.branch_index || 0
         };
     }
 }

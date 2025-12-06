@@ -5,144 +5,201 @@ import { GoogleGenAI } from "@google/genai";
 // Mock Langfuse Web SDK to avoid fs dependency issues in browser
 class LangfuseWebMock {
     constructor(config: any) {
-        // console.log("[Langfuse Mock] Initialized with", config);
+        console.log("[Langfuse Mock] Initialized with", config);
     }
     trace(config: any) {
+        console.log("[Langfuse Mock] Trace started", config);
         return new LangfuseTraceMock();
     }
 }
 
 class LangfuseTraceMock {
     id = "mock-trace-" + Date.now();
-    update(data: any) {}
+    update(data: any) {
+        console.log("[Langfuse Mock] Trace updated", data);
+    }
     generation(data: any) {
+        console.log("[Langfuse Mock] Generation started", data);
         return new LangfuseSpanMock();
     }
     span(data: any) {
+        console.log("[Langfuse Mock] Span started", data);
         return new LangfuseSpanMock();
     }
 }
 
 class LangfuseSpanMock {
-    end(data: any) {}
+    end(data: any) {
+        console.log("[Langfuse Mock] Span/Generation ended", data);
+    }
 }
 
+/**
+ * LangChain Node Runner (Browser Implementation)
+ * 
+ * Simulates LangChain agent execution using Google Gemini API in browser environment.
+ */
 export class LlmNodeRunnerBrowser implements NodeRunner {
-  async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-    const params = interpolate(node.parameters, context);
-    const { log } = context;
-    
-    // 1. Handle Prompt Template (Synchronous)
-    if (node.type === 'prompt_template') {
-        const template = params.template || "";
-        return {
-            status: 'success',
-            inputs: params,
-            output: { 
-                result: template, 
-                prompt: template,
-                ...params 
-            },
-            logs: ['Template processed']
-        };
-    }
+    async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
+        const { log } = context;
+        const params = interpolate(node.parameters, context);
+        const logs: string[] = [];
 
-    // 2. Real LLM Execution (Gemini)
-    // Get API key from window.env for browser environment
-    const apiKey = (window as any).env?.API_KEY || params.API_KEY;
-    if (!apiKey) {
-        return { status: 'error', error: "API Key missing. Please check your environment configuration.", logs: ["Missing API_KEY"] };
-    }
+        // --- 1. Extract Config & Credentials ---
+        const goal = params.goal || "Perform a task";
+        const tools = params.tools || [];
+        const temperature = params.temperature || 0.2;
 
-    // --- Langfuse Init ---
-    let langfuse: any = null;
-    let trace: any = null;
-    
-    // Check credentials in node or params (legacy/global)
-    const langfuseCreds = node.credentials?.langfuse_keys || node.credentials || {};
-    const publicKey = langfuseCreds.publicKey || params.LANGFUSE_PUBLIC_KEY;
-    const baseUrl = langfuseCreds.baseUrl || params.LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
+        // Resolve Credentials
+        // We look for them in node.credentials (direct) or params (interpolated)
+        const langfuseCreds = node.credentials?.langfuse_keys || node.credentials || {};
+        // Fallback to interpolated keys if mapped via Secrets Manager
+        const publicKey = langfuseCreds.publicKey || params.LANGFUSE_PUBLIC_KEY;
+        const secretKey = langfuseCreds.secretKey || params.LANGFUSE_SECRET_KEY;
+        const baseUrl = langfuseCreds.baseUrl || params.LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
 
-    if (publicKey) {
-        try {
-            langfuse = new LangfuseWebMock({ publicKey, baseUrl });
-            trace = langfuse.trace({
-                name: `LLM: ${node.name}`,
-                metadata: { type: node.type, model: params.model }
-            });
-        } catch (e) {
-            if (log) log(`[Langfuse] Init failed: ${e}`);
-        }
-    }
+        // --- 2. Initialize Langfuse (if keys present) ---
+        let langfuse: any = null;
+        let trace: any = null;
 
-    // --- Prepare Request ---
-    const prompt = params.question || params.text || params.prompt || params.instruction || JSON.stringify(params);
-    const model = 'gemini-2.5-flash'; // Standardize on Flash 2.5 for text tasks
-    const systemInstruction = params.role || params.system || "You are a helpful assistant.";
+        if (publicKey) {
+            try {
+                log("[Langfuse] Initializing observability...");
+                // Use Mock implementation for browser environment compatibility
+                langfuse = new LangfuseWebMock({
+                    publicKey,
+                    baseUrl
+                });
 
-    log(`[LLM] Model: ${model}`);
-    log(`[LLM] Input: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
-    
-    if (trace) trace.update({ input: prompt });
-
-    let generation;
-    if (trace) {
-        generation = trace.generation({
-            name: "Gemini Generation",
-            model: model,
-            input: prompt,
-            modelParameters: { temperature: params.temperature || 0.7 }
-        });
-    }
-
-    try {
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-        
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: Number(params.temperature) || 0.7,
+                trace = langfuse.trace({
+                    name: `Agent: ${node.name}`,
+                    sessionId: `session-${Date.now()}`,
+                    metadata: {
+                        nodeType: node.type,
+                        tools: tools
+                    }
+                });
+                log("[Langfuse] Trace started: " + trace.id);
+            } catch (e) {
+                log(`[Langfuse] Warning: Failed to init. ${e}`);
             }
-        });
+        }
 
-        const responseText = response.text || "";
-        log(`[LLM] Response generated (${responseText.length} chars).`);
+        // --- 3. Execute Agent Loop (ReAct Simulation using Gemini) ---
+        try {
+            log(`[Agent] Goal: "${goal}"`);
+            if (trace) trace.update({ input: goal });
 
-        if (generation) {
-            generation.end({
-                output: responseText,
-                usage: { promptTokens: prompt.length, completionTokens: responseText.length, totalTokens: prompt.length + responseText.length } // Approximation
+            // Step 1: Planning / Thought
+            const systemPrompt = `
+                You are a smart AI Agent.
+                Goal: ${goal}
+                Available Tools: ${JSON.stringify(tools)}
+                
+                Format your response as JSON:
+                {
+                    "thought": "your reasoning",
+                    "action": "tool_name_or_final_answer",
+                    "action_input": "arguments"
+                }
+            `;
+
+            // Get API key from window.env (browser-specific)
+            const apiKey = (window as any).env?.API_KEY || params.API_KEY;
+            if (!apiKey) {
+                throw new Error("Google API Key missing in environment");
+            }
+
+            const ai = new GoogleGenAI({ apiKey });
+
+            let generationSpan;
+            if (trace) {
+                generationSpan = trace.generation({
+                    name: "Agent Planning",
+                    model: "gemini-2.5-flash",
+                    input: systemPrompt
+                });
+            }
+
+            log("[Agent] Thinking...");
+            const result = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: { parts: [{ text: systemPrompt }] },
+                config: {
+                    responseMimeType: "application/json",
+                    temperature: temperature
+                }
             });
+
+            const responseText = result.text || "{}";
+            log(`[Agent] Response: ${responseText}`);
+
+            if (generationSpan) {
+                generationSpan.end({
+                    output: responseText,
+                    level: "DEFAULT"
+                });
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(responseText);
+            } catch (e) {
+                parsed = { thought: "Failed to parse JSON", action: "final_answer", action_input: responseText };
+            }
+
+            // --- 4. Tool Execution Simulation ---
+            let finalResult = parsed.action_input;
+
+            if (parsed.action && parsed.action !== "final_answer") {
+                log(`[Agent] Invoking Tool: ${parsed.action}`);
+
+                // Span for tool
+                let toolSpan;
+                if (trace) {
+                    toolSpan = trace.span({
+                        name: `Tool: ${parsed.action}`,
+                        input: parsed.action_input
+                    });
+                }
+
+                // Simulate tool execution
+                await new Promise(r => setTimeout(r, 800));
+                const toolOutput = `Executed ${parsed.action} with ${parsed.action_input}. Result: [Simulated Success]`;
+
+                log(`[Agent] Tool Output: ${toolOutput}`);
+                finalResult = toolOutput;
+
+                if (toolSpan) {
+                    toolSpan.end({ output: toolOutput });
+                }
+            }
+
+            if (trace) {
+                trace.update({ output: finalResult });
+            }
+
+            return {
+                status: 'success',
+                inputs: params,
+                output: {
+                    result: finalResult,
+                    traceId: trace?.id,
+                    thought: parsed.thought
+                },
+                logs: logs
+            };
+
+        } catch (e: any) {
+            if (trace) {
+                trace.update({ level: "ERROR", statusMessage: e.message });
+            }
+            return {
+                status: 'error',
+                inputs: params,
+                error: e.message,
+                logs: logs.concat([`Error: ${e.message}`])
+            };
         }
-
-        if (trace) {
-            trace.update({ output: responseText });
-        }
-
-        const logs = [`Model: ${model}`, `Success`];
-        if (trace) logs.push(`Trace ID: ${trace.id}`);
-
-        return {
-            status: 'success',
-            inputs: params,
-            output: {
-                result: responseText,
-                text: responseText,
-                traceId: trace?.id
-            },
-            logs
-        };
-
-    } catch (e: any) {
-        log(`[LLM] Error: ${e.message}`);
-        return {
-            status: 'error',
-            inputs: params,
-            error: e.message,
-            logs: [`API Error: ${e.message}`]
-        };
     }
-  }
 }

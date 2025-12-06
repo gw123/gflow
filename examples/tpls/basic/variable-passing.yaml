@@ -1,0 +1,112 @@
+# 变量传递示例工作流
+# 演示如何在节点间传递和使用变量
+
+name: "Variable Passing Demo"
+
+# 全局变量 - 可在所有节点中访问
+global:
+  appName: "gFlow"
+  version: "1.0.0"
+  debug: true
+
+nodes:
+  # 1. 触发器 - 提供初始数据
+  - name: "Trigger"
+    type: "manual"
+    parameters:
+      data:
+        userId: 12345
+        action: "login"
+        metadata:
+          ip: "192.168.1.100"
+          userAgent: "Mozilla/5.0"
+
+  # 2. 第一个处理节点 - 创建用户上下文
+  - name: "CreateContext"
+    type: "js"
+    parameters:
+      code: |
+        // 访问输入数据
+        const { userId, action, metadata } = input || {};
+        
+        // 访问全局变量
+        const appName = $global.appName;
+        const debug = $global.debug;
+        
+        // 创建上下文对象
+        const context = {
+          userId,
+          action,
+          appName,
+          sessionId: `sess_${Date.now()}`,
+          startTime: new Date().toISOString(),
+          debug
+        };
+        
+        if (debug) {
+          console.log('Context created:', context);
+        }
+        
+        return context;
+
+  # 3. 第二个处理节点 - 使用表达式引用上一个节点
+  - name: "EnrichData"
+    type: "js"
+    parameters:
+      # 使用表达式从上一个节点获取数据
+      sessionId: "={{ $P.sessionId }}"
+      userId: "={{ $P.userId }}"
+      code: |
+        // input 包含 sessionId 和 userId（从表达式解析）
+        const { sessionId, userId } = input;
+        
+        // 模拟数据库查询
+        const userData = {
+          id: userId,
+          name: "张三",
+          email: "zhangsan@example.com",
+          role: "admin"
+        };
+        
+        return {
+          sessionId,
+          user: userData,
+          enrichedAt: new Date().toISOString()
+        };
+
+  # 4. 第三个节点 - 引用特定节点的输出
+  - name: "GenerateReport"
+    type: "js"
+    parameters:
+      # 可以直接引用任意节点的输出
+      originalAction: "={{ $Trigger.output.action }}"
+      createTime: "={{ $CreateContext.output.startTime }}"
+      code: |
+        // 从 input 获取参数
+        const { originalAction, createTime } = input;
+        
+        // 从父节点（上一个节点）获取数据
+        const enrichedData = $P;
+        
+        // 生成报告
+        return {
+          report: {
+            title: `用户活动报告 - ${enrichedData.user.name}`,
+            action: originalAction,
+            sessionId: enrichedData.sessionId,
+            user: enrichedData.user,
+            timeline: {
+              started: createTime,
+              completed: new Date().toISOString()
+            }
+          },
+          version: $global.version
+        };
+
+connections:
+  Trigger:
+    - - { node: "CreateContext" }
+  CreateContext:
+    - - { node: "EnrichData" }
+  EnrichData:
+    - - { node: "GenerateReport" }

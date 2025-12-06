@@ -1,0 +1,203 @@
+# Cron 定时任务示例
+# 使用 Cron 表达式定时触发工作流
+
+name: "Cron Job Demo"
+
+global:
+  # 告警配置
+  alertEmail: "admin@example.com"
+  alertThreshold: 90  # CPU 使用率告警阈值
+
+nodes:
+  # 1. 定时触发器 - 每分钟执行一次
+  # 生产环境可以调整为更合理的间隔
+  - name: "ScheduledTrigger"
+    type: "timer"
+    parameters:
+      # Cron 表达式：每分钟
+      cron: "* * * * *"
+      # 其他常用配置：
+      # cron: "*/5 * * * *"   # 每5分钟
+      # cron: "0 * * * *"     # 每小时
+      # cron: "0 9 * * 1-5"   # 工作日早上9点
+      # cron: "0 0 * * *"     # 每天午夜
+      timezone: "Asia/Shanghai"
+
+  # 2. 收集系统指标
+  - name: "CollectMetrics"
+    type: "js"
+    parameters:
+      code: |
+        // 模拟收集系统指标
+        // 实际场景中可以调用监控 API 或执行系统命令
+        
+        const timestamp = new Date().toISOString();
+        
+        // 模拟数据
+        const metrics = {
+          cpu: Math.random() * 100,
+          memory: 40 + Math.random() * 40,
+          disk: 50 + Math.random() * 30,
+          network: {
+            in: Math.random() * 1000,
+            out: Math.random() * 500
+          },
+          activeConnections: Math.floor(Math.random() * 100)
+        };
+        
+        return {
+          collectedAt: timestamp,
+          metrics,
+          hostname: "server-01",
+          region: "cn-east-1"
+        };
+
+  # 3. 分析指标
+  - name: "AnalyzeMetrics"
+    type: "js"
+    parameters:
+      code: |
+        const data = input;
+        const threshold = $global.alertThreshold;
+        
+        const alerts = [];
+        
+        // 检查各项指标
+        if (data.metrics.cpu > threshold) {
+          alerts.push({
+            type: 'warning',
+            metric: 'cpu',
+            value: data.metrics.cpu.toFixed(2),
+            threshold: threshold,
+            message: `CPU 使用率过高: ${data.metrics.cpu.toFixed(2)}%`
+          });
+        }
+        
+        if (data.metrics.memory > 80) {
+          alerts.push({
+            type: 'warning',
+            metric: 'memory',
+            value: data.metrics.memory.toFixed(2),
+            threshold: 80,
+            message: `内存使用率过高: ${data.metrics.memory.toFixed(2)}%`
+          });
+        }
+        
+        if (data.metrics.disk > 85) {
+          alerts.push({
+            type: 'critical',
+            metric: 'disk',
+            value: data.metrics.disk.toFixed(2),
+            threshold: 85,
+            message: `磁盘使用率过高: ${data.metrics.disk.toFixed(2)}%`
+          });
+        }
+        
+        return {
+          ...data,
+          analysis: {
+            alertCount: alerts.length,
+            hasAlerts: alerts.length > 0,
+            alerts
+          }
+        };
+
+  # 4. 检查是否需要告警
+  - name: "CheckAlerts"
+    type: "if"
+    parameters:
+      condition: "={{ $P.analysis.hasAlerts === true }}"
+
+  # 5a. 有告警 - 发送通知
+  - name: "SendAlert"
+    type: "js"
+    parameters:
+      code: |
+        const data = input;
+        const alerts = data.analysis.alerts;
+        
+        // 构建告警消息
+        const alertMessage = alerts.map(a => 
+          `[${a.type.toUpperCase()}] ${a.message}`
+        ).join('\n');
+        
+        console.log('====== 告警通知 ======');
+        console.log(`主机: ${data.hostname}`);
+        console.log(`区域: ${data.region}`);
+        console.log(`时间: ${data.collectedAt}`);
+        console.log('告警内容:');
+        console.log(alertMessage);
+        console.log('======================');
+        
+        // 这里可以调用实际的通知服务
+        // 如：发送邮件、钉钉、企业微信等
+        
+        return {
+          alertSent: true,
+          alertCount: alerts.length,
+          recipients: [$global.alertEmail],
+          message: alertMessage,
+          sentAt: new Date().toISOString()
+        };
+
+  # 5b. 无告警 - 记录日志
+  - name: "LogNormal"
+    type: "js"
+    parameters:
+      code: |
+        const data = input;
+        
+        console.log(`[${data.collectedAt}] ${data.hostname}: 系统正常 - ` +
+          `CPU: ${data.metrics.cpu.toFixed(1)}%, ` +
+          `内存: ${data.metrics.memory.toFixed(1)}%, ` +
+          `磁盘: ${data.metrics.disk.toFixed(1)}%`);
+        
+        return {
+          status: 'normal',
+          hostname: data.hostname,
+          metrics: data.metrics,
+          loggedAt: new Date().toISOString()
+        };
+
+  # 6. 保存记录
+  - name: "SaveRecord"
+    type: "js"
+    parameters:
+      code: |
+        // 这里可以将数据保存到数据库
+        // 示例中只是模拟保存
+        
+        const result = input;
+        const originalData = $AnalyzeMetrics.output;
+        
+        const record = {
+          id: `rec_${Date.now()}`,
+          timestamp: originalData.collectedAt,
+          hostname: originalData.hostname,
+          metrics: originalData.metrics,
+          hadAlerts: originalData.analysis.hasAlerts,
+          alertCount: originalData.analysis.alertCount,
+          action: result.alertSent ? 'alert_sent' : 'logged'
+        };
+        
+        console.log(`[Record] Saved: ${record.id}`);
+        
+        return {
+          saved: true,
+          record
+        };
+
+connections:
+  ScheduledTrigger:
+    - - { node: "CollectMetrics" }
+  CollectMetrics:
+    - - { node: "AnalyzeMetrics" }
+  AnalyzeMetrics:
+    - - { node: "CheckAlerts" }
+  CheckAlerts:
+    - - { node: "SendAlert" }   # true 分支
+    - - { node: "LogNormal" }   # false 分支
+  SendAlert:
+    - - { node: "SaveRecord" }
+  LogNormal:
+    - - { node: "SaveRecord" }

@@ -1,0 +1,108 @@
+# JSON 数据转换示例
+# 演示数据过滤、映射和聚合操作
+
+name: "JSON Transform Demo"
+
+nodes:
+  # 1. 触发器 - 提供原始数据
+  - name: "Start"
+    type: "manual"
+    parameters:
+      users:
+        - id: 1
+          name: "张三"
+          age: 28
+          department: "engineering"
+          salary: 15000
+          active: true
+        - id: 2
+          name: "李四"
+          age: 35
+          department: "sales"
+          salary: 12000
+          active: true
+        - id: 3
+          name: "王五"
+          age: 42
+          department: "engineering"
+          salary: 25000
+          active: false
+        - id: 4
+          name: "赵六"
+          age: 29
+          department: "marketing"
+          salary: 11000
+          active: true
+
+  # 2. 过滤活跃用户
+  - name: "FilterActive"
+    type: "js"
+    parameters:
+      input:
+        users: "={{ $P.users }}"
+      code: |
+        const users = input.users || [];
+        const activeUsers = users.filter(u => u.active);
+        return {
+          activeUsers,
+          totalCount: users.length,
+          activeCount: activeUsers.length
+        };
+
+  # 3. 按部门分组
+  - name: "GroupByDepartment"
+    type: "js"
+    parameters:
+      input:
+        activeUsers: "={{ $P.activeUsers }}"
+      code: |
+        const users = input.activeUsers || [];
+        const groups = {};
+        users.forEach(u => {
+          if (!groups[u.department]) {
+            groups[u.department] = { count: 0, totalSalary: 0, names: [] };
+          }
+          groups[u.department].count++;
+          groups[u.department].totalSalary += u.salary;
+          groups[u.department].names.push(u.name);
+        });
+        
+        const departments = Object.entries(groups).map(([dept, data]) => ({
+          department: dept,
+          count: data.count,
+          avgSalary: Math.round(data.totalSalary / data.count),
+          members: data.names
+        }));
+        
+        return { departments };
+
+  # 4. 生成统计报告
+  - name: "GenerateReport"
+    type: "js"
+    parameters:
+      input:
+        departments: "={{ $P.departments }}"
+      code: |
+        const depts = input.departments || [];
+        const totalEmployees = depts.reduce((sum, d) => sum + d.count, 0);
+        const avgSalary = depts.length > 0 
+          ? Math.round(depts.reduce((sum, d) => sum + d.avgSalary, 0) / depts.length)
+          : 0;
+        
+        return {
+          summary: {
+            totalDepartments: depts.length,
+            totalEmployees,
+            averageSalary: avgSalary
+          },
+          departmentRanking: depts.sort((a, b) => b.avgSalary - a.avgSalary),
+          generatedAt: new Date().toISOString()
+        };
+
+connections:
+  Start:
+    - - { node: "FilterActive" }
+  FilterActive:
+    - - { node: "GroupByDepartment" }
+  GroupByDepartment:
+    - - { node: "GenerateReport" }

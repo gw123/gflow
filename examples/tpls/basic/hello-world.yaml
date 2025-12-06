@@ -1,0 +1,58 @@
+# Hello World 工作流
+# 这是最简单的 gFlow 工作流示例
+
+name: "Hello World"
+
+# 全局变量
+global:
+  greeting: "Hello"
+  target: "World"
+
+# 节点定义
+nodes:
+  # 1. 手动触发器 - 工作流入口
+  - name: "Start"
+    type: "manual"
+    parameters:
+      user: "Guest"
+
+  # 2. JavaScript 处理节点
+  - name: "ProcessGreeting"
+    type: "js"
+    parameters:
+      # 通过 input 参数传递数据到 JS 代码
+      input:
+        greeting: "={{ $global.greeting }}"
+        target: "={{ $global.target }}"
+        user: "={{ $P.user }}"
+      code: |
+        // 从 input 获取数据
+        const { greeting, target, user } = input || {};
+        
+        return {
+          message: `${greeting || 'Hello'}, ${target || 'World'}!`,
+          processedBy: user || 'Anonymous',
+          timestamp: new Date().toISOString()
+        };
+
+  # 3. 输出结果节点
+  - name: "Output"
+    type: "js"
+    parameters:
+      input:
+        data: "={{ $P }}"
+      code: |
+        // 格式化最终输出
+        const result = input.data || input;
+        return {
+          success: true,
+          data: result,
+          summary: `Workflow completed: ${result.message}`
+        };
+
+# 节点连接
+connections:
+  Start:
+    - - { node: "ProcessGreeting" }
+  ProcessGreeting:
+    - - { node: "Output" }

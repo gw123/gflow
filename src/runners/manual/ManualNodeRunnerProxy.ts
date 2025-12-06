@@ -4,10 +4,12 @@ import { ManualNodeRunner } from './ManualNodeRunner';
 /**
  * Manual Node Runner Proxy
  * 
- * Automatically selects the appropriate implementation based on the environment.
+ * Manual trigger node works the same in both browser and server environments.
+ * Uses shared implementation.
  */
 export class ManualNodeRunnerProxy extends NodeRunnerProxy {
     constructor() {
-        super(new ManualNodeRunner());
+        // Pass as third argument (sharedRunner) since implementation is the same for both environments
+        super(undefined, undefined, new ManualNodeRunner());
     }
 }

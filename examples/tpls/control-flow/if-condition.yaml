@@ -1,0 +1,94 @@
+# If 条件分支示例
+# 根据年龄判断执行不同分支
+
+name: "If Condition Demo"
+
+nodes:
+  # 1. 触发器 - 提供测试数据
+  - name: "Start"
+    type: "manual"
+    parameters:
+      # 修改 userAge 来测试不同分支（<18 为未成年）
+      userAge: 25
+      userName: "张三"
+      isVip: true
+
+  # 2. 数据预处理
+  - name: "PrepareData"
+    type: "js"
+    parameters:
+      input:
+        userAge: "={{ $P.userAge }}"
+        userName: "={{ $P.userName }}"
+        isVip: "={{ $P.isVip }}"
+      code: |
+        const { userAge, userName, isVip } = input;
+        return {
+          user: { name: userName, age: userAge, vip: isVip },
+          isAdult: userAge >= 18,
+          ageGroup: userAge < 18 ? 'minor' : (userAge < 60 ? 'adult' : 'senior')
+        };
+
+  # 3. 年龄条件判断
+  - name: "CheckAge"
+    type: "if"
+    parameters:
+      condition: "={{ $P.isAdult === true }}"
+
+  # 4a. 成年人分支
+  - name: "AdultBranch"
+    type: "js"
+    parameters:
+      input:
+        userData: "={{ $P }}"
+      code: |
+        const user = input.userData?.user || {};
+        return {
+          category: "成年用户",
+          message: `欢迎 ${user.name}，您已满18岁`,
+          availableServices: ["全部服务", "金融服务"],
+          discount: user.vip ? 0.2 : 0.1
+        };
+
+  # 4b. 未成年人分支
+  - name: "MinorBranch"
+    type: "js"
+    parameters:
+      input:
+        userData: "={{ $P }}"
+      code: |
+        const user = input.userData?.user || {};
+        return {
+          category: "未成年用户",
+          message: `欢迎 ${user.name}，请在监护人陪同下使用`,
+          availableServices: ["青少年内容", "教育服务"],
+          discount: 0.15
+        };
+
+  # 5. 汇总结果
+  - name: "Summary"
+    type: "js"
+    parameters:
+      input:
+        result: "={{ $P }}"
+      code: |
+        const r = input.result || {};
+        return {
+          summary: `用户类型: ${r.category}`,
+          discount: `${((r.discount || 0) * 100).toFixed(0)}% 折扣`,
+          message: r.message,
+          services: r.availableServices
+        };
+
+connections:
+  Start:
+    - - { node: "PrepareData" }
+  PrepareData:
+    - - { node: "CheckAge" }
+  CheckAge:
+    - - { node: "AdultBranch" }   # true 分支
+    - - { node: "MinorBranch" }   # false 分支
+  AdultBranch:
+    - - { node: "Summary" }
+  MinorBranch:
+    - - { node: "Summary" }

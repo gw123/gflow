@@ -1,0 +1,106 @@
+# REST API 调用示例
+# 演示如何调用外部 API 并处理响应
+
+name: "REST API Call Demo"
+
+global:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+nodes:
+  # 1. 触发器
+  - name: "Start"
+    type: "manual"
+    parameters:
+      userId: 1
+
+  # 2. GET 请求 - 获取用户信息
+  - name: "GetUser"
+    type: "http"
+    parameters:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/users/1"
+      headers:
+        Accept: "application/json"
+
+  # 3. 显示用户信息
+  - name: "ShowUser"
+    type: "js"
+    parameters:
+      input:
+        userData: "={{ $P }}"
+      code: |
+        const user = input.userData?.data || input.userData || {};
+        return {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone
+        };
+
+  # 4. GET 请求 - 获取用户帖子
+  - name: "GetPosts"
+    type: "http"
+    parameters:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts?userId=1"
+      headers:
+        Accept: "application/json"
+
+  # 5. 处理帖子
+  - name: "ProcessPosts"
+    type: "js"
+    parameters:
+      input:
+        postsData: "={{ $P }}"
+      code: |
+        const posts = input.postsData?.data || input.postsData || [];
+        return {
+          totalPosts: Array.isArray(posts) ? posts.length : 0,
+          titles: Array.isArray(posts) ? posts.slice(0, 3).map(p => p.title) : []
+        };
+
+  # 6. POST 请求 - 创建新帖子
+  - name: "CreatePost"
+    type: "http"
+    parameters:
+      method: "POST"
+      url: "https://jsonplaceholder.typicode.com/posts"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        title: "New Post by gFlow"
+        body: "This post was created by gFlow workflow automation."
+        userId: 1
+
+  # 7. 最终汇总
+  - name: "Summary"
+    type: "js"
+    parameters:
+      input:
+        newPost: "={{ $P }}"
+      code: |
+        const created = input.newPost?.data || input.newPost || {};
+        return {
+          success: true,
+          message: "API 调用完成",
+          createdPost: {
+            id: created.id,
+            title: created.title
+          },
+          timestamp: new Date().toISOString()
+        };
+
+connections:
+  Start:
+    - - { node: "GetUser" }
+  GetUser:
+    - - { node: "ShowUser" }
+  ShowUser:
+    - - { node: "GetPosts" }
+  GetPosts:
+    - - { node: "ProcessPosts" }
+  ProcessPosts:
+    - - { node: "CreatePost" }
+  CreatePost:
+    - - { node: "Summary" }

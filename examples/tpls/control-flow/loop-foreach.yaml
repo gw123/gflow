@@ -1,0 +1,132 @@
+# Loop 循环示例
+# 遍历数组并处理每个元素
+
+name: "Loop ForEach Demo"
+
+nodes:
+  # 1. 触发器 - 提供测试数据
+  - name: "Start"
+    type: "manual"
+    parameters:
+      orders:
+        - id: "ORD001"
+          product: "iPhone 15"
+          quantity: 1
+          price: 7999
+          status: "pending"
+        - id: "ORD002"
+          product: "MacBook Pro"
+          quantity: 1
+          price: 14999
+          status: "paid"
+        - id: "ORD003"
+          product: "AirPods Pro"
+          quantity: 2
+          price: 1899
+          status: "shipped"
+        - id: "ORD004"
+          product: "iPad Air"
+          quantity: 1
+          price: 4799
+          status: "pending"
+
+  # 2. 循环处理订单
+  - name: "ProcessOrders"
+    type: "loop"
+    parameters:
+      # 要遍历的数组
+      items: "={{ $P.orders }}"
+
+  # 3. 循环体 - 处理单个订单
+  - name: "ProcessSingleOrder"
+    type: "js"
+    parameters:
+      code: |
+        // $item 是当前遍历的元素
+        // $index 是当前索引
+        const order = $item;
+        const index = $index;
+        
+        // 计算订单总额
+        const total = order.price * order.quantity;
+        
+        // 根据状态设置优先级
+        const priorityMap = {
+          'pending': 1,
+          'paid': 2,
+          'shipped': 3,
+          'delivered': 4
+        };
+        
+        return {
+          orderIndex: index,
+          orderId: order.id,
+          product: order.product,
+          total: total,
+          status: order.status,
+          priority: priorityMap[order.status] || 0,
+          processed: true,
+          processedAt: new Date().toISOString()
+        };
+
+  # 4. 汇总循环结果
+  - name: "AggregateResults"
+    type: "js"
+    parameters:
+      code: |
+        // $loopResults 包含所有循环迭代的结果
+        const results = $loopResults || [];
+        
+        // 计算统计信息
+        const totalAmount = results.reduce((sum, r) => sum + r.total, 0);
+        const statusCount = results.reduce((acc, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1;
+          return acc;
+        }, {});
+        
+        // 按优先级排序
+        const sortedByPriority = [...results].sort((a, b) => a.priority - b.priority);
+        
+        return {
+          summary: {
+            totalOrders: results.length,
+            totalAmount: totalAmount,
+            averageAmount: results.length > 0 ? totalAmount / results.length : 0,
+            statusBreakdown: statusCount
+          },
+          highestPriority: sortedByPriority[0],
+          allResults: results
+        };
+
+  # 5. 筛选待处理订单
+  - name: "FilterPendingOrders"
+    type: "js"
+    parameters:
+      code: |
+        const summary = input.summary;
+        const results = input.allResults;
+        
+        // 筛选待处理订单
+        const pendingOrders = results.filter(r => r.status === 'pending');
+        
+        return {
+          ...summary,
+          pendingCount: pendingOrders.length,
+          pendingOrders: pendingOrders,
+          needsAction: pendingOrders.length > 0,
+          message: pendingOrders.length > 0 
+            ? `有 ${pendingOrders.length} 个订单待处理`
+            : '所有订单已处理'
+        };
+
+connections:
+  Start:
+    - - { node: "ProcessOrders" }
+  ProcessOrders:
+    # 循环体连接
+    - - { node: "ProcessSingleOrder" }
+  ProcessSingleOrder:
+    # 循环完成后执行汇总
+    - - { node: "AggregateResults" }
+  AggregateResults:
+    - - { node: "FilterPendingOrders" }

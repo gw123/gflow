@@ -3,16 +3,16 @@
 
 // Helper to safely evaluate JS expressions within the workflow context
 const safeEval = (code: string, context: any) => {
-    try {
-        const $P = context.inputs?.['$P'] || context.inputs || {};
-        const $global = context.global || {};
-        const $inputs = context.inputs || {};
-        const $node = (nodeName: string) => {
-             const res = context.executionState?.nodeResults?.[nodeName];
-             return res ? { ...res.output, ...res } : {}; 
-        };
+  try {
+    const $P = context.inputs?.['$P'] || context.inputs || {};
+    const $global = context.global || {};
+    const $inputs = context.inputs || {};
+    const $node = (nodeName: string) => {
+      const res = context.executionState?.nodeResults?.[nodeName];
+      return res ? { ...res.output, ...res } : {};
+    };
 
-        const funcBody = `
+    const funcBody = `
             try {
                 return (${code});
             } catch(e) {
@@ -20,14 +20,14 @@ const safeEval = (code: string, context: any) => {
             }
         `;
 
-        const func = new Function('$P', '$global', '$inputs', '$node', funcBody);
-        return func($P, $global, $inputs, $node);
+    const func = new Function('$P', '$global', '$inputs', '$node', funcBody);
+    return func($P, $global, $inputs, $node);
 
-    } catch (e: any) {
-        // Log error to help debug workflow configuration errors
-        console.error(`[Interpolation Error] Failed to evaluate expression: "${code}"`, e.message);
-        return undefined;
-    }
+  } catch (e: any) {
+    // Log error to help debug workflow configuration errors
+    console.error(`[Interpolation Error] Failed to evaluate expression: "${code}"`, e.message);
+    return undefined;
+  }
 };
 
 export const interpolate = (template: any, context: any): any => {
@@ -35,19 +35,19 @@ export const interpolate = (template: any, context: any): any => {
     const raw = template.trim();
 
     if (raw.startsWith('=')) {
-        let expr = raw.slice(1).trim();
-        if (expr.startsWith('{{') && expr.endsWith('}}')) {
-            expr = expr.slice(2, -2).trim();
-        }
-        const result = safeEval(expr, context);
-        return result !== undefined ? result : raw;
+      let expr = raw.slice(1).trim();
+      if (expr.startsWith('{{') && expr.endsWith('}}')) {
+        expr = expr.slice(2, -2).trim();
+      }
+      const result = safeEval(expr, context);
+      return result !== undefined ? result : raw;
     }
 
     if (raw.includes('{{')) {
       return raw.replace(/\{\{\s*(.*?)\s*\}\}/g, (_, expression) => {
         const result = safeEval(expression, context);
         if (typeof result === 'object' && result !== null) {
-            return JSON.stringify(result);
+          return JSON.stringify(result);
         }
         return result !== undefined ? String(result) : "";
       });
@@ -67,16 +67,16 @@ export const interpolate = (template: any, context: any): any => {
 };
 
 export const evaluateCondition = (condition: any, context: any): boolean => {
-    if (condition === undefined || condition === null || condition === '') return true;
-    if (condition === 'true' || condition === true) return true;
-    if (condition === 'false' || condition === false) return false;
-    
-    let expr = String(condition).trim();
-    if (expr.startsWith('=')) expr = expr.slice(1).trim();
-    if (expr.startsWith('{{') && expr.endsWith('}}')) expr = expr.slice(2, -2).trim();
-    
-    const result = safeEval(expr, context);
-    return !!result;
+  if (condition === undefined || condition === null || condition === '') return true;
+  if (condition === 'true' || condition === true) return true;
+  if (condition === 'false' || condition === false) return false;
+
+  let expr = String(condition).trim();
+  if (expr.startsWith('=')) expr = expr.slice(1).trim();
+  if (expr.startsWith('{{') && expr.endsWith('}}')) expr = expr.slice(2, -2).trim();
+
+  const result = safeEval(expr, context);
+  return !!result;
 };
 
 export interface Schema {
@@ -124,7 +124,7 @@ export const validateSchema = (data: any, schema: Schema, path: string = ''): st
       if (!regex.test(data)) {
         errors.push(`${path || 'root'} format invalid`);
       }
-    } catch(e) {}
+    } catch (e) { }
   }
 
   if (schema.enum && !schema.enum.includes(data)) {
@@ -139,26 +139,46 @@ export const validateSchema = (data: any, schema: Schema, path: string = ''): st
       }
     }
     if (schema.additionalProperties !== undefined) {
-       const definedKeys = new Set(Object.keys(schema.properties || {}));
-       for (const key in data) {
-         if (!definedKeys.has(key)) {
-            if (schema.additionalProperties === false) {
-                 errors.push(`${path ? `${path}.` : ''}${key} is not allowed`);
-            } else if (typeof schema.additionalProperties === 'object') {
-                 const fieldErrors = validateSchema(data[key], schema.additionalProperties as Schema, path ? `${path}.${key}` : key);
-                 errors.push(...fieldErrors);
-            }
-         }
-       }
+      const definedKeys = new Set(Object.keys(schema.properties || {}));
+      for (const key in data) {
+        if (!definedKeys.has(key)) {
+          if (schema.additionalProperties === false) {
+            errors.push(`${path ? `${path}.` : ''}${key} is not allowed`);
+          } else if (typeof schema.additionalProperties === 'object') {
+            const fieldErrors = validateSchema(data[key], schema.additionalProperties as Schema, path ? `${path}.${key}` : key);
+            errors.push(...fieldErrors);
+          }
+        }
+      }
     }
   }
 
   if (schema.type === 'array' && Array.isArray(data) && schema.items) {
-      data.forEach((item, index) => {
-          const itemErrors = validateSchema(item, schema.items!, `${path}[${index}]`);
-          errors.push(...itemErrors);
-      });
+    data.forEach((item, index) => {
+      const itemErrors = validateSchema(item, schema.items!, `${path}[${index}]`);
+      errors.push(...itemErrors);
+    });
   }
 
   return errors;
 };
+
+/**
+ * Detect the current execution environment
+ * 
+ * @returns 'browser' | 'server'
+ */
+export function detectEnvironment(): 'browser' | 'server' {
+  // Check for Node.js specific globals
+  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    return 'server';
+  }
+
+  // Check for browser specific globals
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    return 'browser';
+  }
+
+  // Default to browser for unknown environments (Web Workers, etc.)
+  return 'browser';
+}

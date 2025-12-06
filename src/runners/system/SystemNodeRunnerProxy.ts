@@ -4,10 +4,12 @@ import { SystemNodeRunner } from './SystemNodeRunner';
 /**
  * System Node Runner Proxy
  * 
- * Automatically selects the appropriate implementation based on the environment.
+ * System command node (currently simulated).
+ * Uses shared implementation.
  */
 export class SystemNodeRunnerProxy extends NodeRunnerProxy {
     constructor() {
-        super(new SystemNodeRunner());
+        // Pass as third argument (sharedRunner) since implementation is the same for both environments
+        super(undefined, undefined, new SystemNodeRunner());
     }
 }

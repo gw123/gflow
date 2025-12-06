@@ -1,0 +1,118 @@
+# ChatGPT 简单对话示例
+# 使用 OpenAI GPT 模型进行简单问答
+
+name: "ChatGPT Simple Demo"
+
+# 全局配置
+global:
+  debug: true
+
+# 凭证配置（需要填入你的 API Key）
+credentials:
+  - id: "openai-key"
+    name: "OpenAI API Key"
+    type: "openai"
+    data:
+      apiKey: "${OPENAI_API_KEY}"  # 从环境变量读取
+
+nodes:
+  # 1. 触发器
+  - name: "Start"
+    type: "manual"
+    parameters:
+      question: "请用简单的语言解释什么是人工智能？"
+      language: "中文"
+
+  # 2. 构建提示词
+  - name: "BuildPrompt"
+    type: "js"
+    parameters:
+      code: |
+        const { question, language } = input;
+        
+        return {
+          systemPrompt: `你是一个友好的AI助手。请用${language}回答问题。
+          回答要求：
+          - 简洁明了
+          - 举例说明
+          - 适合普通人理解`,
+          userQuestion: question,
+          timestamp: new Date().toISOString()
+        };
+
+  # 3. 调用 ChatGPT
+  - name: "CallGPT"
+    type: "llm"
+    credential_id: "openai-key"
+    parameters:
+      provider: "openai"
+      model: "gpt-4o-mini"  # 或 "gpt-4", "gpt-3.5-turbo"
+      temperature: 0.7
+      max_tokens: 1000
+      messages:
+        - role: "system"
+          content: "={{ $P.systemPrompt }}"
+        - role: "user"
+          content: "={{ $P.userQuestion }}"
+
+  # 4. 处理响应
+  - name: "ProcessResponse"
+    type: "js"
+    parameters:
+      code: |
+        // AI 响应
+        const aiResponse = input;
+        
+        // 提取内容
+        const content = aiResponse.choices?.[0]?.message?.content 
+          || aiResponse.content 
+          || aiResponse;
+        
+        return {
+          success: true,
+          question: $BuildPrompt.output.userQuestion,
+          answer: content,
+          model: aiResponse.model || 'unknown',
+          usage: aiResponse.usage || {},
+          processedAt: new Date().toISOString()
+        };
+
+  # 5. 格式化输出
+  - name: "FormatOutput"
+    type: "js"
+    parameters:
+      code: |
+        const result = input;
+        
+        // 格式化为易读格式
+        const formatted = `
+=== AI 问答结果 ===
+
+📝 问题: ${result.question}
+
+🤖 回答:
+${result.answer}
+
+📊 使用统计:
+- 模型: ${result.model}
+- 输入Token: ${result.usage.prompt_tokens || 'N/A'}
+- 输出Token: ${result.usage.completion_tokens || 'N/A'}
+- 总Token: ${result.usage.total_tokens || 'N/A'}
+
+⏰ 处理时间: ${result.processedAt}
+        `.trim();
+        
+        return {
+          ...result,
+          formattedOutput: formatted
+        };
+
+connections:
+  Start:
+    - - { node: "BuildPrompt" }
+  BuildPrompt:
+    - - { node: "CallGPT" }
+  CallGPT:
+    - - { node: "ProcessResponse" }
+  ProcessResponse:
+    - - { node: "FormatOutput" }

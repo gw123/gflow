@@ -9,6 +9,16 @@ import { JsNodeRunnerProxy } from '../runners/js';
 import { TimeNodeRunnerProxy } from '../runners/time';
 import { ControlNodeRunnerProxy } from '../runners/control';
 import { DefaultRunnerProxy } from '../runners/default';
+import { MediaNodeRunnerProxy } from '../runners/media';
+import { PlayMediaNodeRunnerProxy } from '../runners/play-media';
+import { AiImageNodeRunnerProxy } from '../runners/ai-image';
+import { GrpcNodeRunnerProxy } from '../runners/grpc';
+import { InteractionNodeRunnerProxy } from '../runners/interaction';
+import { LlmNodeRunnerProxy } from '../runners/llm';
+
+import { ManualNodeRunnerProxy } from '../runners/manual';
+import { SystemNodeRunnerProxy } from '../runners/system';
+import { TtsNodeRunnerProxy } from '../runners/tts';
 import { interpolate as sharedInterpolate } from '../runners/utils';
 
 /**
@@ -197,26 +207,108 @@ const interpolate = sharedInterpolate;
 
 // --- Runner Factory ---
 
+import { Registry } from '../registry';
+
 /**
  * Get the appropriate runner for a node type.
- * Uses shared proxy runners for cross-platform code.
+ * First checks Registry for dynamically registered plugins,
+ * then falls back to built-in runners.
  */
 const getRunner = (type: string): NodeRunner => {
+    // First, check if there's a registered runner in the Registry
+    // This allows dynamically registered gRPC plugins to work
+    const registeredPlugin = Registry.get(type);
+    if (registeredPlugin && registeredPlugin.runner) {
+        return registeredPlugin.runner;
+    }
+
     switch (type) {
+        // HTTP & Webhook
         case 'http':
         case 'webhook':
             return new HttpNodeRunnerProxy();
+
+        // JavaScript
         case 'js':
+        case 'javascript':
+        case 'code':
             return new JsNodeRunnerProxy();
+
+        // Time & Wait
         case 'wait':
         case 'timer':
+        case 'delay':
             return new TimeNodeRunnerProxy();
+
+        // Control Flow
         case 'if':
         case 'condition':
         case 'switch':
         case 'loop':
         case 'foreach':
             return new ControlNodeRunnerProxy();
+
+        // Media Capture & Playback
+        case 'media_capture':
+        case 'media':
+        case 'capture':
+            return new MediaNodeRunnerProxy();
+        case 'play_media':
+        case 'play':
+        case 'playback':
+            return new PlayMediaNodeRunnerProxy();
+
+        // AI Image Generation
+        case 'ai_image':
+        case 'image_gen':
+        case 'dalle':
+        case 'imagen':
+            return new AiImageNodeRunnerProxy();
+
+        // gRPC
+        case 'grpc':
+            return new GrpcNodeRunnerProxy();
+
+        // User Interaction
+        case 'interaction':
+        case 'input':
+        case 'prompt':
+        case 'confirm':
+            return new InteractionNodeRunnerProxy();
+
+        // LangChain
+        case 'langchain':
+        case 'chain':
+            return new LlmNodeRunnerProxy();
+
+        // LLM (Large Language Model)
+        case 'llm':
+        case 'chat':
+        case 'gpt':
+        case 'gemini':
+        case 'claude':
+            return new LlmNodeRunnerProxy();
+
+        // Manual Trigger
+        case 'manual':
+        case 'trigger':
+        case 'start':
+            return new ManualNodeRunnerProxy();
+
+        // System Commands
+        case 'system':
+        case 'shell':
+        case 'exec':
+        case 'command':
+            return new SystemNodeRunnerProxy();
+
+        // Text-to-Speech
+        case 'tts':
+        case 'speech':
+        case 'speak':
+            return new TtsNodeRunnerProxy();
+
+        // Default fallback
         default:
             return new DefaultRunnerProxy();
     }

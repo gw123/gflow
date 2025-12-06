@@ -4,10 +4,12 @@ import { TtsNodeRunner } from './TtsNodeRunner';
 /**
  * TTS Node Runner Proxy
  * 
- * Automatically selects the appropriate implementation based on the environment.
+ * Text-to-Speech node uses Google GenAI API which works in both environments.
+ * Uses shared implementation.
  */
 export class TtsNodeRunnerProxy extends NodeRunnerProxy {
     constructor() {
-        super(new TtsNodeRunner());
+        // Pass as third argument (sharedRunner) since implementation is the same for both environments
+        super(undefined, undefined, new TtsNodeRunner());
     }
 }

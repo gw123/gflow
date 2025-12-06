@@ -1,0 +1,51 @@
+# Echo 插件工作流示例
+# 调用 gRPC Echo 插件进行消息回显
+
+name: "Echo Plugin Demo"
+
+# 全局变量
+global:
+  prefix: "[gFlow]"
+
+nodes:
+  # 1. 触发器
+  - name: "Start"
+    type: "manual"
+    parameters:
+      message: "你好，gFlow!"
+      delay: 1
+
+  # 2. 调用 Echo 插件
+  - name: "CallEcho"
+    type: "echo_plugin"  # 使用 config/plugins.yaml 中配置的插件 kind
+    parameters:
+      message: "={{ $P.message }}"
+      prefix: "={{ $global.prefix }}"
+      delay: "={{ $P.delay }}"
+
+  # 3. 处理结果
+  - name: "ProcessResult"
+    type: "js"
+    parameters:
+      input:
+        echoResult: "={{ $P.result }}"
+        originalMessage: "={{ $P.original_message }}"
+        timestamp: "={{ $P.timestamp }}"
+      code: |
+        const { echoResult, originalMessage, timestamp } = input;
+        
+        return {
+          success: true,
+          summary: {
+            original: originalMessage,
+            echoed: echoResult,
+            processedAt: timestamp
+          },
+          message: `Echo 成功: "${echoResult}"`
+        };
+
+connections:
+  Start:
+    - - { node: "CallEcho" }
+  CallEcho:
+    - - { node: "ProcessResult" }

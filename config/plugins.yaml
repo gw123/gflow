@@ -1,0 +1,57 @@
+# gRPC 插件配置文件
+# 用于注册外部 gRPC 节点插件
+#
+# 使用方法：
+# 1. 启动你的 gRPC 插件服务
+# 2. 在此文件中配置插件信息
+# 3. 重启 gflow 服务或调用 API 重新加载配置
+
+plugins:
+  # Echo 插件 - 用于测试
+  - name: "Echo Plugin"
+    kind: "echo_plugin"
+    endpoint: "localhost:50051"
+    enabled: true
+    health_check: true
+    description: "回显插件 - 用于测试"
+    version: "1.0.0"
+    category: "action"
+    icon: "MessageCircle"
+    color: "blue"
+
+  # Python 测试插件
+  - name: "Test Python Plugin"
+    kind: "test_py_plugin"
+    endpoint: "localhost:50051"
+    enabled: true
+    health_check: true
+    description: "Python 测试插件"
+    version: "1.0.0"
+    category: "plugin"
+    icon: "Plug"
+    color: "green"
+
+  # 通用测试插件
+  - name: "Test Plugin"
+    kind: "test_plugin"
+    endpoint: "localhost:50051"
+    enabled: true
+    health_check: true
+    description: "测试插件"
+    version: "1.0.0"
+    category: "plugin"
+    icon: "Plug"
+    color: "green"
+
+  # 可以添加更多插件
+  # - name: "Custom Plugin"
+  #   kind: "custom_node"
+  #   endpoint: "remote-server:50053"
+  #   enabled: true
+  #   health_check: true
+  #   description: "自定义插件"
+  #   category: "action"
+  #   tls:
+  #     enabled: true
+  #     cert_path: "/path/to/cert.pem"
+  #     key_path: "/path/to/key.pem"

@@ -1,18 +1,18 @@
 import { NodeRunnerProxy } from '../base/NodeRunnerProxy';
-import { LlmNodeRunner } from './LlmNodeRunner';
+import { LlmNodeRunnerBrowser } from './LlmNodeRunnerBrowser';
+import { LlmNodeRunnerServer } from './LlmNodeRunnerServer';
+import { NodeRunner } from '../../types';
 
 /**
  * LLM Node Runner Proxy
  * 
- * Uses the same implementation for both browser and server environments
- * since it only calls external APIs (Gemini).
+ * Automatically selects the appropriate implementation based on the environment.
  */
 export class LlmNodeRunnerProxy extends NodeRunnerProxy {
     constructor() {
         super(
-            undefined,            // No browser-specific implementation
-            undefined,            // No server-specific implementation
-            new LlmNodeRunner()   // Shared implementation for both
+            new LlmNodeRunnerBrowser(),    // Browser implementation
+            new LlmNodeRunnerServer()      // Server implementation
         );
     }
 }

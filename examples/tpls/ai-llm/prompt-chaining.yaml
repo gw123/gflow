@@ -1,0 +1,185 @@
+# 提示词链式调用示例
+# 多个 AI 调用串联，前一个的输出作为后一个的输入
+
+name: "Prompt Chaining Demo"
+
+# 凭证
+credentials:
+  - id: "openai-key"
+    name: "OpenAI API Key"
+    type: "openai"
+    data:
+      apiKey: "${OPENAI_API_KEY}"
+
+nodes:
+  # 1. 触发器 - 输入原始文本
+  - name: "Start"
+    type: "manual"
+    parameters:
+      rawText: |
+        昨天我去了一家新开的咖啡店，
+        环境很不错但是咖啡有点苦，
+        服务员态度很好，
+        价格有点贵，
+        总体来说还是值得推荐的。
+
+  # 2. 链式调用第一步：情感分析
+  - name: "SentimentAnalysis"
+    type: "llm"
+    credential_id: "openai-key"
+    parameters:
+      provider: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.3
+      messages:
+        - role: "system"
+          content: |
+            你是一个情感分析专家。分析用户输入文本的情感。
+            返回JSON格式：
+            {
+              "overall": "positive/negative/neutral",
+              "score": 0-100,
+              "aspects": [{"aspect": "xxx", "sentiment": "xxx"}]
+            }
+        - role: "user"
+          content: "分析以下文本的情感:\n{{ $P.rawText }}"
+
+  # 3. 提取情感分析结果
+  - name: "ExtractSentiment"
+    type: "js"
+    parameters:
+      code: |
+        const response = input;
+        const content = response.choices?.[0]?.message?.content || response.content || '';
+        
+        // 尝试解析 JSON
+        try {
+          // 移除可能的 markdown 代码块
+          const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const sentiment = JSON.parse(jsonStr);
+          return {
+            rawText: $Start.output.rawText,
+            sentiment,
+            extracted: true
+          };
+        } catch (e) {
+          return {
+            rawText: $Start.output.rawText,
+            sentiment: { overall: 'unknown', raw: content },
+            extracted: false
+          };
+        }
+
+  # 4. 链式调用第二步：关键词提取
+  - name: "KeywordExtraction"
+    type: "llm"
+    credential_id: "openai-key"
+    parameters:
+      provider: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.3
+      messages:
+        - role: "system"
+          content: |
+            你是一个关键词提取专家。
+            从文本中提取关键词和短语。
+            返回JSON格式：
+            {
+              "keywords": ["keyword1", "keyword2"],
+              "phrases": ["phrase1", "phrase2"],
+              "topics": ["topic1", "topic2"]
+            }
+        - role: "user"
+          content: "提取以下文本的关键词:\n{{ $P.rawText }}"
+
+  # 5. 提取关键词结果
+  - name: "ExtractKeywords"
+    type: "js"
+    parameters:
+      code: |
+        const response = input;
+        const content = response.choices?.[0]?.message?.content || response.content || '';
+        
+        try {
+          const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const keywords = JSON.parse(jsonStr);
+          return {
+            ...($ExtractSentiment.output || {}),
+            keywords,
+            keywordsExtracted: true
+          };
+        } catch (e) {
+          return {
+            ...($ExtractSentiment.output || {}),
+            keywords: { raw: content },
+            keywordsExtracted: false
+          };
+        }
+
+  # 6. 链式调用第三步：生成摘要
+  - name: "GenerateSummary"
+    type: "llm"
+    credential_id: "openai-key"
+    parameters:
+      provider: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.5
+      messages:
+        - role: "system"
+          content: |
+            你是一个专业的文本摘要生成器。
+            基于原文和分析结果，生成结构化摘要。
+        - role: "user"
+          content: |
+            原文：
+            {{ $Start.output.rawText }}
+            
+            情感分析：{{ JSON.stringify($ExtractSentiment.output.sentiment) }}
+            
+            关键词：{{ JSON.stringify($ExtractKeywords.output.keywords) }}
+            
+            请生成一段50字以内的摘要，并给出该内容的评分（1-5星）。
+
+  # 7. 汇总所有结果
+  - name: "FinalReport"
+    type: "js"
+    parameters:
+      code: |
+        const sentiment = $ExtractSentiment.output?.sentiment || {};
+        const keywords = $ExtractKeywords.output?.keywords || {};
+        const summary = input.choices?.[0]?.message?.content || input.content || '';
+        
+        return {
+          originalText: $Start.output.rawText,
+          analysis: {
+            sentiment: {
+              overall: sentiment.overall,
+              score: sentiment.score,
+              aspects: sentiment.aspects
+            },
+            keywords: keywords.keywords || [],
+            topics: keywords.topics || [],
+            phrases: keywords.phrases || []
+          },
+          summary: summary.trim(),
+          processingChain: [
+            "情感分析",
+            "关键词提取",
+            "摘要生成"
+          ],
+          completedAt: new Date().toISOString()
+        };
+
+connections:
+  Start:
+    - - { node: "SentimentAnalysis" }
+  SentimentAnalysis:
+    - - { node: "ExtractSentiment" }
+  ExtractSentiment:
+    - - { node: "KeywordExtraction" }
+  KeywordExtraction:
+    - - { node: "ExtractKeywords" }
+  ExtractKeywords:
+    - - { node: "GenerateSummary" }
+  GenerateSummary:
+    - - { node: "FinalReport" }

@@ -1,0 +1,159 @@
+# 音频采集工作流示例
+# 从麦克风采集音频并保存
+
+name: "Audio Capture Demo"
+
+global:
+  outputDir: "./output/audio"
+  defaultDuration: 5000  # 5秒
+
+nodes:
+  # 1. 触发器
+  - name: "Start"
+    type: "manual"
+    parameters:
+      captureConfig:
+        duration: 5000    # 采集时长（毫秒）
+        source: "microphone"
+        quality: "high"
+
+  # 2. 准备采集配置
+  - name: "PrepareCapture"
+    type: "js"
+    parameters:
+      code: |
+        const config = input.captureConfig;
+        
+        // 根据质量设置参数
+        const qualityPresets = {
+          low: { sampleRate: 22050, bitrate: 64 },
+          medium: { sampleRate: 44100, bitrate: 128 },
+          high: { sampleRate: 48000, bitrate: 256 }
+        };
+        
+        const preset = qualityPresets[config.quality] || qualityPresets.medium;
+        
+        // 生成输出文件名
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `recording_${timestamp}.wav`;
+        
+        return {
+          source: config.source,
+          duration: config.duration || $global.defaultDuration,
+          sampleRate: preset.sampleRate,
+          channels: 2,
+          format: 'wav',
+          outputPath: `${$global.outputDir}/${filename}`,
+          filename
+        };
+
+  # 3. 执行音频采集
+  - name: "CaptureAudio"
+    type: "media_capture"
+    parameters:
+      source: "={{ $P.source }}"
+      duration: "={{ $P.duration }}"
+      format: "={{ $P.format }}"
+      sampleRate: "={{ $P.sampleRate }}"
+      channels: "={{ $P.channels }}"
+      outputPath: "={{ $P.outputPath }}"
+
+  # 4. 验证采集结果
+  - name: "ValidateCapture"
+    type: "js"
+    parameters:
+      code: |
+        const captureResult = input;
+        const config = $PrepareCapture.output;
+        
+        // 验证结果
+        const isValid = captureResult && (
+          captureResult.success || 
+          captureResult.path || 
+          captureResult.data
+        );
+        
+        return {
+          success: isValid,
+          filename: config.filename,
+          path: captureResult.path || config.outputPath,
+          duration: config.duration,
+          format: config.format,
+          sampleRate: config.sampleRate,
+          fileSize: captureResult.fileSize || 'unknown',
+          capturedAt: new Date().toISOString()
+        };
+
+  # 5. 检查采集是否成功
+  - name: "CheckSuccess"
+    type: "if"
+    parameters:
+      condition: "={{ $P.success === true }}"
+
+  # 6a. 成功 - 生成报告
+  - name: "GenerateReport"
+    type: "js"
+    parameters:
+      code: |
+        const result = input;
+        
+        return {
+          status: 'success',
+          message: '音频采集成功',
+          file: {
+            name: result.filename,
+            path: result.path,
+            format: result.format,
+            duration: `${result.duration / 1000}秒`,
+            sampleRate: `${result.sampleRate}Hz`,
+            size: result.fileSize
+          },
+          timestamp: result.capturedAt
+        };
+
+  # 6b. 失败 - 记录错误
+  - name: "HandleError"
+    type: "js"
+    parameters:
+      code: |
+        const result = $ValidateCapture.output;
+        
+        return {
+          status: 'error',
+          message: '音频采集失败',
+          error: 'Capture validation failed',
+          attemptedConfig: $PrepareCapture.output,
+          timestamp: new Date().toISOString()
+        };
+
+  # 7. 最终输出
+  - name: "FinalOutput"
+    type: "js"
+    parameters:
+      code: |
+        const result = input;
+        
+        console.log(`[Audio Capture] ${result.status}: ${result.message}`);
+        if (result.file) {
+          console.log(`  File: ${result.file.path}`);
+          console.log(`  Duration: ${result.file.duration}`);
+        }
+        
+        return result;
+
+connections:
+  Start:
+    - - { node: "PrepareCapture" }
+  PrepareCapture:
+    - - { node: "CaptureAudio" }
+  CaptureAudio:
+    - - { node: "ValidateCapture" }
+  ValidateCapture:
+    - - { node: "CheckSuccess" }
+  CheckSuccess:
+    - - { node: "GenerateReport" }
+    - - { node: "HandleError" }
+  GenerateReport:
+    - - { node: "FinalOutput" }
+  HandleError:
+    - - { node: "FinalOutput" }

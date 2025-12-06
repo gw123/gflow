@@ -7,7 +7,8 @@ import { HttpNodeRunnerProxy } from './runners/http';
 import { JsNodeRunnerProxy } from './runners/js';
 import { TimeNodeRunnerProxy } from './runners/time';
 import { ControlNodeRunnerProxy } from './runners/control';
-import { LlmNodeRunnerProxy } from './runners/llm';
+
+import { MysqlNodeRunnerProxy } from './runners/mysql';
 
 // Import runners that haven't been refactored yet
 import {
@@ -18,7 +19,7 @@ import {
     MediaNodeRunner,
     PlayMediaNodeRunner,
     AiImageNodeRunner,
-    LangChainNodeRunner,
+    LlmNodeRunner,
     TtsNodeRunner
 } from './runners';
 
@@ -170,7 +171,7 @@ const plugins: NodePlugin[] = [
                 { name: "maxSteps", type: "number", defaultValue: 5, description: "Maximum reasoning steps" }
             ]
         },
-        runner: new LangChainNodeRunner(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'Workflow', color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' }
     },
     {
@@ -187,7 +188,7 @@ const plugins: NodePlugin[] = [
                 { name: "prompt", type: "string", defaultValue: "Hello!" }
             ]
         },
-        runner: new LlmNodeRunnerProxy(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -232,7 +233,7 @@ const plugins: NodePlugin[] = [
             type: "agent",
             parameters: { role: "You are a helpful assistant", prompt: "How can I help?" }
         },
-        runner: new LlmNodeRunnerProxy(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -243,7 +244,7 @@ const plugins: NodePlugin[] = [
             type: "ai_low_code",
             parameters: { instruction: "Create a form" }
         },
-        runner: new LlmNodeRunnerProxy(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
     {
@@ -254,7 +255,7 @@ const plugins: NodePlugin[] = [
             type: "prompt_template",
             parameters: { template: "Hello {{name}}", name: "World" }
         },
-        runner: new LlmNodeRunnerProxy(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'File', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
     },
 
@@ -352,8 +353,29 @@ const plugins: NodePlugin[] = [
     {
         type: 'mysql',
         category: 'data',
-        template: { name: "MySQL", type: "mysql", parameters: { sql: "SELECT * FROM table" } },
-        runner: new SystemNodeRunner(), // Mock
+        template: {
+            name: "MySQL",
+            type: "mysql",
+            desc: "Execute SQL queries against a MySQL database.",
+            parameters: {
+                host: "localhost",
+                port: 3306,
+                user: "root",
+                password: "",
+                database: "",
+                sql: "SELECT * FROM users LIMIT 10"
+            },
+            parameterDefinitions: [
+                { name: "host", type: "string", defaultValue: "localhost", description: "MySQL server host" },
+                { name: "port", type: "number", defaultValue: 3306, description: "MySQL server port" },
+                { name: "user", type: "string", defaultValue: "root", description: "Database user" },
+                { name: "password", type: "string", defaultValue: "", description: "Database password" },
+                { name: "database", type: "string", defaultValue: "", description: "Database name" },
+                { name: "sql", type: "string", defaultValue: "SELECT 1", description: "SQL query to execute" },
+                { name: "values", type: "object", defaultValue: [], description: "Parameterized query values (optional)" }
+            ]
+        },
+        runner: new MysqlNodeRunnerProxy(),
         visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
     {
@@ -381,7 +403,7 @@ const plugins: NodePlugin[] = [
         type: 'text2sql',
         category: 'data',
         template: { name: "Text to SQL", type: "text2sql", parameters: { prompt: "Find users" } },
-        runner: new LlmNodeRunnerProxy(),
+        runner: new LlmNodeRunner(),
         visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
     },
 

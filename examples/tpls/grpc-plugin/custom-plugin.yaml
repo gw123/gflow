@@ -1,0 +1,140 @@
+# 自定义 gRPC 插件模板
+# 展示如何配置和调用自定义 gRPC 插件
+
+name: "Custom gRPC Plugin Template"
+
+# 说明：在使用此模板前，需要：
+# 1. 创建你的 gRPC 插件（实现 NodePluginService）
+# 2. 在 config/plugins.yaml 中注册插件：
+#    plugins:
+#      - name: "My Custom Plugin"
+#        kind: "my_custom_plugin"
+#        endpoint: "localhost:50055"
+#        enabled: true
+
+global:
+  # 插件配置
+  pluginEndpoint: "localhost:50055"
+  timeout: 30000
+
+nodes:
+  # 1. 触发器
+  - name: "Start"
+    type: "manual"
+    parameters:
+      inputData:
+        operation: "process"
+        data:
+          field1: "value1"
+          field2: 123
+          nested:
+            key: "nested_value"
+
+  # 2. 预处理输入
+  - name: "PrepareInput"
+    type: "js"
+    parameters:
+      code: |
+        const data = input.inputData;
+        
+        // 添加请求元数据
+        return {
+          requestId: `req_${Date.now()}`,
+          operation: data.operation,
+          payload: data.data,
+          timestamp: new Date().toISOString(),
+          options: {
+            timeout: $global.timeout,
+            retryCount: 3
+          }
+        };
+
+  # 3. 调用自定义插件
+  # 注意：将 "my_custom_plugin" 替换为你在 config/plugins.yaml 中配置的 kind
+  - name: "CallCustomPlugin"
+    type: "echo_plugin"  # 替换为: my_custom_plugin
+    parameters:
+      # 插件参数 - 根据你的插件定义调整
+      message: "={{ JSON.stringify($P.payload) }}"
+      prefix: "={{ $P.requestId }}"
+      delay: 0
+      # 以下是自定义插件可能需要的参数示例：
+      # operation: "={{ $P.operation }}"
+      # data: "={{ $P.payload }}"
+      # config:
+      #   option1: true
+      #   option2: "value"
+
+  # 4. 处理插件响应
+  - name: "ProcessResponse"
+    type: "js"
+    parameters:
+      code: |
+        const response = input;
+        const request = $PrepareInput.output;
+        
+        return {
+          success: true,
+          requestId: request.requestId,
+          operation: request.operation,
+          result: response,
+          duration: Date.now() - new Date(request.timestamp).getTime(),
+          processedAt: new Date().toISOString()
+        };
+
+  # 5. 错误条件检查
+  - name: "CheckSuccess"
+    type: "if"
+    parameters:
+      condition: "={{ $P.success === true }}"
+
+  # 6a. 成功处理
+  - name: "OnSuccess"
+    type: "js"
+    parameters:
+      code: |
+        return {
+          status: "success",
+          message: `操作 ${input.operation} 完成`,
+          data: input.result,
+          duration: `${input.duration}ms`
+        };
+
+  # 6b. 失败处理
+  - name: "OnFailure"
+    type: "js"
+    parameters:
+      code: |
+        return {
+          status: "failure",
+          message: "操作失败",
+          error: $ProcessResponse.output?.error || "未知错误",
+          requestId: $ProcessResponse.output?.requestId
+        };
+
+  # 7. 最终输出
+  - name: "FinalOutput"
+    type: "js"
+    parameters:
+      code: |
+        return {
+          ...input,
+          completedAt: new Date().toISOString()
+        };
+
+connections:
+  Start:
+    - - { node: "PrepareInput" }
+  PrepareInput:
+    - - { node: "CallCustomPlugin" }
+  CallCustomPlugin:
+    - - { node: "ProcessResponse" }
+  ProcessResponse:
+    - - { node: "CheckSuccess" }
+  CheckSuccess:
+    - - { node: "OnSuccess" }
+    - - { node: "OnFailure" }
+  OnSuccess:
+    - - { node: "FinalOutput" }
+  OnFailure:
+    - - { node: "FinalOutput" }

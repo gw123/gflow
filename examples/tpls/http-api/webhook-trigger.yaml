@@ -1,0 +1,149 @@
+# Webhook 触发工作流示例
+# 当外部系统发送请求到 Webhook 端点时触发
+
+name: "Webhook Trigger Demo"
+
+global:
+  webhookSecret: "my-secret-key"
+
+nodes:
+  # 1. Webhook 触发器 - 监听外部请求
+  - name: "WebhookReceiver"
+    type: "webhook"
+    parameters:
+      # Webhook 路径: /webhook/order-notification
+      path: "order-notification"
+      method: "POST"
+      # 可选：响应配置
+      response:
+        statusCode: 200
+        body:
+          received: true
+          message: "Order notification received"
+
+  # 2. 验证请求
+  - name: "ValidateRequest"
+    type: "js"
+    parameters:
+      code: |
+        // 获取 Webhook 请求数据
+        const payload = input;
+        const headers = payload.headers || {};
+        
+        // 验证签名（示例）
+        const signature = headers['x-webhook-signature'];
+        const secret = $global.webhookSecret;
+        
+        // 简单验证示例
+        const isValid = signature === secret || true; // 实际生产中应使用 HMAC 验证
+        
+        if (!isValid) {
+          throw new Error('Invalid webhook signature');
+        }
+        
+        return {
+          valid: true,
+          event: payload.body?.event || 'unknown',
+          data: payload.body?.data || {},
+          receivedAt: new Date().toISOString()
+        };
+
+  # 3. 根据事件类型处理
+  - name: "RouteByEvent"
+    type: "switch"
+    parameters:
+      value: "={{ $P.event }}"
+      cases:
+        - value: "order.created"
+          output: 0
+        - value: "order.paid"
+          output: 1
+        - value: "order.shipped"
+          output: 2
+      default: 3
+
+  # 4a. 处理订单创建
+  - name: "HandleOrderCreated"
+    type: "js"
+    parameters:
+      code: |
+        const order = $ValidateRequest.output.data;
+        return {
+          action: "order_created",
+          orderId: order.orderId,
+          customer: order.customer,
+          notification: `新订单 ${order.orderId} 已创建`
+        };
+
+  # 4b. 处理订单支付
+  - name: "HandleOrderPaid"
+    type: "js"
+    parameters:
+      code: |
+        const order = $ValidateRequest.output.data;
+        return {
+          action: "order_paid",
+          orderId: order.orderId,
+          amount: order.amount,
+          notification: `订单 ${order.orderId} 已支付 ¥${order.amount}`
+        };
+
+  # 4c. 处理订单发货
+  - name: "HandleOrderShipped"
+    type: "js"
+    parameters:
+      code: |
+        const order = $ValidateRequest.output.data;
+        return {
+          action: "order_shipped",
+          orderId: order.orderId,
+          trackingNumber: order.trackingNumber,
+          notification: `订单 ${order.orderId} 已发货，运单号: ${order.trackingNumber}`
+        };
+
+  # 4d. 处理未知事件
+  - name: "HandleUnknownEvent"
+    type: "js"
+    parameters:
+      code: |
+        return {
+          action: "unknown",
+          event: $ValidateRequest.output.event,
+          notification: `收到未知事件: ${$ValidateRequest.output.event}`
+        };
+
+  # 5. 发送通知（合并处理）
+  - name: "SendNotification"
+    type: "js"
+    parameters:
+      code: |
+        // 这里可以发送邮件、短信、钉钉通知等
+        const result = input;
+        
+        console.log(`[Notification] ${result.notification}`);
+        
+        return {
+          sent: true,
+          ...result,
+          sentAt: new Date().toISOString()
+        };
+
+connections:
+  WebhookReceiver:
+    - - { node: "ValidateRequest" }
+  ValidateRequest:
+    - - { node: "RouteByEvent" }
+  RouteByEvent:
+    # 分支连接：根据 switch 的结果路由到不同节点
+    - - { node: "HandleOrderCreated" }   # output: 0
+    - - { node: "HandleOrderPaid" }      # output: 1
+    - - { node: "HandleOrderShipped" }   # output: 2
+    - - { node: "HandleUnknownEvent" }   # default: 3
+  HandleOrderCreated:
+    - - { node: "SendNotification" }
+  HandleOrderPaid:
+    - - { node: "SendNotification" }
+  HandleOrderShipped:
+    - - { node: "SendNotification" }
+  HandleUnknownEvent:
+    - - { node: "SendNotification" }
