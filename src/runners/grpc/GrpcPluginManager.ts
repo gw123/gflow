@@ -410,7 +410,7 @@ class GrpcPluginManagerClass {
                     parameters: parameterDefinitions,
                 },
             },
-            runner: new DynamicGrpcNodeRunner(config.kind, config.endpoint),
+            runner: new DynamicGrpcNodeRunner(config.kind, config.endpoint, this),
             visuals: {
                 icon: config.icon || 'Plug',
                 color: colorConfig.text,

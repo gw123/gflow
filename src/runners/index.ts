@@ -28,5 +28,7 @@ export { TtsNodeRunnerProxy as TtsNodeRunner } from './tts';
 export { MysqlNodeRunnerProxy as MysqlNodeRunner } from './mysql';
 
 // gRPC Plugin System (Server-side only)
-export { GrpcPluginManager, DynamicGrpcNodeRunner } from './grpc';
+
+// todo 加上下面代码前端无法打开
+//export { GrpcPluginManager, DynamicGrpcNodeRunner } from './grpc/server';
 export type { GrpcPluginConfig, GrpcPluginsConfig, RegisteredGrpcPlugin } from './grpc';

@@ -7,7 +7,6 @@
 
 import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
 import { interpolate } from '../utils';
-import { GrpcPluginManager } from './GrpcPluginManager';
 
 /**
  * Value 类型转换工具
@@ -103,10 +102,12 @@ function mapFromProto(protoMap: Record<string, any>): Record<string, any> {
 export class DynamicGrpcNodeRunner implements NodeRunner {
     private kind: string;
     private endpoint: string;
+    private pluginManager: any; // Using any to avoid circular dependency type issues
 
-    constructor(kind: string, endpoint: string) {
+    constructor(kind: string, endpoint: string, pluginManager: any) {
         this.kind = kind;
         this.endpoint = endpoint;
+        this.pluginManager = pluginManager;
     }
 
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
@@ -119,7 +120,7 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
 
         try {
             // 获取 gRPC 客户端
-            const client = GrpcPluginManager.getClient(this.kind);
+            const client = this.pluginManager.getClient(this.kind);
             if (!client) {
                 throw new Error(`gRPC client not found for plugin: ${this.kind}. Make sure the plugin is registered.`);
             }

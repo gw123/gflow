@@ -6,7 +6,7 @@ import axios from 'axios';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import { ServerWorkflowEngine } from './engine';
-import { GrpcPluginManager } from '../runners/grpc';
+import { GrpcPluginManager } from '../runners/grpc/server';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);

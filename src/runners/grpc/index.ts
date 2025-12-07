@@ -7,10 +7,6 @@
 // 类型
 export * from './types';
 
-// 插件管理器
-export { GrpcPluginManager } from './GrpcPluginManager';
-
-// Runner
-export { DynamicGrpcNodeRunner } from './DynamicGrpcNodeRunner';
+// Runner (Client-side safe)
 export { GrpcNodeRunner } from './GrpcNodeRunner';
 export { GrpcNodeRunnerProxy } from './GrpcNodeRunnerProxy';
