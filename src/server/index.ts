@@ -7,6 +7,7 @@ import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import { ServerWorkflowEngine } from './engine';
 import { GrpcPluginManager } from '../runners/grpc/server';
+import { Registry } from '../registry';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -273,20 +274,32 @@ app.delete('/api/apis/:id', (req, res) => {
 // --- gRPC Plugins API ---
 
 // 获取所有已注册的插件
+// 获取所有已注册的插件
 app.get('/api/plugins', (req, res) => {
     const plugins = GrpcPluginManager.getPlugins();
-    res.json(plugins.map(p => ({
-        kind: p.config.kind,
-        name: p.config.name,
-        endpoint: p.config.endpoint,
-        enabled: p.config.enabled,
-        status: p.status,
-        lastHealthCheck: p.lastHealthCheck,
-        error: p.error,
-        description: p.config.description || p.metadata?.description,
-        version: p.config.version || p.metadata?.version,
-        category: p.config.category || p.metadata?.category,
-    })));
+    res.json(plugins.map(p => {
+        const nodePlugin = Registry.get(p.config.kind);
+        // Exclude runner as it may contain methods/circular refs not suitable for JSON
+        let safeNodePlugin = undefined;
+        if (nodePlugin) {
+            const { runner, ...rest } = nodePlugin;
+            safeNodePlugin = rest;
+        }
+
+        return {
+            kind: p.config.kind,
+            name: p.config.name,
+            endpoint: p.config.endpoint,
+            enabled: p.config.enabled,
+            status: p.status,
+            lastHealthCheck: p.lastHealthCheck,
+            error: p.error,
+            description: p.config.description || p.metadata?.description,
+            version: p.config.version || p.metadata?.version,
+            category: p.config.category || p.metadata?.category,
+            nodePlugin: safeNodePlugin, // Include the full node definition (sans runner)
+        };
+    }));
 });
 
 // 获取单个插件状态

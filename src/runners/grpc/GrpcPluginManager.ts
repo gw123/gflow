@@ -159,7 +159,7 @@ class GrpcPluginManagerClass {
             const nodePlugin = this.createNodePlugin(config, metadata);
             Registry.register(nodePlugin);
 
-            console.log(`[GrpcPluginManager] Plugin registered: ${kind} (status: ${registeredPlugin.status})`);
+            console.log(`[GrpcPluginManager] ✅ Successfully registered plugin configuration: ${kind}. Status: ${registeredPlugin.status}`);
             return true;
         } catch (error: any) {
             console.error(`[GrpcPluginManager] Failed to register plugin ${kind}:`, error.message);

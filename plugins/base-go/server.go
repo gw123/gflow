@@ -26,11 +26,44 @@ func (s *Server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*
 }
 
 func (s *Server) Init(ctx context.Context, req *pb.InitRequest) (*pb.InitResponse, error) {
-	return s.handler.Init(ctx, req)
+	execId := "unknown"
+	if req.Context != nil {
+		execId = req.Context.ExecutionId
+	}
+	log.Printf("🔌 Initializing plugin (ExecID: %s)", execId)
+
+	resp, err := s.handler.Init(ctx, req)
+	if err != nil {
+		log.Printf("❌ Plugin initialization failed: %v", err)
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Server) Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) error {
-	return s.handler.Run(req, stream)
+	execId := "unknown"
+	workflowId := "unknown"
+	nodeId := "unknown"
+
+	if req.Context != nil {
+		execId = req.Context.ExecutionId
+		workflowId = req.Context.WorkflowId
+		nodeId = req.Context.NodeId
+	}
+
+	log.Printf("▶️  Running plugin (ExecID: %s, Workflow: %s, Node: %s)", execId, workflowId, nodeId)
+	startTime := time.Now()
+
+	err := s.handler.Run(req, stream)
+
+	duration := time.Since(startTime)
+	if err != nil {
+		log.Printf("❌ Plugin execution failed after %v: %v", duration, err)
+		return err
+	}
+
+	log.Printf("✅ Plugin execution completed successfully in %v", duration)
+	return nil
 }
 
 func (s *Server) Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error) {
