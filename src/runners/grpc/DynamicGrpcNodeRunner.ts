@@ -104,6 +104,9 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
     private endpoint: string;
     private pluginManager: any; // Using any to avoid circular dependency type issues
 
+    // Cache initialization state per execution (or generally per node)
+    private initializedSessions = new Set<string>();
+
     constructor(kind: string, endpoint: string, pluginManager: any) {
         this.kind = kind;
         this.endpoint = endpoint;
@@ -125,14 +128,42 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
                 throw new Error(`gRPC client not found for plugin: ${this.kind}. Make sure the plugin is registered.`);
             }
 
-            // 执行健康检查
-            await this.healthCheck(client, log);
+            // Skipped manual health check for efficiency
 
-            // 初始化
-            await this.init(client, node, context, log);
+            // Ensure we have a valid Execution Context ID for this run scope
+            // Fallback to timestamp if not provided by context
+            const executionId = (context as any).executionId || `exec-${Date.now()}`;
+            const traceId = `trace-${Date.now()}`;
+            const spanId = `span-${Date.now()}`;
 
-            // 执行
-            const result = await this.runStream(client, params, context, log);
+            const requestContext = {
+                workflow_id: context.workflow.name,
+                execution_id: executionId,
+                node_id: node.name,
+                trace_id: traceId,
+                span_id: spanId,
+                retry_count: 0,
+                timeout_ms: 30000,
+                metadata: {},
+            };
+
+            // Initialization Logic with Caching
+            // We cache based on 'executionId:nodeName'.
+            const initCacheKey = `${executionId}:${node.name}`;
+
+            if (!this.initializedSessions.has(initCacheKey)) {
+                await this.init(client, node, context, requestContext, log);
+                this.initializedSessions.add(initCacheKey);
+
+                // Prevent unbounded growth of cache 
+                if (this.initializedSessions.size > 200) {
+                    this.initializedSessions.clear();
+                    this.initializedSessions.add(initCacheKey);
+                }
+            }
+
+            // Execute
+            const result = await this.runStream(client, params, context, requestContext, log);
 
             return {
                 status: 'success',
@@ -152,30 +183,10 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
     }
 
     /**
-     * 健康检查
+     * 健康检查 - Deprecated in run loop for efficiency
      */
     private async healthCheck(client: any, log: (msg: string) => void): Promise<void> {
-        log(`[gRPC] Health check...`);
-
-        return new Promise((resolve, reject) => {
-            const deadline = new Date();
-            deadline.setSeconds(deadline.getSeconds() + 5);
-
-            client.HealthCheck({ include_details: false }, { deadline }, (error: any, response: any) => {
-                if (error) {
-                    reject(new Error(`Health check failed: ${error.message}`));
-                    return;
-                }
-
-                if (response.status !== 'HEALTH_STATUS_HEALTHY' && response.status !== 1) {
-                    reject(new Error(`Plugin unhealthy: ${response.message || 'Unknown reason'}`));
-                    return;
-                }
-
-                log(`[gRPC] Health check passed`);
-                resolve();
-            });
-        });
+        return Promise.resolve();
     }
 
     /**
@@ -185,21 +196,13 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
         client: any,
         node: NodeDefinition,
         context: NodeRunnerContext,
+        requestContext: any,
         log: (msg: string) => void
     ): Promise<void> {
         log(`[gRPC] Initializing plugin...`);
 
         const initRequest = {
-            context: {
-                workflow_id: context.workflow.name,
-                execution_id: `exec-${Date.now()}`,
-                node_id: node.name,
-                trace_id: `trace-${Date.now()}`,
-                span_id: `span-${Date.now()}`,
-                retry_count: 0,
-                timeout_ms: 30000,
-                metadata: {},
-            },
+            context: requestContext,
             node_config: {
                 id: node.name,
                 name: node.name,
@@ -251,19 +254,11 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
         client: any,
         params: Record<string, any>,
         context: NodeRunnerContext,
+        requestContext: any,
         log: (msg: string) => void
     ): Promise<{ output: any; branchIndex: number }> {
         const runRequest = {
-            context: {
-                workflow_id: context.workflow.name,
-                execution_id: `exec-${Date.now()}`,
-                node_id: 'current',
-                trace_id: `trace-${Date.now()}`,
-                span_id: `span-${Date.now()}`,
-                retry_count: 0,
-                timeout_ms: 30000,
-                metadata: {},
-            },
+            context: requestContext,
             parameters: mapToProto(params),
             parent_output: mapToProto(context.inputs),
             global_vars: mapToProto(context.global),

@@ -445,7 +445,7 @@ class GrpcPluginManagerClass {
                     }
                 }
             }
-        }, 30000);
+        }, 60000);
     }
 
     /**
