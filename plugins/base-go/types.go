@@ -43,40 +43,51 @@ func ValueToGo(v *pb.Value) interface{} {
 
 // GoToValue converts Go interface{} to Proto Value
 func GoToValue(v interface{}) *pb.Value {
-	if v == nil {
-		return &pb.Value{Kind: &pb.Value_NullValue{NullValue: pb.NullValue_NULL_VALUE}}
-	}
-	switch val := v.(type) {
-	case string:
-		return &pb.Value{Kind: &pb.Value_StringValue{StringValue: val}}
-	case int:
-		return &pb.Value{Kind: &pb.Value_IntValue{IntValue: int64(val)}}
-	case int64:
-		return &pb.Value{Kind: &pb.Value_IntValue{IntValue: val}}
-	case int32:
-		return &pb.Value{Kind: &pb.Value_IntValue{IntValue: int64(val)}}
-	case float64:
-		return &pb.Value{Kind: &pb.Value_DoubleValue{DoubleValue: val}}
-	case float32:
-		return &pb.Value{Kind: &pb.Value_DoubleValue{DoubleValue: float64(val)}}
-	case bool:
-		return &pb.Value{Kind: &pb.Value_BoolValue{BoolValue: val}}
-	case []byte:
-		return &pb.Value{Kind: &pb.Value_BytesValue{BytesValue: val}}
-	case []interface{}:
-		list := &pb.ListValue{}
-		for _, item := range val {
-			list.Values = append(list.Values, GoToValue(item))
-		}
-		return &pb.Value{Kind: &pb.Value_ListValue{ListValue: list}}
-	case map[string]interface{}:
-		m := &pb.MapValue{Fields: make(map[string]*pb.Value)}
-		for key, item := range val {
-			m.Fields[key] = GoToValue(item)
-		}
-		return &pb.Value{Kind: &pb.Value_MapValue{MapValue: m}}
-	default:
-		// Fallback to string
-		return &pb.Value{Kind: &pb.Value_StringValue{StringValue: fmt.Sprintf("%v", val)}}
-	}
+    if v == nil {
+        return &pb.Value{Kind: &pb.Value_NullValue{NullValue: pb.NullValue_NULL_VALUE}}
+    }
+    switch val := v.(type) {
+    case string:
+        return &pb.Value{Kind: &pb.Value_StringValue{StringValue: val}}
+    case int:
+        return &pb.Value{Kind: &pb.Value_IntValue{IntValue: int64(val)}}
+    case int64:
+        return &pb.Value{Kind: &pb.Value_IntValue{IntValue: val}}
+    case int32:
+        return &pb.Value{Kind: &pb.Value_IntValue{IntValue: int64(val)}}
+    case float64:
+        return &pb.Value{Kind: &pb.Value_DoubleValue{DoubleValue: val}}
+    case float32:
+        return &pb.Value{Kind: &pb.Value_DoubleValue{DoubleValue: float64(val)}}
+    case bool:
+        return &pb.Value{Kind: &pb.Value_BoolValue{BoolValue: val}}
+    case []byte:
+        return &pb.Value{Kind: &pb.Value_BytesValue{BytesValue: val}}
+    case []map[string]interface{}:
+        // Handle common pattern of rows: []map[string]interface{}
+        list := &pb.ListValue{}
+        for _, item := range val {
+            m := &pb.MapValue{Fields: make(map[string]*pb.Value)}
+            for key, v := range item {
+                m.Fields[key] = GoToValue(v)
+            }
+            list.Values = append(list.Values, &pb.Value{Kind: &pb.Value_MapValue{MapValue: m}})
+        }
+        return &pb.Value{Kind: &pb.Value_ListValue{ListValue: list}}
+    case []interface{}:
+        list := &pb.ListValue{}
+        for _, item := range val {
+            list.Values = append(list.Values, GoToValue(item))
+        }
+        return &pb.Value{Kind: &pb.Value_ListValue{ListValue: list}}
+    case map[string]interface{}:
+        m := &pb.MapValue{Fields: make(map[string]*pb.Value)}
+        for key, item := range val {
+            m.Fields[key] = GoToValue(item)
+        }
+        return &pb.Value{Kind: &pb.Value_MapValue{MapValue: m}}
+    default:
+        // Fallback to string
+        return &pb.Value{Kind: &pb.Value_StringValue{StringValue: fmt.Sprintf("%v", val)}}
+    }
 }

@@ -60,6 +60,10 @@ const loadAndScheduleWorkflows = () => {
     activeJobs.clear();
 
     workflows.forEach((wfRecord: any) => {
+        // 跳过未启用的工作流（支持顶层 enabled 与 content.enabled）
+        if (wfRecord && (wfRecord.enabled === false || (wfRecord.content && wfRecord.content.enabled === false))) {
+            return;
+        }
         const wf = wfRecord.content;
         const timerNode = wf.nodes.find((n: any) => n.type === 'timer');
 
@@ -94,6 +98,22 @@ const loadAndScheduleWorkflows = () => {
 // Initialize Scheduler
 loadAndScheduleWorkflows();
 
+// Watch workflows file changes to reschedule dynamically
+try {
+    if (fs.existsSync(WORKFLOWS_FILE)) {
+        fs.watchFile(WORKFLOWS_FILE, { interval: 2000 }, () => {
+            try {
+                loadAndScheduleWorkflows();
+            } catch (e) {
+                console.warn('[Scheduler] Failed to reload workflows on change:', (e as any)?.message || e);
+            }
+        });
+        console.log('[Scheduler] Workflows file watcher started');
+    }
+} catch (e) {
+    console.warn('[Scheduler] Failed to start workflows watcher:', (e as any)?.message || e);
+}
+
 // Initialize gRPC Plugins
 const initializeGrpcPlugins = async () => {
     if (fs.existsSync(PLUGINS_CONFIG_FILE)) {
@@ -121,11 +141,22 @@ app.post('/api/execute', async (req, res) => {
     if (!targetWorkflow && workflowId) {
         const workflows = readJson(WORKFLOWS_FILE);
         const record = workflows.find((w: any) => w.id === workflowId);
-        if (record) targetWorkflow = record.content;
+        if (record) {
+            // 若工作流被禁用（顶层或内容级），阻止执行
+            if (record.enabled === false || (record.content && record.content.enabled === false)) {
+                return res.status(400).json({ error: 'Workflow is disabled' });
+            }
+            targetWorkflow = record.content;
+        }
     }
 
     if (!targetWorkflow) {
         return res.status(400).json({ error: "No workflow provided" });
+    }
+
+    // 若直接传递 workflow 对象且其标记为未启用，也阻止执行
+    if ((targetWorkflow as any)?.enabled === false) {
+        return res.status(400).json({ error: 'Workflow is disabled' });
     }
 
     try {
@@ -205,7 +236,16 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // --- Workflow CRUD ---
-app.get('/api/workflows', (req, res) => res.json(readJson(WORKFLOWS_FILE).map((w: any) => ({ id: w.id, name: w.name, updatedAt: w.updatedAt }))));
+app.get('/api/workflows', (req, res) =>
+    res.json(
+        readJson(WORKFLOWS_FILE).map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            updatedAt: w.updatedAt,
+            enabled: (w.enabled !== false) && (!w.content || w.content.enabled !== false),
+        }))
+    )
+);
 
 app.get('/api/workflows/:id', (req, res) => {
     const w = readJson(WORKFLOWS_FILE).find((w: any) => w.id === req.params.id);
@@ -213,7 +253,13 @@ app.get('/api/workflows/:id', (req, res) => {
 });
 
 app.post('/api/workflows', (req, res) => {
-    const w = { id: Date.now().toString(), name: req.body.name, content: req.body.content, updatedAt: new Date().toISOString() };
+    const w = {
+        id: Date.now().toString(),
+        name: req.body.name,
+        content: req.body.content,
+        enabled: req.body.enabled ?? true,
+        updatedAt: new Date().toISOString()
+    };
     const all = readJson(WORKFLOWS_FILE);
     all.push(w);
     writeJson(WORKFLOWS_FILE, all);

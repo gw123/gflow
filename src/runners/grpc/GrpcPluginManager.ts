@@ -576,6 +576,8 @@ class GrpcPluginManagerClass {
         const matched: any[] = [];
 
         for (const wfRecord of workflows) {
+            // 跳过未启用的工作流（支持顶层 enabled 与 content.enabled）
+            if (wfRecord && (wfRecord.enabled === false || (wfRecord.content && wfRecord.content.enabled === false))) continue;
             const wf = wfRecord.content;
             if (!wf?.nodes) continue;
             const hasTriggerNode = wf.nodes.some((n: any) => 
@@ -754,6 +756,8 @@ class GrpcPluginManagerClass {
     private shouldSubscribeForTrigger(kind: string): boolean {
         const workflows = this.readWorkflows();
         for (const wfRecord of workflows) {
+            // 跳过未启用的工作流（支持顶层 enabled 与 content.enabled）
+            if (wfRecord && (wfRecord.enabled === false || (wfRecord.content && wfRecord.content.enabled === false))) continue;
             const wf = wfRecord.content;
             if (!wf?.nodes) continue;
             const hasTriggerNode = wf.nodes.some((n: any) => {
