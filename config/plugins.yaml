@@ -43,6 +43,22 @@ plugins:
     icon: "Plug"
     color: "green"
 
+  # Timer Trigger 插件（Go 实现的定时触发器）
+  - name: "Timer Trigger"
+    kind: "timer_trigger"
+    endpoint: "localhost:50052"
+    enabled: true
+    health_check: true
+    description: "定时触发插件：按 filters.interval_ms 推送触发事件"
+    version: "1.0.0"
+    category: "trigger"
+    icon: "Timer"
+    color: "green"
+    consumer_group: "default"
+    filters:
+      interval_ms: 1500   # 每 1.5 秒一个事件
+      count: 10           # 推送 10 次后结束（为 0 则无限）
+
   # 可以添加更多插件
   # - name: "Custom Plugin"
   #   kind: "custom_node"

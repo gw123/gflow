@@ -8,14 +8,17 @@ import (
 
 // PluginHandler defines the interface that plugins must implement
 type PluginHandler interface {
-	// GetMetadata returns the plugin metadata
-	GetMetadata(ctx context.Context) (*pb.GetMetadataResponse, error)
+  // GetMetadata returns the plugin metadata
+  GetMetadata(ctx context.Context) (*pb.GetMetadataResponse, error)
 
 	// Init initializes the plugin
 	Init(ctx context.Context, req *pb.InitRequest) (*pb.InitResponse, error)
 
-	// Run executes the plugin logic
-	Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) error
+    // Run executes the plugin logic
+    Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) error
+
+    // SubscribeTrigger streams trigger events to the server
+    SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error
 
 	// Stop stops the plugin execution
 	Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error)
@@ -39,9 +42,14 @@ func (h *DefaultHandler) Stop(ctx context.Context, req *pb.StopRequest) (*pb.Sto
 }
 
 func (h *DefaultHandler) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	return &pb.HealthCheckResponse{Status: pb.HealthStatus_HEALTH_STATUS_HEALTHY, Message: "OK"}, nil
+  return &pb.HealthCheckResponse{Status: pb.HealthStatus_HEALTH_STATUS_HEALTHY, Message: "OK"}, nil
 }
 
 func (h *DefaultHandler) TestCredential(ctx context.Context, req *pb.TestCredentialRequest) (*pb.TestCredentialResponse, error) {
-	return &pb.TestCredentialResponse{Success: true, Info: map[string]string{"message": "No credential check implemented"}}, nil
+  return &pb.TestCredentialResponse{Success: true, Info: map[string]string{"message": "No credential check implemented"}}, nil
+}
+
+// Default no-op SubscribeTrigger; trigger plugins should override
+func (h *DefaultHandler) SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error {
+  return nil
 }

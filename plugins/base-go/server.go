@@ -17,8 +17,8 @@ import (
 
 // Server wraps the gRPC server and plugin handler
 type Server struct {
-	pb.UnimplementedNodePluginServiceServer
-	handler PluginHandler
+  pb.UnimplementedNodePluginServiceServer
+  handler PluginHandler
 }
 
 func (s *Server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*pb.GetMetadataResponse, error) {
@@ -64,6 +64,20 @@ func (s *Server) Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) 
 
 	log.Printf("✅ Plugin execution completed successfully in %v", duration)
 	return nil
+}
+
+// SubscribeTrigger delegates trigger streaming to the plugin handler
+func (s *Server) SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error {
+    log.Printf("📡 SubscribeTrigger started (consumer_group=%s)", req.GetConsumerGroup())
+    startTime := time.Now()
+    err := s.handler.SubscribeTrigger(req, stream)
+    duration := time.Since(startTime)
+    if err != nil {
+        log.Printf("❌ SubscribeTrigger failed after %v: %v", duration, err)
+        return err
+    }
+    log.Printf("✅ SubscribeTrigger completed in %v", duration)
+    return nil
 }
 
 func (s *Server) Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error) {

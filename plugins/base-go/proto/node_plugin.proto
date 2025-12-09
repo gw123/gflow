@@ -30,6 +30,10 @@ service NodePluginService {
   
   // Run 执行节点（支持流式输出）
   rpc Run(RunRequest) returns (stream RunResponse);
+
+  // SubscribeTrigger 触发事件订阅（服务端作为客户端读取插件推送的事件）
+  // 仅当插件分类为 CATEGORY_TRIGGER 时由服务端主动调用，插件通过流式响应推送事件
+  rpc SubscribeTrigger(SubscribeTriggerRequest) returns (stream TriggerEvent);
   
   // Stop 停止正在执行的节点（优雅停止）
   rpc Stop(StopRequest) returns (StopResponse);
@@ -414,6 +418,34 @@ enum ErrorType {
   ERROR_TYPE_INTERNAL = 8;            // 内部错误
   ERROR_TYPE_EXTERNAL = 9;            // 外部服务错误
   ERROR_TYPE_CANCELLED = 10;          // 已取消
+}
+
+// =============================================================================
+// Trigger Subscription - 触发事件订阅
+// =============================================================================
+
+// SubscribeTriggerRequest 订阅请求
+message SubscribeTriggerRequest {
+  // 可选：用于 MQ 等场景的消费组标识
+  string consumer_group = 1;
+  // 可选：用于插件侧的过滤条件（路由键、主题等）
+  map<string, string> filters = 2;
+}
+
+// TriggerEvent 触发事件（由插件通过流式响应不断推送）
+message TriggerEvent {
+  // 事件唯一标识（用于幂等处理）
+  string event_id = 1;
+  // 来源标识（topic、routing_key、path 等）
+  string source = 2;
+  // 事件载荷（任意结构）
+  Value payload = 3;
+  // 追踪信息（可选）
+  string trace_id = 4;
+  // 建议的目标工作流或标签（可选，供服务端筛选）
+  string target_workflow = 5;
+  // 触发发生时间
+  int64 timestamp_ms = 6;
 }
 
 // =============================================================================

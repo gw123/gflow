@@ -48,6 +48,8 @@ export interface PluginMetadata {
   nodeType: string;
   credentialType?: string;
   parameters?: PluginParameterDefinition[];
+  // 节点分类：用于识别触发节点（例如 'trigger'）
+  category?: string;
 }
 
 export interface NodeDefinition {

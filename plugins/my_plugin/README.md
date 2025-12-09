@@ -1,6 +1,6 @@
-# MyPlugin
+# my_plugin
 
-for test
+
 
 ## Usage
 
@@ -16,7 +16,7 @@ Add to `config/plugins.yaml` if not using auto-registration:
 
 ```yaml
 plugins:
-  - name: "MyPlugin"
+  - name: "my_plugin"
     kind: "my_plugin"
     endpoint: "localhost:50051"
     enabled: true

@@ -13,6 +13,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 
 import { Registry } from '../../registry';
+import { ServerWorkflowEngine } from '../../server/engine';
 import { NodePlugin, PluginParameterDefinition } from '../../types';
 import {
     GrpcPluginConfig,
@@ -49,6 +50,51 @@ class GrpcPluginManagerClass {
     private serviceDefinition: any = null;
     private initialized: boolean = false;
     private healthCheckInterval: NodeJS.Timeout | null = null;
+    private triggerStreams: Map<string, grpc.ClientReadableStream<any>> = new Map();
+    private workflowsWatcherStarted: boolean = false;
+    // 指数退避重试状态映射
+    private triggerRetry: Map<string, { delayMs: number; attempts: number; maxDelayMs: number; initialDelayMs: number; timer?: NodeJS.Timeout }> = new Map();
+
+    /**
+     * 规范化端点字符串用于重复注册判断（忽略协议与本地地址差异）
+     */
+    private normalizeEndpoint(endpoint: string | undefined): string {
+        if (!endpoint) return '';
+        let ep = endpoint.trim();
+        // 去掉可能的协议前缀
+        ep = ep.replace(/^grpc:\/\//, '').replace(/^http:\/\//, '').replace(/^https:\/\//, '');
+        // 去掉 IPv6 括号
+        ep = ep.replace(/^\[/, '').replace(/\]$/, '');
+        // 统一本地地址
+        ep = ep.replace('localhost', '127.0.0.1').replace('::1', '127.0.0.1');
+        // 去掉多余的斜杠
+        ep = ep.replace(/\/+$/, '');
+        return ep;
+    }
+
+    /**
+     * 合并插件配置：优先保留已有的非空 consumer_group，filters 进行浅合并
+     */
+    private mergePluginConfig(existing: GrpcPluginConfig, incoming: GrpcPluginConfig): GrpcPluginConfig {
+        const merged: any = { ...existing, ...incoming };
+        // consumer_group：优先保留已有的非空值（配置文件 > 自注册），除非现有为空
+        const oldGroup = (existing as any)?.consumer_group;
+        const newGroup = (incoming as any)?.consumer_group;
+        if (oldGroup !== undefined && oldGroup !== null && oldGroup !== '') {
+            (merged as any).consumer_group = oldGroup;
+        } else {
+            (merged as any).consumer_group = newGroup;
+        }
+        // filters：若新值为空则保留旧值，否则浅合并
+        const newFilters = (incoming as any)?.filters;
+        const oldFilters = (existing as any)?.filters;
+        if (!newFilters || (typeof newFilters === 'object' && Object.keys(newFilters).length === 0)) {
+            (merged as any).filters = oldFilters;
+        } else {
+            (merged as any).filters = { ...(oldFilters || {}), ...newFilters };
+        }
+        return merged as GrpcPluginConfig;
+    }
 
     /**
      * 初始化管理器
@@ -102,6 +148,9 @@ class GrpcPluginManagerClass {
 
             // 启动健康检查定时器
             this.startHealthCheckTimer();
+
+            // 启动工作流文件变化监听，用于按需启动/停止触发订阅
+            this.startWorkflowsWatcher();
         } catch (error) {
             console.error('[GrpcPluginManager] Failed to load config:', error);
             throw error;
@@ -121,6 +170,17 @@ class GrpcPluginManagerClass {
         console.log(`[GrpcPluginManager] Registering plugin: ${kind} at ${endpoint}`);
 
         try {
+            // 若已存在同名且端点一致（规范化后）插件，避免重复注册，合并配置后直接返回
+            const existing = this.plugins.get(kind);
+            const epExisting = this.normalizeEndpoint(existing?.config?.endpoint);
+            const epIncoming = this.normalizeEndpoint(endpoint);
+            if (existing && existing.config && epExisting && epExisting === epIncoming) {
+                existing.config = this.mergePluginConfig(existing.config, config);
+                this.plugins.set(kind, existing);
+                console.log(`[GrpcPluginManager] Plugin ${kind} already registered at ${epExisting}; skipping duplicate registration`);
+                return true;
+            }
+
             // 创建 gRPC 客户端
             const client = this.createClient(endpoint, config);
             this.clients.set(kind, client);
@@ -158,6 +218,24 @@ class GrpcPluginManagerClass {
             // 创建 NodePlugin 并注册到 Registry
             const nodePlugin = this.createNodePlugin(config, metadata);
             Registry.register(nodePlugin);
+
+            // 若为触发类插件，订阅触发事件流
+            const category = nodePlugin.category;
+            if (category === 'trigger') {
+                // 仅当存在引用该触发器的工作流时才订阅
+                if (this.shouldSubscribeForTrigger(kind)) {
+                    // 避免重复启动导致立刻取消与重建
+                    if (!this.triggerStreams.has(kind)) {
+                        this.startTriggerSubscription(kind).catch(err => {
+                            console.warn(`[GrpcPluginManager] Failed to start trigger subscription for ${kind}:`, err?.message || err);
+                        });
+                    } else {
+                        console.log(`[GrpcPluginManager] Trigger subscription already active for ${kind}; skipping`);
+                    }
+                } else {
+                    console.log(`[GrpcPluginManager] Skip trigger subscription for ${kind}: no workflows reference this trigger`);
+                }
+            }
 
             console.log(`[GrpcPluginManager] ✅ Successfully registered plugin configuration: ${kind}. Status: ${registeredPlugin.status}`);
             return true;
@@ -408,6 +486,8 @@ class GrpcPluginManagerClass {
                     nodeType: metadata?.nodeType || 'processor',
                     credentialType: config.credential_type || metadata?.credentialType,
                     parameters: parameterDefinitions,
+                    // 保留分类信息到节点模板，供引擎识别起始节点
+                    category: config.category || metadata?.category || 'plugin',
                 },
             },
             runner: new DynamicGrpcNodeRunner(config.kind, config.endpoint, this),
@@ -420,6 +500,154 @@ class GrpcPluginManagerClass {
         };
 
         return plugin;
+    }
+
+    /**
+     * 启动触发事件订阅（流式）
+     */
+    private async startTriggerSubscription(kind: string): Promise<void> {
+        const client = this.clients.get(kind);
+        if (!client) {
+            throw new Error(`Client not found for plugin: ${kind}`);
+        }
+
+        // 避免重复订阅
+        const existing = this.triggerStreams.get(kind);
+        if (existing) {
+            try { existing.cancel(); } catch {}
+            this.triggerStreams.delete(kind);
+        }
+
+        const plugin = this.plugins.get(kind);
+        const request = {
+            consumer_group: (plugin?.config as any)?.consumer_group || '',
+            filters: (plugin?.config as any)?.filters || {},
+        };
+
+        const call: grpc.ClientReadableStream<any> = client.SubscribeTrigger(request);
+        this.triggerStreams.set(kind, call);
+
+        console.log(`[GrpcPluginManager] ▶ Subscribed trigger stream for ${kind}`);
+
+        call.on('data', async (event: any) => {
+            try {
+                // 收到数据认为连接正常，重置该插件的重试状态
+                this.resetTriggerRetry(kind);
+                await this.handleTriggerEvent(kind, event);
+            } catch (err: any) {
+                console.error(`[GrpcPluginManager] Error handling trigger event from ${kind}:`, err?.message || err);
+            }
+        });
+
+        call.on('error', (err: any) => {
+            const msg = err?.message || String(err);
+            console.warn(`[GrpcPluginManager] Trigger stream error for ${kind}:`, msg);
+            // 指数退避重订阅
+            this.scheduleTriggerResubscribe(kind, `error: ${msg}`, true);
+        });
+
+        call.on('end', () => {
+            console.log(`[GrpcPluginManager] Trigger stream ended for ${kind}`);
+            const state = this.getTriggerRetry(kind);
+            // 如果刚经历错误并已进入退避周期，避免 end 事件再次调度导致频繁重试
+            if (state.attempts > 0) {
+                console.log(`[GrpcPluginManager] Skip end resubscribe for ${kind}: backoff in progress (attempts=${state.attempts})`);
+                return;
+            }
+            // 若仍有工作流引用该触发器，则按初始延迟重订阅（不指数增加）
+            if (this.shouldSubscribeForTrigger(kind)) {
+                this.scheduleTriggerResubscribe(kind, 'end', false);
+            } else {
+                console.log(`[GrpcPluginManager] Not resubscribing ${kind}: no workflows reference this trigger`);
+            }
+        });
+    }
+
+    /**
+     * 触发事件处理：查找匹配工作流并执行
+     */
+    private async handleTriggerEvent(kind: string, event: any): Promise<void> {
+        const payload = this.convertValue(event?.payload);
+        const source = event?.source;
+        const traceId = event?.trace_id;
+        const eventId = event?.event_id;
+
+        const workflows = this.readWorkflows();
+        const matched: any[] = [];
+
+        for (const wfRecord of workflows) {
+            const wf = wfRecord.content;
+            if (!wf?.nodes) continue;
+            const hasTriggerNode = wf.nodes.some((n: any) => 
+                n.type === kind && ((n.meta && n.meta.category === 'trigger') || true)
+            );
+            if (hasTriggerNode) {
+                matched.push(wf);
+            }
+        }
+
+        if (matched.length === 0) {
+            console.log(`[GrpcPluginManager] No workflows matched trigger [${kind}] for source=${source || '-'} event=${eventId || '-'} `);
+            return;
+        }
+
+        for (const wf of matched) {
+            try {
+                // 注入触发上下文到全局变量
+                wf.global = wf.global || {};
+                wf.global.TRIGGER = {
+                    kind,
+                    source,
+                    trace_id: traceId,
+                    event_id: eventId,
+                    payload,
+                };
+
+                const engine = new ServerWorkflowEngine(wf);
+                await engine.run();
+            } catch (err: any) {
+                console.error(`[GrpcPluginManager] Failed to execute workflow ${wf?.name} for trigger ${kind}:`, err?.message || err);
+            }
+        }
+    }
+
+    /**
+     * 读取工作流数据文件
+     */
+    private readWorkflows(): any[] {
+        try {
+            const file = path.resolve(__dirname, '../../server/data/workflows.json');
+            if (!fs.existsSync(file)) return [];
+            const content = fs.readFileSync(file, 'utf-8');
+            const arr = JSON.parse(content);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            console.warn('[GrpcPluginManager] Failed to read workflows.json:', (e as any)?.message || e);
+            return [];
+        }
+    }
+
+    /**
+     * 将 proto Value 转为 JS 值
+     */
+    private convertValue(value: any): any {
+        if (!value || typeof value !== 'object') return value;
+        if (value.string_value !== undefined) return value.string_value;
+        if (value.int_value !== undefined) return Number(value.int_value);
+        if (value.double_value !== undefined) return value.double_value;
+        if (value.bool_value !== undefined) return value.bool_value;
+        if (value.null_value !== undefined) return null;
+        if (value.list_value && Array.isArray(value.list_value)) {
+            return value.list_value.map((v: any) => this.convertValue(v));
+        }
+        if (value.map_value) {
+            const out: any = {};
+            for (const k of Object.keys(value.map_value)) {
+                out[k] = this.convertValue(value.map_value[k]);
+            }
+            return out;
+        }
+        return value;
     }
 
     /**
@@ -478,6 +706,10 @@ class GrpcPluginManagerClass {
             client.close();
             this.clients.delete(kind);
         }
+        const stream = this.triggerStreams.get(kind);
+        try { stream?.cancel(); } catch {}
+        this.triggerStreams.delete(kind);
+        this.clearTriggerRetry(kind);
         return this.plugins.delete(kind);
     }
 
@@ -514,6 +746,147 @@ class GrpcPluginManagerClass {
         this.clients.clear();
         this.plugins.clear();
         this.initialized = false;
+    }
+
+    /**
+     * 判断是否需要为指定触发插件启动订阅（至少有一个工作流引用该触发器）
+     */
+    private shouldSubscribeForTrigger(kind: string): boolean {
+        const workflows = this.readWorkflows();
+        for (const wfRecord of workflows) {
+            const wf = wfRecord.content;
+            if (!wf?.nodes) continue;
+            const hasTriggerNode = wf.nodes.some((n: any) => {
+                const typeMatched = n.type === kind;
+                const isTriggerMeta = (n.meta && n.meta.category === 'trigger') || true;
+                return typeMatched && isTriggerMeta;
+            });
+            if (hasTriggerNode) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 监听工作流文件变更，根据需要启动/停止各触发插件的订阅
+     */
+    private startWorkflowsWatcher(): void {
+        if (this.workflowsWatcherStarted) return;
+        try {
+            const file = path.resolve(__dirname, '../../server/data/workflows.json');
+            if (!fs.existsSync(file)) return;
+            fs.watchFile(file, { interval: 2000 }, () => {
+                try {
+                    this.restartAllTriggerSubscriptions();
+                } catch (e) {
+                    console.warn('[GrpcPluginManager] Failed to restart trigger subscriptions on workflows change:', (e as any)?.message || e);
+                }
+            });
+            this.workflowsWatcherStarted = true;
+            console.log('[GrpcPluginManager] Workflows watcher started');
+        } catch (e) {
+            console.warn('[GrpcPluginManager] Failed to start workflows watcher:', (e as any)?.message || e);
+        }
+    }
+
+    /**
+     * 根据当前工作流引用情况，按需启动或停止所有触发插件的订阅
+     */
+    private restartAllTriggerSubscriptions(): void {
+        for (const [kind, plugin] of this.plugins.entries()) {
+            const nodePlugin = Registry.get(plugin.config.kind);
+            const category = nodePlugin?.category || plugin.config.category;
+            if (category !== 'trigger') continue;
+
+            const should = this.shouldSubscribeForTrigger(kind);
+            const hasStream = this.triggerStreams.has(kind);
+            if (should && !hasStream) {
+                console.log(`[GrpcPluginManager] ▶ Starting trigger subscription for ${kind} due to workflows change`);
+                this.startTriggerSubscription(kind).catch(() => {});
+            } else if (!should && hasStream) {
+                console.log(`[GrpcPluginManager] ✋ Stopping trigger subscription for ${kind} (no workflows reference)`);
+                const existing = this.triggerStreams.get(kind);
+                try { existing?.cancel(); } catch {}
+                this.triggerStreams.delete(kind);
+                // 停止订阅时清理重试状态
+                this.clearTriggerRetry(kind);
+            }
+        }
+    }
+
+    /**
+     * 获取/初始化触发重试状态
+     */
+    private getTriggerRetry(kind: string): { delayMs: number; attempts: number; maxDelayMs: number; initialDelayMs: number; timer?: NodeJS.Timeout } {
+        let state = this.triggerRetry.get(kind);
+        if (!state) {
+            state = { delayMs: 1000, attempts: 0, maxDelayMs: 60000, initialDelayMs: 1000 };
+            this.triggerRetry.set(kind, state);
+        }
+        return state;
+    }
+
+    /**
+     * 重置触发重试状态
+     */
+    private resetTriggerRetry(kind: string): void {
+        const state = this.getTriggerRetry(kind);
+        state.attempts = 0;
+        state.delayMs = state.initialDelayMs;
+        if (state.timer) {
+            clearTimeout(state.timer);
+            state.timer = undefined;
+        }
+    }
+
+    /**
+     * 清理触发重试状态
+     */
+    private clearTriggerRetry(kind: string): void {
+        const state = this.triggerRetry.get(kind);
+        if (state?.timer) {
+            clearTimeout(state.timer);
+        }
+        this.triggerRetry.delete(kind);
+    }
+
+    /**
+     * 调度触发重订阅（带指数退避与抖动）
+     * useExponential = true：指数退避；false：使用初始延迟
+     */
+    private scheduleTriggerResubscribe(kind: string, reason: string, useExponential: boolean = true): void {
+        if (!this.shouldSubscribeForTrigger(kind)) {
+            console.log(`[GrpcPluginManager] Not resubscribing ${kind}: no workflows reference this trigger`);
+            return;
+        }
+
+        const state = this.getTriggerRetry(kind);
+        let delay = useExponential ? state.delayMs : state.initialDelayMs;
+        // 抖动：0.5x ~ 1.0x，避免群体同步重试
+        const jitter = 0.5 + Math.random() * 0.5;
+        delay = Math.floor(delay * jitter);
+
+        // 取消已存在定时器，避免重复调度
+        if (state.timer) {
+            clearTimeout(state.timer);
+            state.timer = undefined;
+        }
+
+        console.log(`[GrpcPluginManager] ⏳ Resubscribing ${kind} in ${delay}ms (${reason}, attempt ${state.attempts + 1})`);
+        state.timer = setTimeout(() => {
+            this.startTriggerSubscription(kind).catch(err => {
+                console.warn(`[GrpcPluginManager] Failed to resubscribe ${kind}:`, err?.message || err);
+            });
+        }, delay);
+
+        // 更新退避参数
+        if (useExponential) {
+            state.attempts += 1;
+            state.delayMs = Math.min(state.delayMs * 2, state.maxDelayMs);
+        } else {
+            // 正常结束场景保持初始延迟
+            state.attempts = 0;
+            state.delayMs = state.initialDelayMs;
+        }
     }
 }
 

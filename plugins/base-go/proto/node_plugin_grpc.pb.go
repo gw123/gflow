@@ -29,12 +29,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NodePluginService_GetMetadata_FullMethodName    = "/node_plugin.NodePluginService/GetMetadata"
-	NodePluginService_Init_FullMethodName           = "/node_plugin.NodePluginService/Init"
-	NodePluginService_Run_FullMethodName            = "/node_plugin.NodePluginService/Run"
-	NodePluginService_Stop_FullMethodName           = "/node_plugin.NodePluginService/Stop"
-	NodePluginService_TestCredential_FullMethodName = "/node_plugin.NodePluginService/TestCredential"
-	NodePluginService_HealthCheck_FullMethodName    = "/node_plugin.NodePluginService/HealthCheck"
+	NodePluginService_GetMetadata_FullMethodName      = "/node_plugin.NodePluginService/GetMetadata"
+	NodePluginService_Init_FullMethodName             = "/node_plugin.NodePluginService/Init"
+	NodePluginService_Run_FullMethodName              = "/node_plugin.NodePluginService/Run"
+	NodePluginService_SubscribeTrigger_FullMethodName = "/node_plugin.NodePluginService/SubscribeTrigger"
+	NodePluginService_Stop_FullMethodName             = "/node_plugin.NodePluginService/Stop"
+	NodePluginService_TestCredential_FullMethodName   = "/node_plugin.NodePluginService/TestCredential"
+	NodePluginService_HealthCheck_FullMethodName      = "/node_plugin.NodePluginService/HealthCheck"
 )
 
 // NodePluginServiceClient is the client API for NodePluginService service.
@@ -49,6 +50,9 @@ type NodePluginServiceClient interface {
 	Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitResponse, error)
 	// Run 执行节点（支持流式输出）
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[RunResponse], error)
+	// SubscribeTrigger 触发事件订阅（服务端作为客户端读取插件推送的事件）
+	// 仅当插件分类为 CATEGORY_TRIGGER 时由服务端主动调用，插件通过流式响应推送事件
+	SubscribeTrigger(ctx context.Context, in *SubscribeTriggerRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TriggerEvent], error)
 	// Stop 停止正在执行的节点（优雅停止）
 	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
 	// TestCredential 测试凭证有效性
@@ -104,6 +108,25 @@ func (c *nodePluginServiceClient) Run(ctx context.Context, in *RunRequest, opts 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type NodePluginService_RunClient = grpc.ServerStreamingClient[RunResponse]
 
+func (c *nodePluginServiceClient) SubscribeTrigger(ctx context.Context, in *SubscribeTriggerRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TriggerEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &NodePluginService_ServiceDesc.Streams[1], NodePluginService_SubscribeTrigger_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeTriggerRequest, TriggerEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type NodePluginService_SubscribeTriggerClient = grpc.ServerStreamingClient[TriggerEvent]
+
 func (c *nodePluginServiceClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StopResponse)
@@ -146,6 +169,9 @@ type NodePluginServiceServer interface {
 	Init(context.Context, *InitRequest) (*InitResponse, error)
 	// Run 执行节点（支持流式输出）
 	Run(*RunRequest, grpc.ServerStreamingServer[RunResponse]) error
+	// SubscribeTrigger 触发事件订阅（服务端作为客户端读取插件推送的事件）
+	// 仅当插件分类为 CATEGORY_TRIGGER 时由服务端主动调用，插件通过流式响应推送事件
+	SubscribeTrigger(*SubscribeTriggerRequest, grpc.ServerStreamingServer[TriggerEvent]) error
 	// Stop 停止正在执行的节点（优雅停止）
 	Stop(context.Context, *StopRequest) (*StopResponse, error)
 	// TestCredential 测试凭证有效性
@@ -170,6 +196,9 @@ func (UnimplementedNodePluginServiceServer) Init(context.Context, *InitRequest) 
 }
 func (UnimplementedNodePluginServiceServer) Run(*RunRequest, grpc.ServerStreamingServer[RunResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method Run not implemented")
+}
+func (UnimplementedNodePluginServiceServer) SubscribeTrigger(*SubscribeTriggerRequest, grpc.ServerStreamingServer[TriggerEvent]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeTrigger not implemented")
 }
 func (UnimplementedNodePluginServiceServer) Stop(context.Context, *StopRequest) (*StopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
@@ -247,6 +276,17 @@ func _NodePluginService_Run_Handler(srv interface{}, stream grpc.ServerStream) e
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type NodePluginService_RunServer = grpc.ServerStreamingServer[RunResponse]
+
+func _NodePluginService_SubscribeTrigger_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeTriggerRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(NodePluginServiceServer).SubscribeTrigger(m, &grpc.GenericServerStream[SubscribeTriggerRequest, TriggerEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type NodePluginService_SubscribeTriggerServer = grpc.ServerStreamingServer[TriggerEvent]
 
 func _NodePluginService_Stop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StopRequest)
@@ -334,6 +374,11 @@ var NodePluginService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Run",
 			Handler:       _NodePluginService_Run_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SubscribeTrigger",
+			Handler:       _NodePluginService_SubscribeTrigger_Handler,
 			ServerStreams: true,
 		},
 	},

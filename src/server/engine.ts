@@ -421,7 +421,7 @@ export class ServerWorkflowEngine {
     async run() {
         // Log workflow start
         const startNodes = this.workflow.nodes
-            .filter(n => ['manual', 'webhook', 'timer'].includes(n.type))
+            .filter(n => (n as any).meta?.category === 'trigger' || ['manual', 'webhook', 'timer'].includes(n.type))
             .map(n => n.name);
 
         if (startNodes.length === 0 && this.workflow.nodes.length > 0) {

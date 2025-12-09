@@ -24,11 +24,11 @@ func (p *MyPluginPlugin) GetMetadata(ctx context.Context) (*pb.GetMetadataRespon
 		NodeType:    pb.NodeType_NODE_TYPE_PROCESSOR,
 		InputParameters: []*pb.ParameterDef{
 			{
-				Name:        "input",
-				DisplayName: "Input",
-				Type:        pb.ParameterType_PARAM_TYPE_STRING,
-				Required:    true,
-				Description: "Example input parameter",
+				Name:         "input",
+				DisplayName:  "Input",
+				Type:         pb.ParameterType_PARAM_TYPE_STRING,
+				Required:     true,
+				Description:  "Example input parameter",
 			},
 		},
 		OutputParameters: []*pb.ParameterDef{
@@ -77,7 +77,7 @@ func (p *MyPluginPlugin) Run(req *pb.RunRequest, stream pb.NodePluginService_Run
 				Output: map[string]*pb.Value{
 					"output": base.GoToValue(result),
 				},
-				Status: pb.ExecutionStatus_EXECUTION_STATUS_SUCCESS,
+				Status:     pb.ExecutionStatus_EXECUTION_STATUS_SUCCESS,
 			},
 		},
 	})
