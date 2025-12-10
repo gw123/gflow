@@ -133,10 +133,21 @@ content:
         code: |
           const orderData = input.data;
           
+          // 确保orderData是对象，不是字符串
+          let orderDataObj = orderData;
+          if (typeof orderData === 'string') {
+            try {
+              orderDataObj = JSON.parse(orderData);
+            } catch (e) {
+              console.error("❌ 解析订单数据失败:", e);
+              orderDataObj = {};
+            }
+          }
+          
           // 模拟订单创建逻辑
           const order = {
             id: `ORD-${Date.now()}`,
-            ...orderData,
+            ...orderDataObj,
             status: "pending",
             createdAt: new Date().toISOString()
           };

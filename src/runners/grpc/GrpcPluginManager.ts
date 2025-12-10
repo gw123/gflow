@@ -658,6 +658,15 @@ class GrpcPluginManagerClass {
         if (value.double_value !== undefined) return value.double_value;
         if (value.bool_value !== undefined) return value.bool_value;
         if (value.null_value !== undefined) return null;
+        if (value.bytes_value !== undefined) {
+            // 处理 bytes_value，转换为字符串
+            if (Array.isArray(value.bytes_value)) {
+                return Buffer.from(value.bytes_value).toString();
+            } else if (typeof value.bytes_value === 'string') {
+                return value.bytes_value;
+            }
+            return String(value.bytes_value);
+        }
         if (value.list_value) {
             return (value.list_value.values || []).map((v: any) => this.convertValue(v));
         }
