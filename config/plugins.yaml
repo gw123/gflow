@@ -59,6 +59,21 @@ plugins:
       interval_ms: 1500   # 每 1.5 秒一个事件
       count: 10           # 推送 10 次后结束（为 0 则无限）
 
+  # HTTP Gateway 插件
+  - name: "HTTP Gateway"
+    kind: "http_gateway"
+    endpoint: "localhost:50053"
+    enabled: true
+    health_check: true
+    description: "HTTP 网关插件：监听指定端口和路由，推送触发事件"
+    version: "1.0.0"
+    category: "trigger"
+    icon: "Globe"
+    color: "purple"
+    consumer_group: "default"
+    filters:
+      http_port: 8080
+
   # 可以添加更多插件
   # - name: "Custom Plugin"
   #   kind: "custom_node"

@@ -5,6 +5,7 @@ import path from 'path';
 import axios from 'axios';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 import { ServerWorkflowEngine } from './engine';
 import { GrpcPluginManager } from '../runners/grpc/server';
 import { Registry } from '../registry';
@@ -15,15 +16,19 @@ const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, '../../config');
-const WORKFLOWS_FILE = path.join(DATA_DIR, 'workflows.json');
+const FLOWS_DIR = path.join(DATA_DIR, 'flows');
 const SECRETS_FILE = path.join(DATA_DIR, 'secrets.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const APIS_FILE = path.join(DATA_DIR, 'apis.json');
 const PLUGINS_CONFIG_FILE = path.join(CONFIG_DIR, 'plugins.yaml');
 
-// Ensure data directory exists
+// Ensure directories exist
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR);
+}
+
+if (!fs.existsSync(FLOWS_DIR)) {
+    fs.mkdirSync(FLOWS_DIR);
 }
 
 // JSON Helper
@@ -41,6 +46,59 @@ const writeJson = (file: string, data: any) => {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
 
+// Workflow YAML Helpers
+const readWorkflows = () => {
+    if (!fs.existsSync(FLOWS_DIR)) {
+        console.log(`[WorkflowLoader] Flows directory not found: ${FLOWS_DIR}`);
+        return [];
+    }
+    
+    const workflows: any[] = [];
+    const files = fs.readdirSync(FLOWS_DIR);
+    
+    console.log(`[WorkflowLoader] Loading workflows from directory: ${FLOWS_DIR}`);
+    console.log(`[WorkflowLoader] Found ${files.length} files in flows directory`);
+    
+    for (const file of files) {
+        if (file.endsWith('.yaml') || file.endsWith('.yml')) {
+            try {
+                const filePath = path.join(FLOWS_DIR, file);
+                console.log(`[WorkflowLoader] Reading workflow file: ${file}`);
+                
+                const yamlData = fs.readFileSync(filePath, 'utf8');
+                const workflow = yaml.load(yamlData) as any;
+                
+                if (workflow && workflow.id && workflow.content) {
+                    console.log(`[WorkflowLoader] ✅ Successfully loaded workflow: ${workflow.id} - ${workflow.name}`);
+                    workflows.push(workflow);
+                } else {
+                    console.warn(`[WorkflowLoader] ⚠️  Invalid workflow format in file: ${file}`);
+                }
+            } catch (e) {
+                console.error(`[WorkflowLoader] ❌ Error reading workflow file ${file}:`, e);
+            }
+        }
+    }
+    
+    console.log(`[WorkflowLoader] Finished loading ${workflows.length} valid workflows`);
+    return workflows;
+};
+
+const writeWorkflow = (workflow: any) => {
+    const filename = `${workflow.id}.yaml`;
+    const filePath = path.join(FLOWS_DIR, filename);
+    const yamlData = yaml.dump(workflow, { indent: 2 });
+    fs.writeFileSync(filePath, yamlData, 'utf8');
+};
+
+const deleteWorkflow = (workflowId: string) => {
+    const filename = `${workflowId}.yaml`;
+    const filePath = path.join(FLOWS_DIR, filename);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+};
+
 const app = express();
 const PORT = 3001;
 
@@ -53,7 +111,7 @@ const activeJobs = new Map<string, any>();
 
 const loadAndScheduleWorkflows = () => {
     console.log("Loading scheduled workflows...");
-    const workflows = readJson(WORKFLOWS_FILE);
+    const workflows = readWorkflows();
 
     // Clear existing jobs
     activeJobs.forEach(job => job.stop());
@@ -98,17 +156,20 @@ const loadAndScheduleWorkflows = () => {
 // Initialize Scheduler
 loadAndScheduleWorkflows();
 
-// Watch workflows file changes to reschedule dynamically
+// Watch flows directory changes to reschedule dynamically
 try {
-    if (fs.existsSync(WORKFLOWS_FILE)) {
-        fs.watchFile(WORKFLOWS_FILE, { interval: 2000 }, () => {
-            try {
-                loadAndScheduleWorkflows();
-            } catch (e) {
-                console.warn('[Scheduler] Failed to reload workflows on change:', (e as any)?.message || e);
+    if (fs.existsSync(FLOWS_DIR)) {
+        fs.watch(FLOWS_DIR, { interval: 2000, recursive: false }, (eventType, filename) => {
+            if (filename && (filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
+                try {
+                    console.log(`[Scheduler] Workflow file changed: ${filename}, reloading...`);
+                    loadAndScheduleWorkflows();
+                } catch (e) {
+                    console.warn('[Scheduler] Failed to reload workflows on change:', (e as any)?.message || e);
+                }
             }
         });
-        console.log('[Scheduler] Workflows file watcher started');
+        console.log('[Scheduler] Workflows directory watcher started');
     }
 } catch (e) {
     console.warn('[Scheduler] Failed to start workflows watcher:', (e as any)?.message || e);
@@ -139,7 +200,7 @@ app.post('/api/execute', async (req, res) => {
     let targetWorkflow = workflow;
 
     if (!targetWorkflow && workflowId) {
-        const workflows = readJson(WORKFLOWS_FILE);
+        const workflows = readWorkflows();
         const record = workflows.find((w: any) => w.id === workflowId);
         if (record) {
             // 若工作流被禁用（顶层或内容级），阻止执行
@@ -238,7 +299,7 @@ app.get('/api/auth/me', (req, res) => {
 // --- Workflow CRUD ---
 app.get('/api/workflows', (req, res) =>
     res.json(
-        readJson(WORKFLOWS_FILE).map((w: any) => ({
+        readWorkflows().map((w: any) => ({
             id: w.id,
             name: w.name,
             updatedAt: w.updatedAt,
@@ -248,7 +309,7 @@ app.get('/api/workflows', (req, res) =>
 );
 
 app.get('/api/workflows/:id', (req, res) => {
-    const w = readJson(WORKFLOWS_FILE).find((w: any) => w.id === req.params.id);
+    const w = readWorkflows().find((w: any) => w.id === req.params.id);
     w ? res.json(w) : res.status(404).json({ error: 'Not found' });
 });
 
@@ -260,29 +321,30 @@ app.post('/api/workflows', (req, res) => {
         enabled: req.body.enabled ?? true,
         updatedAt: new Date().toISOString()
     };
-    const all = readJson(WORKFLOWS_FILE);
-    all.push(w);
-    writeJson(WORKFLOWS_FILE, all);
+    writeWorkflow(w);
     loadAndScheduleWorkflows();
     res.json(w);
 });
 
 app.put('/api/workflows/:id', (req, res) => {
-    const all = readJson(WORKFLOWS_FILE);
-    const idx = all.findIndex((w: any) => w.id === req.params.id);
-    if (idx !== -1) {
-        all[idx] = { ...all[idx], ...req.body, updatedAt: new Date().toISOString() };
-        writeJson(WORKFLOWS_FILE, all);
+    const workflows = readWorkflows();
+    const existing = workflows.find((w: any) => w.id === req.params.id);
+    if (existing) {
+        const updated = { ...existing, ...req.body, updatedAt: new Date().toISOString() };
+        writeWorkflow(updated);
         loadAndScheduleWorkflows();
-        res.json(all[idx]);
+        res.json(updated);
     } else res.status(404).json({ error: 'Not found' });
 });
 
 app.delete('/api/workflows/:id', (req, res) => {
-    const all = readJson(WORKFLOWS_FILE).filter((w: any) => w.id !== req.params.id);
-    writeJson(WORKFLOWS_FILE, all);
-    loadAndScheduleWorkflows();
-    res.json({ success: true });
+    const workflows = readWorkflows();
+    const exists = workflows.some((w: any) => w.id === req.params.id);
+    if (exists) {
+        deleteWorkflow(req.params.id);
+        loadAndScheduleWorkflows();
+        res.json({ success: true });
+    } else res.status(404).json({ error: 'Not found' });
 });
 
 // --- Secrets API ---

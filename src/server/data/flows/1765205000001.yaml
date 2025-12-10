@@ -1,0 +1,50 @@
+id: '1765205000001'
+name: my-plugin-trigger-flow
+content:
+  name: my-plugin-trigger-flow
+  global: {}
+  nodes:
+    - name: MyPluginTrigger
+      type: my_plugin
+      desc: Trigger start node using my_plugin
+      parameters:
+        input: '={{ $global.TRIGGER.payload.message }}'
+      parameterDefinitions:
+        - name: input
+          type: string
+          description: Message from trigger payload
+          required: true
+          options: []
+      credentialType: ''
+      meta:
+        kind: my_plugin
+        nodeType: trigger
+        category: trigger
+        parameters:
+          - name: input
+            type: string
+            description: Message from trigger payload
+            required: true
+            options: []
+    - name: LogTrigger
+      type: debug
+      parameters:
+        message: 'Triggered: {{ $global.TRIGGER.payload.message }}'
+        level: info
+    - name: WaitAfter
+      type: wait
+      parameters:
+        seconds: 1
+    - name: LogEnd
+      type: debug
+      parameters:
+        message: Trigger workflow finished.
+        level: success
+  connections:
+    MyPluginTrigger:
+      - - node: LogTrigger
+    LogTrigger:
+      - - node: WaitAfter
+    WaitAfter:
+      - - node: LogEnd
+updatedAt: '2025-12-09T00:00:00.000Z'

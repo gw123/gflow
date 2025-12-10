@@ -78,7 +78,7 @@ export class WorkflowEngine {
             // 1. Identify Start Nodes (or Resume Point)
             // 使用节点的 meta.category 判定触发节点；兼容旧的类型判断
             const startNodes = this.workflow.nodes.filter(n => 
-                (n as any).meta?.category === 'trigger' || ['manual', 'webhook', 'timer'].includes(n.type)
+                (n as any).meta?.category === 'trigger'
             );
             const queue: string[] = startNodes.map(n => n.name);
             

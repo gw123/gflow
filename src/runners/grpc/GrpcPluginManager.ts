@@ -618,13 +618,32 @@ class GrpcPluginManagerClass {
      */
     private readWorkflows(): any[] {
         try {
-            const file = path.resolve(__dirname, '../../server/data/workflows.json');
-            if (!fs.existsSync(file)) return [];
-            const content = fs.readFileSync(file, 'utf-8');
-            const arr = JSON.parse(content);
-            return Array.isArray(arr) ? arr : [];
+            const flowsDir = path.resolve(__dirname, '../../server/data/flows');
+            if (!fs.existsSync(flowsDir)) return [];
+            
+            const workflows: any[] = [];
+            const files = fs.readdirSync(flowsDir);
+            
+            for (const file of files) {
+                if (path.extname(file) !== '.yaml' && path.extname(file) !== '.yml') {
+                    continue;
+                }
+                
+                const filePath = path.join(flowsDir, file);
+                try {
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    const workflow = yaml.load(content);
+                    if (workflow) {
+                        workflows.push(workflow);
+                    }
+                } catch (e) {
+                    console.warn(`[GrpcPluginManager] Failed to read workflow file ${file}:`, (e as any)?.message || e);
+                }
+            }
+            
+            return workflows;
         } catch (e) {
-            console.warn('[GrpcPluginManager] Failed to read workflows.json:', (e as any)?.message || e);
+            console.warn('[GrpcPluginManager] Failed to read workflows directory:', (e as any)?.message || e);
             return [];
         }
     }
@@ -776,17 +795,25 @@ class GrpcPluginManagerClass {
     private startWorkflowsWatcher(): void {
         if (this.workflowsWatcherStarted) return;
         try {
-            const file = path.resolve(__dirname, '../../server/data/workflows.json');
-            if (!fs.existsSync(file)) return;
-            fs.watchFile(file, { interval: 2000 }, () => {
-                try {
-                    this.restartAllTriggerSubscriptions();
-                } catch (e) {
-                    console.warn('[GrpcPluginManager] Failed to restart trigger subscriptions on workflows change:', (e as any)?.message || e);
+            const flowsDir = path.resolve(__dirname, '../../server/data/flows');
+            if (!fs.existsSync(flowsDir)) {
+                console.warn('[GrpcPluginManager] Flows directory not found, creating it...');
+                fs.mkdirSync(flowsDir, { recursive: true });
+            }
+            
+            // 监听目录变化
+            fs.watch(flowsDir, { recursive: true }, (event, filename) => {
+                if (filename && (path.extname(filename) === '.yaml' || path.extname(filename) === '.yml')) {
+                    try {
+                        this.restartAllTriggerSubscriptions();
+                    } catch (e) {
+                        console.warn('[GrpcPluginManager] Failed to restart trigger subscriptions on workflows change:', (e as any)?.message || e);
+                    }
                 }
             });
+            
             this.workflowsWatcherStarted = true;
-            console.log('[GrpcPluginManager] Workflows watcher started');
+            console.log('[GrpcPluginManager] Workflows watcher started for YAML directory');
         } catch (e) {
             console.warn('[GrpcPluginManager] Failed to start workflows watcher:', (e as any)?.message || e);
         }

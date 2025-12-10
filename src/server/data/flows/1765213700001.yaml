@@ -1,0 +1,35 @@
+id: '1765213700001'
+name: timer-trigger-flow
+enabled: false
+content:
+  name: timer-trigger-flow
+  nodes:
+    - name: TimerTrigger
+      type: timer_trigger
+      parameters: {}
+      meta:
+        kind: timer_trigger
+        nodeType: trigger
+        category: trigger
+    - name: LogTrigger
+      type: debug
+      parameters:
+        message: 'Triggered: {{ $global.TRIGGER.payload.message }}'
+        level: info
+    - name: WaitAfter
+      type: wait
+      parameters:
+        seconds: 2
+    - name: LogEnd
+      type: debug
+      parameters:
+        message: Timer trigger workflow finished.
+        level: success
+  connections:
+    TimerTrigger:
+      - - node: LogTrigger
+    LogTrigger:
+      - - node: WaitAfter
+    WaitAfter:
+      - - node: LogEnd
+updatedAt: '2025-12-09T20:28:30.000Z'
