@@ -3,8 +3,10 @@
  */
 
 import cron from 'node-cron';
+import path from 'path';
 import { Database } from './db';
 import { ServerWorkflowEngine } from './engine';
+import { Logger } from '../core/Logger';
 
 interface ScheduledJob {
   workflowId: string;
@@ -14,16 +16,26 @@ interface ScheduledJob {
 export class WorkflowScheduler {
   private db: Database;
   private jobs: Map<string, ScheduledJob> = new Map();
+  private logger: Logger;
 
   constructor(db: Database) {
     this.db = db;
+    // 创建日志实例，支持同时输出到控制台和文件
+    this.logger = new Logger({
+      logFile: path.join(process.cwd(), 'logs', 'scheduler.log'),
+      level: 'info',
+      consoleOutput: true,
+      fileOutput: true
+    });
   }
 
   /**
    * 启动调度器
    */
   async start(): Promise<void> {
-    console.log('[Scheduler] Starting workflow scheduler...');
+    const message = '[Scheduler] Starting workflow scheduler...';
+    console.log(message);
+    this.logger.info(message);
     await this.loadAndScheduleWorkflows();
   }
 
@@ -31,7 +43,9 @@ export class WorkflowScheduler {
    * 停止调度器
    */
   stop(): void {
-    console.log('[Scheduler] Stopping workflow scheduler...');
+    const message = '[Scheduler] Stopping workflow scheduler...';
+    console.log(message);
+    this.logger.info(message);
     this.jobs.forEach(({ job }) => job.stop());
     this.jobs.clear();
   }
@@ -61,9 +75,13 @@ export class WorkflowScheduler {
         }
       }
 
-      console.log(`[Scheduler] Loaded ${this.jobs.size} scheduled workflows`);
+      const message = `[Scheduler] Loaded ${this.jobs.size} scheduled workflows`;
+      console.log(message);
+      this.logger.info(message);
     } catch (err) {
-      console.error('[Scheduler] Failed to load workflows:', err);
+      const errorMessage = '[Scheduler] Failed to load workflows:';
+      console.error(errorMessage, err);
+      this.logger.error(errorMessage, err);
     }
   }
 
@@ -99,7 +117,9 @@ export class WorkflowScheduler {
 
     // 验证并创建调度任务
     if (schedule && cron.validate(schedule)) {
-      console.log(`[Scheduler] Scheduling workflow [${workflow.name}] with cron: ${schedule}`);
+      const message = `[Scheduler] Scheduling workflow [${workflow.name}] with cron: ${schedule}`;
+      console.log(message);
+      this.logger.info(message);
       
       const job = cron.schedule(schedule, async () => {
         await this.executeWorkflow(workflow);
@@ -113,7 +133,9 @@ export class WorkflowScheduler {
    * 执行工作流
    */
   private async executeWorkflow(workflow: any): Promise<void> {
-    console.log(`[Scheduler] Triggering workflow: ${workflow.name}`);
+    const triggerMessage = `[Scheduler] Triggering workflow: ${workflow.name}`;
+    console.log(triggerMessage);
+    this.logger.info(triggerMessage);
 
     try {
       // 创建执行记录
@@ -137,9 +159,13 @@ export class WorkflowScheduler {
         duration_ms: Date.now() - new Date(execution.created_at).getTime()
       });
 
-      console.log(`[Scheduler] Workflow ${workflow.name} completed successfully`);
+      const successMessage = `[Scheduler] Workflow ${workflow.name} completed successfully`;
+      console.log(successMessage);
+      this.logger.info(successMessage);
     } catch (err: any) {
-      console.error(`[Scheduler] Workflow ${workflow.name} failed:`, err.message);
+      const errorMessage = `[Scheduler] Workflow ${workflow.name} failed: ${err.message}`;
+      console.error(errorMessage);
+      this.logger.error(errorMessage);
 
       // 记录失败
       try {

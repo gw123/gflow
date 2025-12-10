@@ -2,6 +2,7 @@
  * Base Database Adapter - 数据库适配器基类
  */
 
+import crypto from 'node:crypto';
 import { DatabaseAdapter } from '../interface';
 import { DatabaseType, getCreateTableSQL, getCreateIndexSQL } from '../schema';
 

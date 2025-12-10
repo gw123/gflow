@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 import vm from 'vm';
+import path from 'path';
 // Fix: Import from ../src/core because server is at root and core is in src/core
 import { WorkflowEngine as CoreEngine } from '../core/WorkflowEngine';
 import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
@@ -15,6 +16,7 @@ import { AiImageNodeRunnerProxy } from '../runners/ai-image';
 import { GrpcNodeRunnerProxy } from '../runners/grpc';
 import { InteractionNodeRunnerProxy } from '../runners/interaction';
 import { LlmNodeRunnerProxy } from '../runners/llm';
+import { Logger } from '../core/Logger';
 
 import { ManualNodeRunnerProxy } from '../runners/manual';
 import { SystemNodeRunnerProxy } from '../runners/system';
@@ -61,10 +63,28 @@ class ServerLogger {
     private workflowName: string;
     private startTime: number;
     private nodeStartTimes: Map<string, number> = new Map();
+    private logger: Logger;
+    private baseLogger: Logger;
 
     constructor(workflowName: string) {
         this.workflowName = workflowName;
         this.startTime = Date.now();
+        
+        // 创建日志实例，支持同时输出到控制台和文件
+        this.logger = new Logger({
+            logFile: path.join(process.cwd(), 'logs', `${workflowName.toLowerCase().replace(/\s+/g, '-')}.log`),
+            level: 'info',
+            consoleOutput: true,
+            fileOutput: true
+        });
+        
+        // 基础日志实例（用于系统级日志）
+        this.baseLogger = new Logger({
+            logFile: path.join(process.cwd(), 'logs', 'gflow.log'),
+            level: 'info',
+            consoleOutput: true,
+            fileOutput: true
+        });
     }
 
     private getTimestamp(): string {
@@ -77,6 +97,15 @@ class ServerLogger {
 
     private prefix(): string {
         return `${LOG_COLORS.gray}[${this.getTimestamp()}]${LOG_COLORS.reset} ${LOG_COLORS.cyan}[${this.workflowName}]${LOG_COLORS.reset}`;
+    }
+    
+    // 原始控制台输出，用于保持原有格式
+    private consoleLog(message: string) {
+        console.log(message);
+        // 同时写入到日志文件（无颜色）
+        const plainMessage = message.replace(/\x1b\[[0-9;]*m/g, '');
+        this.logger.info(plainMessage);
+        this.baseLogger.info(plainMessage);
     }
 
     log(level: LogLevel, message: string, details?: any) {
@@ -95,14 +124,12 @@ class ServerLogger {
             output += `\n${LOG_COLORS.dim}${detailStr}${LOG_COLORS.reset}`;
         }
 
-        console.log(output);
+        this.consoleLog(output);
     }
 
     workflowStart(nodeCount: number, startNodes: string[]) {
-        console.log(`\n${'═'.repeat(60)}`);
-        console.log(`${this.prefix()} ${LOG_COLORS.bright}${LOG_COLORS.green}▶ WORKFLOW STARTED${LOG_COLORS.reset}`);
-        console.log(`${LOG_COLORS.dim}   Nodes: ${nodeCount} | Start: [${startNodes.join(', ')}]${LOG_COLORS.reset}`);
-        console.log(`${'─'.repeat(60)}`);
+        const output = `\n${'═'.repeat(60)}\n${this.prefix()} ${LOG_COLORS.bright}${LOG_COLORS.green}▶ WORKFLOW STARTED${LOG_COLORS.reset}\n${LOG_COLORS.dim}   Nodes: ${nodeCount} | Start: [${startNodes.join(', ')}]${LOG_COLORS.reset}\n${'─'.repeat(60)}`;
+        this.consoleLog(output);
     }
 
     workflowEnd(success: boolean, nodeResults: Record<string, any>) {
@@ -111,27 +138,29 @@ class ServerLogger {
         const errorCount = Object.values(nodeResults).filter((r: any) => r.status === 'error').length;
         const skippedCount = Object.values(nodeResults).filter((r: any) => r.status === 'skipped').length;
 
-        console.log(`${'─'.repeat(60)}`);
         const statusIcon = success ? `${LOG_COLORS.green}✓` : `${LOG_COLORS.red}✗`;
         const statusText = success ? 'COMPLETED' : 'FAILED';
-        console.log(`${this.prefix()} ${LOG_COLORS.bright}${statusIcon} WORKFLOW ${statusText}${LOG_COLORS.reset}`);
-        console.log(`${LOG_COLORS.dim}   Duration: ${elapsed} | Success: ${successCount} | Error: ${errorCount} | Skipped: ${skippedCount}${LOG_COLORS.reset}`);
-        console.log(`${'═'.repeat(60)}\n`);
+        
+        const output = `${'─'.repeat(60)}\n${this.prefix()} ${LOG_COLORS.bright}${statusIcon} WORKFLOW ${statusText}${LOG_COLORS.reset}\n${LOG_COLORS.dim}   Duration: ${elapsed} | Success: ${successCount} | Error: ${errorCount} | Skipped: ${skippedCount}${LOG_COLORS.reset}\n${'═'.repeat(60)}\n`;
+        this.consoleLog(output);
     }
 
     nodeStart(nodeName: string, nodeType: string, index: number, total: number) {
         this.nodeStartTimes.set(nodeName, Date.now());
-        console.log(`${this.prefix()} ${LOG_COLORS.magenta}┌─[${index}/${total}]${LOG_COLORS.reset} ${LOG_COLORS.bright}${nodeName}${LOG_COLORS.reset} ${LOG_COLORS.dim}(${nodeType})${LOG_COLORS.reset}`);
+        const output = `${this.prefix()} ${LOG_COLORS.magenta}┌─[${index}/${total}]${LOG_COLORS.reset} ${LOG_COLORS.bright}${nodeName}${LOG_COLORS.reset} ${LOG_COLORS.dim}(${nodeType})${LOG_COLORS.reset}`;
+        this.consoleLog(output);
     }
 
     nodeInput(nodeName: string, params: any) {
         if (params && Object.keys(params).length > 0) {
-            console.log(`${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.dim}Input: ${formatOutput(params, 100)}${LOG_COLORS.reset}`);
+            const output = `${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.dim}Input: ${formatOutput(params, 100)}${LOG_COLORS.reset}`;
+            this.consoleLog(output);
         }
     }
 
     nodeLog(nodeName: string, message: string) {
-        console.log(`${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.gray}→ ${message}${LOG_COLORS.reset}`);
+        const output = `${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.gray}→ ${message}${LOG_COLORS.reset}`;
+        this.consoleLog(output);
     }
 
     nodeEnd(nodeName: string, status: string, output?: any, error?: string) {
@@ -159,27 +188,37 @@ class ServerLogger {
                 statusColor = LOG_COLORS.gray;
         }
 
+        let outputStr = '';
+        
         if (output !== undefined && status === 'success') {
-            console.log(`${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.dim}Output: ${formatOutput(output, 100)}${LOG_COLORS.reset}`);
+            outputStr += `${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.dim}Output: ${formatOutput(output, 100)}${LOG_COLORS.reset}\n`;
         }
 
         if (error) {
-            console.log(`${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.red}Error: ${error}${LOG_COLORS.reset}`);
+            outputStr += `${this.prefix()} ${LOG_COLORS.magenta}│${LOG_COLORS.reset}  ${LOG_COLORS.red}Error: ${error}${LOG_COLORS.reset}\n`;
         }
-
-        console.log(`${this.prefix()} ${LOG_COLORS.magenta}└─${LOG_COLORS.reset} ${statusColor}${statusIcon} ${status.toUpperCase()}${LOG_COLORS.reset} ${LOG_COLORS.dim}(${duration})${LOG_COLORS.reset}`);
+        
+        outputStr += `${this.prefix()} ${LOG_COLORS.magenta}└─${LOG_COLORS.reset} ${statusColor}${statusIcon} ${status.toUpperCase()}${LOG_COLORS.reset} ${LOG_COLORS.dim}(${duration})${LOG_COLORS.reset}`;
+        
+        this.consoleLog(outputStr);
     }
 
     connection(from: string, to: string, condition?: string) {
         const condStr = condition ? ` ${LOG_COLORS.dim}when: ${condition}${LOG_COLORS.reset}` : '';
-        console.log(`${this.prefix()} ${LOG_COLORS.gray}   ↓ ${from} → ${to}${condStr}${LOG_COLORS.reset}`);
+        const output = `${this.prefix()} ${LOG_COLORS.gray}   ↓ ${from} → ${to}${condStr}${LOG_COLORS.reset}`;
+        this.consoleLog(output);
     }
 }
 
 // --- Utils Adapter ---
 
-const safeEval = (code: string, context: any) => {
+const safeEval = (code: any, context: any) => {
     try {
+        // 如果不是字符串，直接返回值
+        if (typeof code !== 'string') {
+            return code;
+        }
+        
         // Strip leading '=' if present
         const expr = code.startsWith('=') ? code.slice(1) : code;
 
@@ -339,8 +378,13 @@ export class ServerWorkflowEngine {
                 },
                 getRunner: (type: string) => this.wrapRunner(getRunner(type)),
                 evaluateCondition: (cond, ctx) => {
+                    // 如果条件不是字符串，直接返回布尔值
+                    if (typeof cond !== 'string') {
+                        return !!cond;
+                    }
+                    
                     // Logic: Remove outer {{ }} if present, then safeEval
-                    const raw = String(cond).trim();
+                    const raw = cond.trim();
                     const expr = (raw.startsWith('{{') && raw.endsWith('}}'))
                         ? raw.slice(2, -2).trim()
                         : (raw.startsWith('=') ? raw.slice(1).trim() : raw);

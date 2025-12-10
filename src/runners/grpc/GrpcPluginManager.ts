@@ -658,13 +658,13 @@ class GrpcPluginManagerClass {
         if (value.double_value !== undefined) return value.double_value;
         if (value.bool_value !== undefined) return value.bool_value;
         if (value.null_value !== undefined) return null;
-        if (value.list_value && Array.isArray(value.list_value)) {
-            return value.list_value.map((v: any) => this.convertValue(v));
+        if (value.list_value) {
+            return (value.list_value.values || []).map((v: any) => this.convertValue(v));
         }
         if (value.map_value) {
             const out: any = {};
-            for (const k of Object.keys(value.map_value)) {
-                out[k] = this.convertValue(value.map_value[k]);
+            for (const k of Object.keys(value.map_value.fields || {})) {
+                out[k] = this.convertValue(value.map_value.fields[k]);
             }
             return out;
         }

@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -457,6 +458,8 @@ func main() {
 	plugin := &GatewayPlugin{}
 	// 初始化订阅者列表
 	plugin.subscribers = []chan *pb.TriggerEvent{}
-	// 启动插件服务
+	// 启动插件服务，使用指定的50053端口
+	// 通过命令行参数传递端口号给base.Serve
+	os.Args = append(os.Args, "--port", "50053")
 	base.Serve(plugin)
 }
