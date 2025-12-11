@@ -1,0 +1,281 @@
+id: "gateway-trigger-1"
+name: "HTTP Gateway Trigger Demo"
+content:
+  name: "HTTP Gateway Trigger Demo"
+  global:
+    apiKey: "gateway-secret-123"
+    targetUrl: "https://api.example.com/process"
+  
+  nodes:
+    # 1. HTTP Gateway 触发器 - 监听外部请求
+    - name: "GatewayReceiver"
+      type: "http_gateway"
+      parameters:
+        # HTTP 监听端口，默认 8080
+        http_port: "8080"
+        # 路由配置，支持多种格式
+        # 格式1: 逗号分隔，如 "POST:/webhook,GET:/notify"
+        routes: "POST:/api/v1/orders,GET:/api/v1/status"
+        # 可选：API Key 认证
+        api_key: "={{ $global.apiKey }}"
+        # 可选：默认目标工作流
+        target_workflow: "HTTP Gateway Trigger Demo"
+
+    # 2. 解析和验证请求
+    - name: "ParseRequest"
+      type: "js"
+      parameters:
+        input:
+          triggerPayload: "={{ $global.TRIGGER.payload }}"
+          apiKey: "={{ $global.apiKey }}"
+        code: |
+          const { triggerPayload, apiKey } = input;
+          // 获取 Gateway 请求数据 - 已经是 JavaScript 对象
+          const payload = triggerPayload;
+          console.log("📥 Gateway 请求数据:", JSON.stringify(payload, null, 2));
+          
+          // 验证 API Key
+          const headers = payload.headers || {};
+          console.log("🔑 所有 headers:", JSON.stringify(headers, null, 2));
+          console.log("🔑 检查 X-API-Key:", headers['X-API-Key']);
+          console.log("🔑 检查 x-api-key:", headers['x-api-key']);
+          console.log("🔑 检查 X-Api-Key:", headers['X-Api-Key']);
+          
+          const receivedKey = headers['X-API-Key'] || headers['x-api-key'] || headers['X-Api-Key'] || '';
+          const expectedKey = apiKey;
+          
+          console.log("🔑 收到的 API Key:", receivedKey);
+          console.log("🔑 期望的 API Key:", expectedKey);
+          
+          if (receivedKey !== expectedKey) {
+            throw new Error(`Invalid API Key: received '${receivedKey}', expected '${expectedKey}'`);
+          }
+          
+          // 解析请求数据
+          const method = payload.method || '';
+          const path = payload.path || '';
+          
+          // 解析 body
+          let body = {};
+          let bodyStr = '';
+          
+          // 处理 body 数据
+          if (typeof payload.body === 'object' && payload.body !== null) {
+            if (Array.isArray(payload.body)) {
+              // 如果是字符数组，转换为字符串
+              bodyStr = payload.body.join('');
+            } else if (typeof payload.body === 'object') {
+              // 如果是对象，检查是否有 string_value 或其他 protobuf 字段
+              bodyStr = payload.body.string_value || JSON.stringify(payload.body);
+            }
+          } else if (typeof payload.body === 'string') {
+            // 如果已经是字符串，直接使用
+            bodyStr = payload.body;
+          }
+          
+          // 尝试解析为 JSON
+          try {
+            body = JSON.parse(bodyStr);
+          } catch {
+            // 如果解析失败，保留原始字符串
+            body = bodyStr;
+          }
+          
+          console.log("📋 解析后的请求体:", JSON.stringify(body, null, 2));
+          
+          // 解析 query
+          const query = payload.query || {};
+          
+          return {
+            valid: true,
+            method: method,
+            path: path,
+            body: body,
+            query: query,
+            receivedAt: new Date().toISOString()
+          };
+
+    # 3. 根据请求方法和路径处理
+    - name: "RouteRequest"
+      type: "js"
+      parameters:
+        input: "={{ $P }}"  # 接收前一个节点ParseRequest的输出
+        code: |
+          // input直接是ParseRequest节点返回的结果，包含method, path等属性
+          const request = input;
+          
+          // 根据方法和路径路由
+          if (request.method === 'POST' && request.path === '/api/v1/orders') {
+            return {
+              action: "create_order",
+              data: request.body,
+              route: "order_creation"
+            };
+          } else if (request.method === 'GET' && request.path === '/api/v1/status') {
+            return {
+              action: "check_status",
+              orderId: request.query.orderId || "",
+              route: "status_check"
+            };
+          } else {
+            return {
+              action: "unknown",
+              route: "unknown",
+              message: `Unknown request: ${request.method} ${request.path}`
+            };
+          }
+
+    # 4a. 处理订单创建
+    - name: "CreateOrder"
+      type: "js"
+      parameters:
+        input: "={{ $P }}"  # 接收前一个节点RouteRequest的输出
+        code: |
+          const orderData = input.data;
+          
+          // 确保orderData是对象，不是字符串
+          let orderDataObj = orderData;
+          if (typeof orderData === 'string') {
+            try {
+              orderDataObj = JSON.parse(orderData);
+            } catch (e) {
+              console.error("❌ 解析订单数据失败:", e);
+              orderDataObj = {};
+            }
+          }
+          
+          // 模拟订单创建逻辑
+          const order = {
+            id: `ORD-${Date.now()}`,
+            ...orderDataObj,
+            status: "pending",
+            createdAt: new Date().toISOString()
+          };
+          
+          console.log("📦 创建订单:", JSON.stringify(order, null, 2));
+          
+          return {
+            success: true,
+            order: order,
+            message: "Order created successfully"
+          };
+
+    # 4b. 处理状态查询
+    - name: "CheckStatus"
+      type: "js"
+      parameters:
+        input: "={{ $P }}"  # 接收前一个节点RouteRequest的输出
+        code: |
+          const orderId = input.orderId;
+          
+          // 模拟状态查询逻辑
+          if (!orderId) {
+            return {
+              success: false,
+              error: "Order ID is required"
+            };
+          }
+          
+          // 模拟订单状态
+          const status = {
+            orderId: orderId,
+            status: "processing",
+            updatedAt: new Date().toISOString(),
+            tracking: "TRK-123456"
+          };
+          
+          console.log("🔍 查询状态:", JSON.stringify(status, null, 2));
+          
+          return {
+            success: true,
+            status: status
+          };
+
+    # 4c. 处理未知请求
+    - name: "HandleUnknown"
+      type: "js"
+      parameters:
+        input: "={{ $P }}"  # 接收前一个节点RouteRequest的输出
+        code: |
+          const request = input;
+          
+          console.log("⚠️ 未知请求:", request.message);
+          
+          return {
+            success: false,
+            error: request.message,
+            code: 404
+          };
+
+    # 5. 发送到外部 API
+    - name: "SendToAPI"
+      type: "js"
+      parameters:
+        input:
+          result: "={{ $P }}"
+          targetUrl: "={{ $global.targetUrl }}"
+        code: |
+          const { result, targetUrl } = input;
+          
+          // 模拟发送到外部 API
+          console.log(`📤 发送到外部 API: ${targetUrl}`);
+          console.log("📋 发送数据:", JSON.stringify(result, null, 2));
+          
+          // 模拟 API 响应
+          const apiResponse = {
+            externalId: `EXT-${Date.now()}`,
+            processedAt: new Date().toISOString(),
+            ...result
+          };
+          
+          return {
+            apiResponse: apiResponse,
+            sentToAPI: true
+          };
+
+    # 6. 构建响应
+    - name: "BuildResponse"
+      type: "js"
+      parameters:
+        input: "={{ $P }}"  # 接收前一个节点SendToAPI的输出
+        code: |
+          const finalResult = input;
+          
+          // 构建最终响应
+          let response = {
+            success: finalResult.apiResponse?.success || false,
+            message: finalResult.apiResponse?.message || "Request processed",
+            timestamp: new Date().toISOString()
+          };
+          
+          if (finalResult.apiResponse?.order) {
+            response.order = finalResult.apiResponse.order;
+          } else if (finalResult.apiResponse?.status) {
+            response.status = finalResult.apiResponse.status;
+          } else if (finalResult.apiResponse?.error) {
+            response.error = finalResult.apiResponse.error;
+          }
+          
+          console.log("📤 最终响应:", JSON.stringify(response, null, 2));
+          
+          return response;
+
+  connections:
+    GatewayReceiver:
+      - - { node: "ParseRequest" }
+    ParseRequest:
+      - - { node: "RouteRequest" }
+    RouteRequest:
+      # 根据请求类型路由到不同节点
+      - - { node: "CreateOrder", when: [{ value1: "={{ $P.action }}", operation: "==", value2: "create_order" }] }
+      - - { node: "CheckStatus", when: [{ value1: "={{ $P.action }}", operation: "==", value2: "check_status" }] }
+      - - { node: "HandleUnknown", when: [{ value1: "={{ $P.action }}", operation: "==", value2: "unknown" }] }
+    CreateOrder:
+      - - { node: "SendToAPI" }
+    CheckStatus:
+      - - { node: "SendToAPI" }
+    HandleUnknown:
+      - - { node: "SendToAPI" }
+    SendToAPI:
+      - - { node: "BuildResponse" }
+updatedAt: "2025-12-10T00:00:00.000Z"
