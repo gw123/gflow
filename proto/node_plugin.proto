@@ -35,6 +35,10 @@ service NodePluginService {
   // 仅当插件分类为 CATEGORY_TRIGGER 时由服务端主动调用，插件通过流式响应推送事件
   rpc SubscribeTrigger(SubscribeTriggerRequest) returns (stream TriggerEvent);
   
+  // DeliverResponse 传递工作流响应给触发器插件（用于同步响应场景）
+  // 当工作流执行完成且包含响应节点时，服务端调用此方法将响应传递给等待的触发器
+  rpc DeliverResponse(DeliverResponseRequest) returns (DeliverResponseResponse);
+  
   // Stop 停止正在执行的节点（优雅停止）
   rpc Stop(StopRequest) returns (StopResponse);
   
@@ -446,6 +450,34 @@ message TriggerEvent {
   string target_workflow = 5;
   // 触发发生时间
   int64 timestamp_ms = 6;
+}
+
+// =============================================================================
+// DeliverResponse - 传递工作流响应
+// =============================================================================
+
+// DeliverResponseRequest 传递响应请求
+message DeliverResponseRequest {
+  // 事件 ID（用于关联原始触发事件）
+  string event_id = 1;
+  // 响应体（任意 JSON 结构）
+  Value body = 2;
+  // HTTP 状态码（默认 200）
+  int32 status_code = 3;
+  // 响应头
+  map<string, string> headers = 4;
+  // 错误信息（如果工作流执行失败）
+  string error = 5;
+  // 是否有响应（用于区分空响应和无响应）
+  bool has_response = 6;
+}
+
+// DeliverResponseResponse 传递响应结果
+message DeliverResponseResponse {
+  // 是否成功传递
+  bool success = 1;
+  // 错误消息（如果失败）
+  string error_message = 2;
 }
 
 // =============================================================================

@@ -9,7 +9,7 @@ import { interpolate } from '../utils';
 export class AiImageNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     const prompt = params.prompt;
     
     // Validate and normalize aspectRatio

@@ -4,7 +4,7 @@ import { glog } from '../core/Logger';
 // --- Utility: Interpolate Variables ---
 
 // Helper to safely evaluate JS expressions within the workflow context
-const safeEval = (code: string, context: any) => {
+const safeEval = (code: string, context: any, node?: any) => {
   try {
     const $P = context.inputs?.['$P'] || context.inputs || {};
     const $global = context.global || {};
@@ -13,6 +13,8 @@ const safeEval = (code: string, context: any) => {
       const res = context.executionState?.nodeResults?.[nodeName];
       return res ? { ...res.output, ...res } : {};
     };
+    const $WORKFLOW = context.workflow || {};
+    const $NODE = node || {};
 
     const funcBody = `
             try {
@@ -22,8 +24,8 @@ const safeEval = (code: string, context: any) => {
             }
         `;
 
-    const func = new Function('$P', '$global', '$inputs', '$node', funcBody);
-    return func($P, $global, $inputs, $node);
+    const func = new Function('$P', '$global', '$inputs', '$node', '$WORKFLOW', '$NODE', funcBody);
+    return func($P, $global, $inputs, $node, $WORKFLOW, $NODE);
 
   } catch (e: any) {
     // Log error to help debug workflow configuration errors
@@ -32,7 +34,7 @@ const safeEval = (code: string, context: any) => {
   }
 };
 
-export const interpolate = (template: any, context: any): any => {
+export const interpolate = (template: any, context: any, node?: any): any => {
   if (typeof template === 'string') {
     const raw = template.trim();
 
@@ -41,13 +43,13 @@ export const interpolate = (template: any, context: any): any => {
       if (expr.startsWith('{{') && expr.endsWith('}}')) {
         expr = expr.slice(2, -2).trim();
       }
-      const result = safeEval(expr, context);
+      const result = safeEval(expr, context, node);
       return result !== undefined ? result : raw;
     }
 
     if (raw.includes('{{')) {
       return raw.replace(/\{\{\s*(.*?)\s*\}\}/g, (_, expression) => {
-        const result = safeEval(expression, context);
+        const result = safeEval(expression, context, node);
         if (typeof result === 'object' && result !== null) {
           return JSON.stringify(result);
         }
@@ -57,18 +59,18 @@ export const interpolate = (template: any, context: any): any => {
 
     return template;
   } else if (Array.isArray(template)) {
-    return template.map(item => interpolate(item, context));
+    return template.map(item => interpolate(item, context, node));
   } else if (typeof template === 'object' && template !== null) {
     const result: any = {};
     for (const key in template) {
-      result[key] = interpolate(template[key], context);
+      result[key] = interpolate(template[key], context, node);
     }
     return result;
   }
   return template;
 };
 
-export const evaluateCondition = (condition: any, context: any): boolean => {
+export const evaluateCondition = (condition: any, context: any, node?: any): boolean => {
   if (condition === undefined || condition === null || condition === '') return true;
   if (condition === 'true' || condition === true) return true;
   if (condition === 'false' || condition === false) return false;
@@ -77,7 +79,7 @@ export const evaluateCondition = (condition: any, context: any): boolean => {
   if (expr.startsWith('=')) expr = expr.slice(1).trim();
   if (expr.startsWith('{{') && expr.endsWith('}}')) expr = expr.slice(2, -2).trim();
 
-  const result = safeEval(expr, context);
+  const result = safeEval(expr, context, node);
   return !!result;
 };
 

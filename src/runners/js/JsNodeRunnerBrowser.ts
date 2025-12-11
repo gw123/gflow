@@ -8,7 +8,7 @@ import { interpolate } from '../utils';
 export class JsNodeRunnerBrowser implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
         const code = node.parameters?.code;
-        const inputData = interpolate(node.parameters?.input, context);
+        const inputData = interpolate(node.parameters?.input, context, node);
 
         if (!code) return { status: 'skipped', logs: ['No code provided'] };
 

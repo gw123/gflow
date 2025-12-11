@@ -5,7 +5,7 @@ import { AudioService, VideoService } from '../../services/MediaService';
 export class PlayMediaNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     
     const mediaType = params.mediaType || 'audio'; // audio, video
     let data = params.data; // Can be base64 string, array of base64 strings, URL, or MediaCapture object

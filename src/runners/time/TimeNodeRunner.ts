@@ -9,7 +9,7 @@ import { interpolate } from '../utils';
  */
 export class TimeNodeRunner implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         if (node.type === 'timer') {
             // Timer acts as a trigger, pass parameters to downstream nodes

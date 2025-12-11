@@ -73,6 +73,16 @@ plugins:
     consumer_group: "default"
     filters:
       http_port: 8080
+      # 方案一：精确绑定路由到唯一工作流，并开启同步响应
+      routes_json:
+        - path: "/api/v1/orders"
+          methods: ["POST"]
+          target_workflow: "Response Node Test Workflow"
+          sync_response: true
+          response_timeout_ms: 30000
+        - path: "/api/v1/status"
+          methods: ["GET"]
+          target_workflow: "Response Node Test Workflow"
 
   # 可以添加更多插件
   # - name: "Custom Plugin"

@@ -2,6 +2,7 @@
 import { Edge, Node, Position, MarkerType } from 'reactflow';
 import * as dagre from 'dagre';
 import { WorkflowDefinition, NodeDefinition, WorkflowConnections } from './types';
+import { glog } from './core/Logger';
 
 // Constants for Layout
 export const NODE_WIDTH = 240; 
@@ -50,7 +51,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'L
 
     return { nodes: layoutedNodes, edges };
   } catch (error) {
-    console.error("Layout calculation failed:", error);
+    glog.error("Layout calculation failed:", error);
     // Fallback: return original nodes if dagre fails
     return { nodes, edges };
   }

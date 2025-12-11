@@ -26,6 +26,7 @@ export { SystemNodeRunnerProxy as SystemNodeRunner } from './system';
 export { TimeNodeRunnerProxy as TimeNodeRunner } from './time';
 export { TtsNodeRunnerProxy as TtsNodeRunner } from './tts';
 export { MysqlNodeRunnerProxy as MysqlNodeRunner } from './mysql';
+export { ResponseNodeRunnerProxy as ResponseNodeRunner } from './response';
 
 // gRPC Plugin System (Server-side only)
 

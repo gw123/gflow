@@ -16,7 +16,7 @@ export class HttpNodeRunnerServer implements NodeRunner {
         };
 
         log(`Interpolating parameters...`);
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         if (node.type === 'webhook') {
             // Webhook in server triggers actual workflow

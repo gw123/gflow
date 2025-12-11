@@ -16,7 +16,7 @@ export class MysqlNodeRunnerBrowser implements NodeRunner {
         };
 
         log(`[MySQL] Interpolating parameters...`);
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         log(`[MySQL] Browser environment detected`);
         log(`[MySQL] Direct MySQL connections are not supported in browser`);

@@ -92,6 +92,11 @@ func (s *Server) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*
 	return s.handler.HealthCheck(ctx, req)
 }
 
+// DeliverResponse delegates synchronous response delivery to the plugin handler
+func (s *Server) DeliverResponse(ctx context.Context, req *pb.DeliverResponseRequest) (*pb.DeliverResponseResponse, error) {
+    return s.handler.DeliverResponse(ctx, req)
+}
+
 // RegisterPlugin registers the plugin with the gFlow server
 func RegisterPlugin(serverURL string, pluginPort int, metadata *pb.GetMetadataResponse) error {
 	payload := map[string]interface{}{

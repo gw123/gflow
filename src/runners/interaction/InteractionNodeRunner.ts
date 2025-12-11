@@ -10,7 +10,7 @@ import { interpolate } from '../utils';
  */
 export class InteractionNodeRunner implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
         
         const title = params.title || node.name;
         const description = params.description || "Please provide the requested information below.";

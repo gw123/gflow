@@ -12,7 +12,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: proto/node_plugin.proto
+// source: plugins/base-go/proto/node_plugin.proto
 
 package proto
 
@@ -59,11 +59,11 @@ func (x NullValue) String() string {
 }
 
 func (NullValue) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[0].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[0].Descriptor()
 }
 
 func (NullValue) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[0]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[0]
 }
 
 func (x NullValue) Number() protoreflect.EnumNumber {
@@ -72,7 +72,7 @@ func (x NullValue) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NullValue.Descriptor instead.
 func (NullValue) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{0}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{0}
 }
 
 // NodeCategory 节点类别
@@ -127,11 +127,11 @@ func (x NodeCategory) String() string {
 }
 
 func (NodeCategory) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[1].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[1].Descriptor()
 }
 
 func (NodeCategory) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[1]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[1]
 }
 
 func (x NodeCategory) Number() protoreflect.EnumNumber {
@@ -140,7 +140,7 @@ func (x NodeCategory) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NodeCategory.Descriptor instead.
 func (NodeCategory) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{1}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{1}
 }
 
 // NodeType 节点类型
@@ -186,11 +186,11 @@ func (x NodeType) String() string {
 }
 
 func (NodeType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[2].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[2].Descriptor()
 }
 
 func (NodeType) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[2]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[2]
 }
 
 func (x NodeType) Number() protoreflect.EnumNumber {
@@ -199,7 +199,7 @@ func (x NodeType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NodeType.Descriptor instead.
 func (NodeType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{2}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{2}
 }
 
 // ParameterType 参数类型
@@ -275,11 +275,11 @@ func (x ParameterType) String() string {
 }
 
 func (ParameterType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[3].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[3].Descriptor()
 }
 
 func (ParameterType) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[3]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[3]
 }
 
 func (x ParameterType) Number() protoreflect.EnumNumber {
@@ -288,7 +288,7 @@ func (x ParameterType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ParameterType.Descriptor instead.
 func (ParameterType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{3}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{3}
 }
 
 // ParameterUIType UI 展示类型
@@ -373,11 +373,11 @@ func (x ParameterUIType) String() string {
 }
 
 func (ParameterUIType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[4].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[4].Descriptor()
 }
 
 func (ParameterUIType) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[4]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[4]
 }
 
 func (x ParameterUIType) Number() protoreflect.EnumNumber {
@@ -386,7 +386,7 @@ func (x ParameterUIType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ParameterUIType.Descriptor instead.
 func (ParameterUIType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{4}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{4}
 }
 
 // ResponseType 响应类型
@@ -429,11 +429,11 @@ func (x ResponseType) String() string {
 }
 
 func (ResponseType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[5].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[5].Descriptor()
 }
 
 func (ResponseType) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[5]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[5]
 }
 
 func (x ResponseType) Number() protoreflect.EnumNumber {
@@ -442,7 +442,7 @@ func (x ResponseType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ResponseType.Descriptor instead.
 func (ResponseType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{5}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{5}
 }
 
 // LogLevel 日志级别
@@ -488,11 +488,11 @@ func (x LogLevel) String() string {
 }
 
 func (LogLevel) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[6].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[6].Descriptor()
 }
 
 func (LogLevel) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[6]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[6]
 }
 
 func (x LogLevel) Number() protoreflect.EnumNumber {
@@ -501,7 +501,7 @@ func (x LogLevel) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LogLevel.Descriptor instead.
 func (LogLevel) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{6}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{6}
 }
 
 // ExecutionStatus 执行状态
@@ -541,11 +541,11 @@ func (x ExecutionStatus) String() string {
 }
 
 func (ExecutionStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[7].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[7].Descriptor()
 }
 
 func (ExecutionStatus) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[7]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[7]
 }
 
 func (x ExecutionStatus) Number() protoreflect.EnumNumber {
@@ -554,7 +554,7 @@ func (x ExecutionStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ExecutionStatus.Descriptor instead.
 func (ExecutionStatus) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{7}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{7}
 }
 
 // ErrorType 错误类型
@@ -615,11 +615,11 @@ func (x ErrorType) String() string {
 }
 
 func (ErrorType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[8].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[8].Descriptor()
 }
 
 func (ErrorType) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[8]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[8]
 }
 
 func (x ErrorType) Number() protoreflect.EnumNumber {
@@ -628,7 +628,7 @@ func (x ErrorType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ErrorType.Descriptor instead.
 func (ErrorType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{8}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{8}
 }
 
 // StopStatus 停止状态
@@ -671,11 +671,11 @@ func (x StopStatus) String() string {
 }
 
 func (StopStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[9].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[9].Descriptor()
 }
 
 func (StopStatus) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[9]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[9]
 }
 
 func (x StopStatus) Number() protoreflect.EnumNumber {
@@ -684,7 +684,7 @@ func (x StopStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use StopStatus.Descriptor instead.
 func (StopStatus) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{9}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{9}
 }
 
 // HealthStatus 健康状态
@@ -724,11 +724,11 @@ func (x HealthStatus) String() string {
 }
 
 func (HealthStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_node_plugin_proto_enumTypes[10].Descriptor()
+	return file_plugins_base_go_proto_node_plugin_proto_enumTypes[10].Descriptor()
 }
 
 func (HealthStatus) Type() protoreflect.EnumType {
-	return &file_proto_node_plugin_proto_enumTypes[10]
+	return &file_plugins_base_go_proto_node_plugin_proto_enumTypes[10]
 }
 
 func (x HealthStatus) Number() protoreflect.EnumNumber {
@@ -737,7 +737,7 @@ func (x HealthStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use HealthStatus.Descriptor instead.
 func (HealthStatus) EnumDescriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{10}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{10}
 }
 
 // Value 表示任意类型的值（类似于 google.protobuf.Value，但更精确）
@@ -760,7 +760,7 @@ type Value struct {
 
 func (x *Value) Reset() {
 	*x = Value{}
-	mi := &file_proto_node_plugin_proto_msgTypes[0]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -772,7 +772,7 @@ func (x *Value) String() string {
 func (*Value) ProtoMessage() {}
 
 func (x *Value) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[0]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -785,7 +785,7 @@ func (x *Value) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Value.ProtoReflect.Descriptor instead.
 func (*Value) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{0}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Value) GetKind() isValue_Kind {
@@ -929,7 +929,7 @@ type ListValue struct {
 
 func (x *ListValue) Reset() {
 	*x = ListValue{}
-	mi := &file_proto_node_plugin_proto_msgTypes[1]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -941,7 +941,7 @@ func (x *ListValue) String() string {
 func (*ListValue) ProtoMessage() {}
 
 func (x *ListValue) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[1]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -954,7 +954,7 @@ func (x *ListValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListValue.ProtoReflect.Descriptor instead.
 func (*ListValue) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{1}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ListValue) GetValues() []*Value {
@@ -974,7 +974,7 @@ type MapValue struct {
 
 func (x *MapValue) Reset() {
 	*x = MapValue{}
-	mi := &file_proto_node_plugin_proto_msgTypes[2]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -986,7 +986,7 @@ func (x *MapValue) String() string {
 func (*MapValue) ProtoMessage() {}
 
 func (x *MapValue) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[2]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -999,7 +999,7 @@ func (x *MapValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapValue.ProtoReflect.Descriptor instead.
 func (*MapValue) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{2}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *MapValue) GetFields() map[string]*Value {
@@ -1026,7 +1026,7 @@ type ExecutionContext struct {
 
 func (x *ExecutionContext) Reset() {
 	*x = ExecutionContext{}
-	mi := &file_proto_node_plugin_proto_msgTypes[3]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1038,7 +1038,7 @@ func (x *ExecutionContext) String() string {
 func (*ExecutionContext) ProtoMessage() {}
 
 func (x *ExecutionContext) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[3]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1051,7 +1051,7 @@ func (x *ExecutionContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionContext.ProtoReflect.Descriptor instead.
 func (*ExecutionContext) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{3}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ExecutionContext) GetWorkflowId() string {
@@ -1118,7 +1118,7 @@ type GetMetadataRequest struct {
 
 func (x *GetMetadataRequest) Reset() {
 	*x = GetMetadataRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[4]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1130,7 @@ func (x *GetMetadataRequest) String() string {
 func (*GetMetadataRequest) ProtoMessage() {}
 
 func (x *GetMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[4]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1143,7 @@ func (x *GetMetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMetadataRequest.ProtoReflect.Descriptor instead.
 func (*GetMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{4}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{4}
 }
 
 type GetMetadataResponse struct {
@@ -1172,7 +1172,7 @@ type GetMetadataResponse struct {
 
 func (x *GetMetadataResponse) Reset() {
 	*x = GetMetadataResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[5]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1184,7 +1184,7 @@ func (x *GetMetadataResponse) String() string {
 func (*GetMetadataResponse) ProtoMessage() {}
 
 func (x *GetMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[5]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1197,7 +1197,7 @@ func (x *GetMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMetadataResponse.ProtoReflect.Descriptor instead.
 func (*GetMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{5}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetMetadataResponse) GetName() string {
@@ -1307,7 +1307,7 @@ type PluginCapabilities struct {
 
 func (x *PluginCapabilities) Reset() {
 	*x = PluginCapabilities{}
-	mi := &file_proto_node_plugin_proto_msgTypes[6]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1319,7 +1319,7 @@ func (x *PluginCapabilities) String() string {
 func (*PluginCapabilities) ProtoMessage() {}
 
 func (x *PluginCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[6]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1332,7 +1332,7 @@ func (x *PluginCapabilities) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PluginCapabilities.ProtoReflect.Descriptor instead.
 func (*PluginCapabilities) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{6}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PluginCapabilities) GetSupportsStreaming() bool {
@@ -1411,7 +1411,7 @@ type ParameterDef struct {
 
 func (x *ParameterDef) Reset() {
 	*x = ParameterDef{}
-	mi := &file_proto_node_plugin_proto_msgTypes[7]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1423,7 +1423,7 @@ func (x *ParameterDef) String() string {
 func (*ParameterDef) ProtoMessage() {}
 
 func (x *ParameterDef) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[7]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1436,7 +1436,7 @@ func (x *ParameterDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParameterDef.ProtoReflect.Descriptor instead.
 func (*ParameterDef) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{7}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ParameterDef) GetName() string {
@@ -1558,7 +1558,7 @@ type ParameterOption struct {
 
 func (x *ParameterOption) Reset() {
 	*x = ParameterOption{}
-	mi := &file_proto_node_plugin_proto_msgTypes[8]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1570,7 +1570,7 @@ func (x *ParameterOption) String() string {
 func (*ParameterOption) ProtoMessage() {}
 
 func (x *ParameterOption) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[8]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1583,7 +1583,7 @@ func (x *ParameterOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParameterOption.ProtoReflect.Descriptor instead.
 func (*ParameterOption) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{8}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ParameterOption) GetValue() string {
@@ -1643,7 +1643,7 @@ type ParameterValidation struct {
 
 func (x *ParameterValidation) Reset() {
 	*x = ParameterValidation{}
-	mi := &file_proto_node_plugin_proto_msgTypes[9]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1655,7 +1655,7 @@ func (x *ParameterValidation) String() string {
 func (*ParameterValidation) ProtoMessage() {}
 
 func (x *ParameterValidation) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[9]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1668,7 +1668,7 @@ func (x *ParameterValidation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParameterValidation.ProtoReflect.Descriptor instead.
 func (*ParameterValidation) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{9}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ParameterValidation) GetMinLength() int32 {
@@ -1749,7 +1749,7 @@ type CredentialDef struct {
 
 func (x *CredentialDef) Reset() {
 	*x = CredentialDef{}
-	mi := &file_proto_node_plugin_proto_msgTypes[10]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1761,7 +1761,7 @@ func (x *CredentialDef) String() string {
 func (*CredentialDef) ProtoMessage() {}
 
 func (x *CredentialDef) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[10]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1774,7 +1774,7 @@ func (x *CredentialDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CredentialDef.ProtoReflect.Descriptor instead.
 func (*CredentialDef) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{10}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CredentialDef) GetType() string {
@@ -1832,7 +1832,7 @@ type InitRequest struct {
 
 func (x *InitRequest) Reset() {
 	*x = InitRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[11]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1844,7 +1844,7 @@ func (x *InitRequest) String() string {
 func (*InitRequest) ProtoMessage() {}
 
 func (x *InitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[11]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1857,7 +1857,7 @@ func (x *InitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
 func (*InitRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{11}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *InitRequest) GetContext() *ExecutionContext {
@@ -1910,7 +1910,7 @@ type NodeConfig struct {
 
 func (x *NodeConfig) Reset() {
 	*x = NodeConfig{}
-	mi := &file_proto_node_plugin_proto_msgTypes[12]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1922,7 +1922,7 @@ func (x *NodeConfig) String() string {
 func (*NodeConfig) ProtoMessage() {}
 
 func (x *NodeConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[12]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1935,7 +1935,7 @@ func (x *NodeConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeConfig.ProtoReflect.Descriptor instead.
 func (*NodeConfig) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{12}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *NodeConfig) GetId() string {
@@ -1991,7 +1991,7 @@ type NodePosition struct {
 
 func (x *NodePosition) Reset() {
 	*x = NodePosition{}
-	mi := &file_proto_node_plugin_proto_msgTypes[13]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2003,7 +2003,7 @@ func (x *NodePosition) String() string {
 func (*NodePosition) ProtoMessage() {}
 
 func (x *NodePosition) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[13]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2016,7 +2016,7 @@ func (x *NodePosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodePosition.ProtoReflect.Descriptor instead.
 func (*NodePosition) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{13}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *NodePosition) GetX() float64 {
@@ -2047,7 +2047,7 @@ type WorkflowConfig struct {
 
 func (x *WorkflowConfig) Reset() {
 	*x = WorkflowConfig{}
-	mi := &file_proto_node_plugin_proto_msgTypes[14]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2059,7 +2059,7 @@ func (x *WorkflowConfig) String() string {
 func (*WorkflowConfig) ProtoMessage() {}
 
 func (x *WorkflowConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[14]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2072,7 +2072,7 @@ func (x *WorkflowConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowConfig.ProtoReflect.Descriptor instead.
 func (*WorkflowConfig) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{14}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *WorkflowConfig) GetId() string {
@@ -2122,7 +2122,7 @@ type Credential struct {
 
 func (x *Credential) Reset() {
 	*x = Credential{}
-	mi := &file_proto_node_plugin_proto_msgTypes[15]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2134,7 +2134,7 @@ func (x *Credential) String() string {
 func (*Credential) ProtoMessage() {}
 
 func (x *Credential) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[15]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2147,7 +2147,7 @@ func (x *Credential) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Credential.ProtoReflect.Descriptor instead.
 func (*Credential) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{15}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Credential) GetType() string {
@@ -2183,7 +2183,7 @@ type InitResponse struct {
 
 func (x *InitResponse) Reset() {
 	*x = InitResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[16]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2195,7 +2195,7 @@ func (x *InitResponse) String() string {
 func (*InitResponse) ProtoMessage() {}
 
 func (x *InitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[16]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2208,7 +2208,7 @@ func (x *InitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitResponse.ProtoReflect.Descriptor instead.
 func (*InitResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{16}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *InitResponse) GetSuccess() bool {
@@ -2252,7 +2252,7 @@ type RunRequest struct {
 
 func (x *RunRequest) Reset() {
 	*x = RunRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[17]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2264,7 +2264,7 @@ func (x *RunRequest) String() string {
 func (*RunRequest) ProtoMessage() {}
 
 func (x *RunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[17]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2277,7 +2277,7 @@ func (x *RunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunRequest.ProtoReflect.Descriptor instead.
 func (*RunRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{17}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RunRequest) GetContext() *ExecutionContext {
@@ -2332,7 +2332,7 @@ type RunResponse struct {
 
 func (x *RunResponse) Reset() {
 	*x = RunResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[18]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2344,7 +2344,7 @@ func (x *RunResponse) String() string {
 func (*RunResponse) ProtoMessage() {}
 
 func (x *RunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[18]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2357,7 +2357,7 @@ func (x *RunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunResponse.ProtoReflect.Descriptor instead.
 func (*RunResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{18}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RunResponse) GetType() ResponseType {
@@ -2457,7 +2457,7 @@ type LogPayload struct {
 
 func (x *LogPayload) Reset() {
 	*x = LogPayload{}
-	mi := &file_proto_node_plugin_proto_msgTypes[19]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2469,7 +2469,7 @@ func (x *LogPayload) String() string {
 func (*LogPayload) ProtoMessage() {}
 
 func (x *LogPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[19]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2482,7 +2482,7 @@ func (x *LogPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogPayload.ProtoReflect.Descriptor instead.
 func (*LogPayload) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{19}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *LogPayload) GetLevel() LogLevel {
@@ -2519,7 +2519,7 @@ type ProgressPayload struct {
 
 func (x *ProgressPayload) Reset() {
 	*x = ProgressPayload{}
-	mi := &file_proto_node_plugin_proto_msgTypes[20]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2531,7 +2531,7 @@ func (x *ProgressPayload) String() string {
 func (*ProgressPayload) ProtoMessage() {}
 
 func (x *ProgressPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[20]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2544,7 +2544,7 @@ func (x *ProgressPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProgressPayload.ProtoReflect.Descriptor instead.
 func (*ProgressPayload) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{20}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ProgressPayload) GetCurrent() int32 {
@@ -2589,7 +2589,7 @@ type ResultPayload struct {
 
 func (x *ResultPayload) Reset() {
 	*x = ResultPayload{}
-	mi := &file_proto_node_plugin_proto_msgTypes[21]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2601,7 +2601,7 @@ func (x *ResultPayload) String() string {
 func (*ResultPayload) ProtoMessage() {}
 
 func (x *ResultPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[21]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2614,7 +2614,7 @@ func (x *ResultPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResultPayload.ProtoReflect.Descriptor instead.
 func (*ResultPayload) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{21}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ResultPayload) GetOutput() map[string]*Value {
@@ -2668,7 +2668,7 @@ type ErrorPayload struct {
 
 func (x *ErrorPayload) Reset() {
 	*x = ErrorPayload{}
-	mi := &file_proto_node_plugin_proto_msgTypes[22]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2680,7 +2680,7 @@ func (x *ErrorPayload) String() string {
 func (*ErrorPayload) ProtoMessage() {}
 
 func (x *ErrorPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[22]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2693,7 +2693,7 @@ func (x *ErrorPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorPayload.ProtoReflect.Descriptor instead.
 func (*ErrorPayload) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{22}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ErrorPayload) GetCode() string {
@@ -2758,7 +2758,7 @@ type SubscribeTriggerRequest struct {
 
 func (x *SubscribeTriggerRequest) Reset() {
 	*x = SubscribeTriggerRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[23]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2770,7 +2770,7 @@ func (x *SubscribeTriggerRequest) String() string {
 func (*SubscribeTriggerRequest) ProtoMessage() {}
 
 func (x *SubscribeTriggerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[23]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2783,7 +2783,7 @@ func (x *SubscribeTriggerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeTriggerRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeTriggerRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{23}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SubscribeTriggerRequest) GetConsumerGroup() string {
@@ -2821,7 +2821,7 @@ type TriggerEvent struct {
 
 func (x *TriggerEvent) Reset() {
 	*x = TriggerEvent{}
-	mi := &file_proto_node_plugin_proto_msgTypes[24]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2833,7 +2833,7 @@ func (x *TriggerEvent) String() string {
 func (*TriggerEvent) ProtoMessage() {}
 
 func (x *TriggerEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[24]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2846,7 +2846,7 @@ func (x *TriggerEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerEvent.ProtoReflect.Descriptor instead.
 func (*TriggerEvent) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{24}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *TriggerEvent) GetEventId() string {
@@ -2891,6 +2891,144 @@ func (x *TriggerEvent) GetTimestampMs() int64 {
 	return 0
 }
 
+// DeliverResponseRequest 包含要投递的响应信息
+type DeliverResponseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                                            // 事件 ID（对应触发请求）
+	Body          *Value                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`                                                                                 // 响应体（任意结构）
+	StatusCode    int32                  `protobuf:"varint,3,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`                                                  // HTTP 状态码（默认 200）
+	Headers       map[string]string      `protobuf:"bytes,4,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 响应头
+	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`                                                                               // 错误信息（可选）
+	HasResponse   bool                   `protobuf:"varint,6,opt,name=has_response,json=hasResponse,proto3" json:"has_response,omitempty"`                                               // 是否包含响应
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeliverResponseRequest) Reset() {
+	*x = DeliverResponseRequest{}
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeliverResponseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeliverResponseRequest) ProtoMessage() {}
+
+func (x *DeliverResponseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeliverResponseRequest.ProtoReflect.Descriptor instead.
+func (*DeliverResponseRequest) Descriptor() ([]byte, []int) {
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeliverResponseRequest) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *DeliverResponseRequest) GetBody() *Value {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
+func (x *DeliverResponseRequest) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *DeliverResponseRequest) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *DeliverResponseRequest) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *DeliverResponseRequest) GetHasResponse() bool {
+	if x != nil {
+		return x.HasResponse
+	}
+	return false
+}
+
+// DeliverResponseResponse 表示投递结果
+type DeliverResponseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功投递
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`      // 错误信息（可选）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeliverResponseResponse) Reset() {
+	*x = DeliverResponseResponse{}
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeliverResponseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeliverResponseResponse) ProtoMessage() {}
+
+func (x *DeliverResponseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeliverResponseResponse.ProtoReflect.Descriptor instead.
+func (*DeliverResponseResponse) Descriptor() ([]byte, []int) {
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *DeliverResponseResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DeliverResponseResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 type StopRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Context       *ExecutionContext      `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"` // 执行上下文
@@ -2902,7 +3040,7 @@ type StopRequest struct {
 
 func (x *StopRequest) Reset() {
 	*x = StopRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[25]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2914,7 +3052,7 @@ func (x *StopRequest) String() string {
 func (*StopRequest) ProtoMessage() {}
 
 func (x *StopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[25]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2927,7 +3065,7 @@ func (x *StopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{25}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *StopRequest) GetContext() *ExecutionContext {
@@ -2962,7 +3100,7 @@ type StopResponse struct {
 
 func (x *StopResponse) Reset() {
 	*x = StopResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[26]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2974,7 +3112,7 @@ func (x *StopResponse) String() string {
 func (*StopResponse) ProtoMessage() {}
 
 func (x *StopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[26]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2987,7 +3125,7 @@ func (x *StopResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopResponse.ProtoReflect.Descriptor instead.
 func (*StopResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{26}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *StopResponse) GetSuccess() bool {
@@ -3022,7 +3160,7 @@ type TestCredentialRequest struct {
 
 func (x *TestCredentialRequest) Reset() {
 	*x = TestCredentialRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[27]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3034,7 +3172,7 @@ func (x *TestCredentialRequest) String() string {
 func (*TestCredentialRequest) ProtoMessage() {}
 
 func (x *TestCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[27]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3047,7 +3185,7 @@ func (x *TestCredentialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestCredentialRequest.ProtoReflect.Descriptor instead.
 func (*TestCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{27}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *TestCredentialRequest) GetCredentialType() string {
@@ -3083,7 +3221,7 @@ type TestCredentialResponse struct {
 
 func (x *TestCredentialResponse) Reset() {
 	*x = TestCredentialResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[28]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3095,7 +3233,7 @@ func (x *TestCredentialResponse) String() string {
 func (*TestCredentialResponse) ProtoMessage() {}
 
 func (x *TestCredentialResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[28]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3108,7 +3246,7 @@ func (x *TestCredentialResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestCredentialResponse.ProtoReflect.Descriptor instead.
 func (*TestCredentialResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{28}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *TestCredentialResponse) GetSuccess() bool {
@@ -3148,7 +3286,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_proto_node_plugin_proto_msgTypes[29]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3160,7 +3298,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[29]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3173,7 +3311,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{29}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *HealthCheckRequest) GetIncludeDetails() bool {
@@ -3203,7 +3341,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_proto_node_plugin_proto_msgTypes[30]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3215,7 +3353,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[30]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3228,7 +3366,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{30}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *HealthCheckResponse) GetStatus() HealthStatus {
@@ -3299,7 +3437,7 @@ type HealthCheckDetail struct {
 
 func (x *HealthCheckDetail) Reset() {
 	*x = HealthCheckDetail{}
-	mi := &file_proto_node_plugin_proto_msgTypes[31]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3311,7 +3449,7 @@ func (x *HealthCheckDetail) String() string {
 func (*HealthCheckDetail) ProtoMessage() {}
 
 func (x *HealthCheckDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[31]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3324,7 +3462,7 @@ func (x *HealthCheckDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckDetail.ProtoReflect.Descriptor instead.
 func (*HealthCheckDetail) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{31}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *HealthCheckDetail) GetStatus() HealthStatus {
@@ -3361,7 +3499,7 @@ type ResourceUsage struct {
 
 func (x *ResourceUsage) Reset() {
 	*x = ResourceUsage{}
-	mi := &file_proto_node_plugin_proto_msgTypes[32]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3373,7 +3511,7 @@ func (x *ResourceUsage) String() string {
 func (*ResourceUsage) ProtoMessage() {}
 
 func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_node_plugin_proto_msgTypes[32]
+	mi := &file_plugins_base_go_proto_node_plugin_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3386,7 +3524,7 @@ func (x *ResourceUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceUsage.ProtoReflect.Descriptor instead.
 func (*ResourceUsage) Descriptor() ([]byte, []int) {
-	return file_proto_node_plugin_proto_rawDescGZIP(), []int{32}
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ResourceUsage) GetMemoryBytes() int64 {
@@ -3417,11 +3555,11 @@ func (x *ResourceUsage) GetActiveConnections() int32 {
 	return 0
 }
 
-var File_proto_node_plugin_proto protoreflect.FileDescriptor
+var File_plugins_base_go_proto_node_plugin_proto protoreflect.FileDescriptor
 
-const file_proto_node_plugin_proto_rawDesc = "" +
+const file_plugins_base_go_proto_node_plugin_proto_rawDesc = "" +
 	"\n" +
-	"\x17proto/node_plugin.proto\x12\vnode_plugin\"\xe4\x02\n" +
+	"'plugins/base-go/proto/node_plugin.proto\x12\vnode_plugin\"\xe4\x02\n" +
 	"\x05Value\x127\n" +
 	"\n" +
 	"null_value\x18\x01 \x01(\x0e2\x16.node_plugin.NullValueH\x00R\tnullValue\x12#\n" +
@@ -3669,7 +3807,21 @@ const file_proto_node_plugin_proto_rawDesc = "" +
 	"\apayload\x18\x03 \x01(\v2\x12.node_plugin.ValueR\apayload\x12\x19\n" +
 	"\btrace_id\x18\x04 \x01(\tR\atraceId\x12'\n" +
 	"\x0ftarget_workflow\x18\x05 \x01(\tR\x0etargetWorkflow\x12!\n" +
-	"\ftimestamp_ms\x18\x06 \x01(\x03R\vtimestampMs\"t\n" +
+	"\ftimestamp_ms\x18\x06 \x01(\x03R\vtimestampMs\"\xbd\x02\n" +
+	"\x16DeliverResponseRequest\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12&\n" +
+	"\x04body\x18\x02 \x01(\v2\x12.node_plugin.ValueR\x04body\x12\x1f\n" +
+	"\vstatus_code\x18\x03 \x01(\x05R\n" +
+	"statusCode\x12J\n" +
+	"\aheaders\x18\x04 \x03(\v20.node_plugin.DeliverResponseRequest.HeadersEntryR\aheaders\x12\x14\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\x12!\n" +
+	"\fhas_response\x18\x06 \x01(\bR\vhasResponse\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"I\n" +
+	"\x17DeliverResponseResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"t\n" +
 	"\vStopRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.node_plugin.ExecutionContextR\acontext\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x14\n" +
@@ -3822,7 +3974,7 @@ const file_proto_node_plugin_proto_rawDesc = "" +
 	"\x19HEALTH_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15HEALTH_STATUS_HEALTHY\x10\x01\x12\x1a\n" +
 	"\x16HEALTH_STATUS_DEGRADED\x10\x02\x12\x1b\n" +
-	"\x17HEALTH_STATUS_UNHEALTHY\x10\x032\x9f\x04\n" +
+	"\x17HEALTH_STATUS_UNHEALTHY\x10\x032\xfd\x04\n" +
 	"\x11NodePluginService\x12P\n" +
 	"\vGetMetadata\x12\x1f.node_plugin.GetMetadataRequest\x1a .node_plugin.GetMetadataResponse\x12;\n" +
 	"\x04Init\x12\x18.node_plugin.InitRequest\x1a\x19.node_plugin.InitResponse\x12:\n" +
@@ -3830,23 +3982,24 @@ const file_proto_node_plugin_proto_rawDesc = "" +
 	"\x10SubscribeTrigger\x12$.node_plugin.SubscribeTriggerRequest\x1a\x19.node_plugin.TriggerEvent0\x01\x12;\n" +
 	"\x04Stop\x12\x18.node_plugin.StopRequest\x1a\x19.node_plugin.StopResponse\x12Y\n" +
 	"\x0eTestCredential\x12\".node_plugin.TestCredentialRequest\x1a#.node_plugin.TestCredentialResponse\x12P\n" +
-	"\vHealthCheck\x12\x1f.node_plugin.HealthCheckRequest\x1a .node_plugin.HealthCheckResponseB.Z,github.com/gw123/gflow/plugins/base-go/protob\x06proto3"
+	"\vHealthCheck\x12\x1f.node_plugin.HealthCheckRequest\x1a .node_plugin.HealthCheckResponse\x12\\\n" +
+	"\x0fDeliverResponse\x12#.node_plugin.DeliverResponseRequest\x1a$.node_plugin.DeliverResponseResponseB.Z,github.com/gw123/gflow/plugins/base-go/protob\x06proto3"
 
 var (
-	file_proto_node_plugin_proto_rawDescOnce sync.Once
-	file_proto_node_plugin_proto_rawDescData []byte
+	file_plugins_base_go_proto_node_plugin_proto_rawDescOnce sync.Once
+	file_plugins_base_go_proto_node_plugin_proto_rawDescData []byte
 )
 
-func file_proto_node_plugin_proto_rawDescGZIP() []byte {
-	file_proto_node_plugin_proto_rawDescOnce.Do(func() {
-		file_proto_node_plugin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_node_plugin_proto_rawDesc), len(file_proto_node_plugin_proto_rawDesc)))
+func file_plugins_base_go_proto_node_plugin_proto_rawDescGZIP() []byte {
+	file_plugins_base_go_proto_node_plugin_proto_rawDescOnce.Do(func() {
+		file_plugins_base_go_proto_node_plugin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_plugins_base_go_proto_node_plugin_proto_rawDesc), len(file_plugins_base_go_proto_node_plugin_proto_rawDesc)))
 	})
-	return file_proto_node_plugin_proto_rawDescData
+	return file_plugins_base_go_proto_node_plugin_proto_rawDescData
 }
 
-var file_proto_node_plugin_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_proto_node_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
-var file_proto_node_plugin_proto_goTypes = []any{
+var file_plugins_base_go_proto_node_plugin_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
+var file_plugins_base_go_proto_node_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
+var file_plugins_base_go_proto_node_plugin_proto_goTypes = []any{
 	(NullValue)(0),                  // 0: node_plugin.NullValue
 	(NodeCategory)(0),               // 1: node_plugin.NodeCategory
 	(NodeType)(0),                   // 2: node_plugin.NodeType
@@ -3883,40 +4036,43 @@ var file_proto_node_plugin_proto_goTypes = []any{
 	(*ErrorPayload)(nil),            // 33: node_plugin.ErrorPayload
 	(*SubscribeTriggerRequest)(nil), // 34: node_plugin.SubscribeTriggerRequest
 	(*TriggerEvent)(nil),            // 35: node_plugin.TriggerEvent
-	(*StopRequest)(nil),             // 36: node_plugin.StopRequest
-	(*StopResponse)(nil),            // 37: node_plugin.StopResponse
-	(*TestCredentialRequest)(nil),   // 38: node_plugin.TestCredentialRequest
-	(*TestCredentialResponse)(nil),  // 39: node_plugin.TestCredentialResponse
-	(*HealthCheckRequest)(nil),      // 40: node_plugin.HealthCheckRequest
-	(*HealthCheckResponse)(nil),     // 41: node_plugin.HealthCheckResponse
-	(*HealthCheckDetail)(nil),       // 42: node_plugin.HealthCheckDetail
-	(*ResourceUsage)(nil),           // 43: node_plugin.ResourceUsage
-	nil,                             // 44: node_plugin.MapValue.FieldsEntry
-	nil,                             // 45: node_plugin.ExecutionContext.MetadataEntry
-	nil,                             // 46: node_plugin.NodeConfig.ParametersEntry
-	nil,                             // 47: node_plugin.NodeConfig.LabelsEntry
-	nil,                             // 48: node_plugin.WorkflowConfig.GlobalVarsEntry
-	nil,                             // 49: node_plugin.WorkflowConfig.EnvEntry
-	nil,                             // 50: node_plugin.Credential.FieldsEntry
-	nil,                             // 51: node_plugin.InitResponse.MetadataEntry
-	nil,                             // 52: node_plugin.RunRequest.ParametersEntry
-	nil,                             // 53: node_plugin.RunRequest.ParentOutputEntry
-	nil,                             // 54: node_plugin.RunRequest.GlobalVarsEntry
-	nil,                             // 55: node_plugin.RunRequest.LocalVarsEntry
-	nil,                             // 56: node_plugin.LogPayload.FieldsEntry
-	nil,                             // 57: node_plugin.ResultPayload.OutputEntry
-	nil,                             // 58: node_plugin.ErrorPayload.DetailsEntry
-	nil,                             // 59: node_plugin.SubscribeTriggerRequest.FiltersEntry
-	nil,                             // 60: node_plugin.TestCredentialResponse.InfoEntry
-	nil,                             // 61: node_plugin.HealthCheckResponse.DetailsEntry
+	(*DeliverResponseRequest)(nil),  // 36: node_plugin.DeliverResponseRequest
+	(*DeliverResponseResponse)(nil), // 37: node_plugin.DeliverResponseResponse
+	(*StopRequest)(nil),             // 38: node_plugin.StopRequest
+	(*StopResponse)(nil),            // 39: node_plugin.StopResponse
+	(*TestCredentialRequest)(nil),   // 40: node_plugin.TestCredentialRequest
+	(*TestCredentialResponse)(nil),  // 41: node_plugin.TestCredentialResponse
+	(*HealthCheckRequest)(nil),      // 42: node_plugin.HealthCheckRequest
+	(*HealthCheckResponse)(nil),     // 43: node_plugin.HealthCheckResponse
+	(*HealthCheckDetail)(nil),       // 44: node_plugin.HealthCheckDetail
+	(*ResourceUsage)(nil),           // 45: node_plugin.ResourceUsage
+	nil,                             // 46: node_plugin.MapValue.FieldsEntry
+	nil,                             // 47: node_plugin.ExecutionContext.MetadataEntry
+	nil,                             // 48: node_plugin.NodeConfig.ParametersEntry
+	nil,                             // 49: node_plugin.NodeConfig.LabelsEntry
+	nil,                             // 50: node_plugin.WorkflowConfig.GlobalVarsEntry
+	nil,                             // 51: node_plugin.WorkflowConfig.EnvEntry
+	nil,                             // 52: node_plugin.Credential.FieldsEntry
+	nil,                             // 53: node_plugin.InitResponse.MetadataEntry
+	nil,                             // 54: node_plugin.RunRequest.ParametersEntry
+	nil,                             // 55: node_plugin.RunRequest.ParentOutputEntry
+	nil,                             // 56: node_plugin.RunRequest.GlobalVarsEntry
+	nil,                             // 57: node_plugin.RunRequest.LocalVarsEntry
+	nil,                             // 58: node_plugin.LogPayload.FieldsEntry
+	nil,                             // 59: node_plugin.ResultPayload.OutputEntry
+	nil,                             // 60: node_plugin.ErrorPayload.DetailsEntry
+	nil,                             // 61: node_plugin.SubscribeTriggerRequest.FiltersEntry
+	nil,                             // 62: node_plugin.DeliverResponseRequest.HeadersEntry
+	nil,                             // 63: node_plugin.TestCredentialResponse.InfoEntry
+	nil,                             // 64: node_plugin.HealthCheckResponse.DetailsEntry
 }
-var file_proto_node_plugin_proto_depIdxs = []int32{
+var file_plugins_base_go_proto_node_plugin_proto_depIdxs = []int32{
 	0,  // 0: node_plugin.Value.null_value:type_name -> node_plugin.NullValue
 	12, // 1: node_plugin.Value.list_value:type_name -> node_plugin.ListValue
 	13, // 2: node_plugin.Value.map_value:type_name -> node_plugin.MapValue
 	11, // 3: node_plugin.ListValue.values:type_name -> node_plugin.Value
-	44, // 4: node_plugin.MapValue.fields:type_name -> node_plugin.MapValue.FieldsEntry
-	45, // 5: node_plugin.ExecutionContext.metadata:type_name -> node_plugin.ExecutionContext.MetadataEntry
+	46, // 4: node_plugin.MapValue.fields:type_name -> node_plugin.MapValue.FieldsEntry
+	47, // 5: node_plugin.ExecutionContext.metadata:type_name -> node_plugin.ExecutionContext.MetadataEntry
 	1,  // 6: node_plugin.GetMetadataResponse.category:type_name -> node_plugin.NodeCategory
 	2,  // 7: node_plugin.GetMetadataResponse.node_type:type_name -> node_plugin.NodeType
 	18, // 8: node_plugin.GetMetadataResponse.input_parameters:type_name -> node_plugin.ParameterDef
@@ -3933,76 +4089,80 @@ var file_proto_node_plugin_proto_depIdxs = []int32{
 	23, // 19: node_plugin.InitRequest.node_config:type_name -> node_plugin.NodeConfig
 	25, // 20: node_plugin.InitRequest.workflow_config:type_name -> node_plugin.WorkflowConfig
 	26, // 21: node_plugin.InitRequest.credential:type_name -> node_plugin.Credential
-	46, // 22: node_plugin.NodeConfig.parameters:type_name -> node_plugin.NodeConfig.ParametersEntry
-	47, // 23: node_plugin.NodeConfig.labels:type_name -> node_plugin.NodeConfig.LabelsEntry
+	48, // 22: node_plugin.NodeConfig.parameters:type_name -> node_plugin.NodeConfig.ParametersEntry
+	49, // 23: node_plugin.NodeConfig.labels:type_name -> node_plugin.NodeConfig.LabelsEntry
 	24, // 24: node_plugin.NodeConfig.position:type_name -> node_plugin.NodePosition
-	48, // 25: node_plugin.WorkflowConfig.global_vars:type_name -> node_plugin.WorkflowConfig.GlobalVarsEntry
-	49, // 26: node_plugin.WorkflowConfig.env:type_name -> node_plugin.WorkflowConfig.EnvEntry
-	50, // 27: node_plugin.Credential.fields:type_name -> node_plugin.Credential.FieldsEntry
-	51, // 28: node_plugin.InitResponse.metadata:type_name -> node_plugin.InitResponse.MetadataEntry
+	50, // 25: node_plugin.WorkflowConfig.global_vars:type_name -> node_plugin.WorkflowConfig.GlobalVarsEntry
+	51, // 26: node_plugin.WorkflowConfig.env:type_name -> node_plugin.WorkflowConfig.EnvEntry
+	52, // 27: node_plugin.Credential.fields:type_name -> node_plugin.Credential.FieldsEntry
+	53, // 28: node_plugin.InitResponse.metadata:type_name -> node_plugin.InitResponse.MetadataEntry
 	14, // 29: node_plugin.RunRequest.context:type_name -> node_plugin.ExecutionContext
-	52, // 30: node_plugin.RunRequest.parameters:type_name -> node_plugin.RunRequest.ParametersEntry
-	53, // 31: node_plugin.RunRequest.parent_output:type_name -> node_plugin.RunRequest.ParentOutputEntry
-	54, // 32: node_plugin.RunRequest.global_vars:type_name -> node_plugin.RunRequest.GlobalVarsEntry
-	55, // 33: node_plugin.RunRequest.local_vars:type_name -> node_plugin.RunRequest.LocalVarsEntry
+	54, // 30: node_plugin.RunRequest.parameters:type_name -> node_plugin.RunRequest.ParametersEntry
+	55, // 31: node_plugin.RunRequest.parent_output:type_name -> node_plugin.RunRequest.ParentOutputEntry
+	56, // 32: node_plugin.RunRequest.global_vars:type_name -> node_plugin.RunRequest.GlobalVarsEntry
+	57, // 33: node_plugin.RunRequest.local_vars:type_name -> node_plugin.RunRequest.LocalVarsEntry
 	5,  // 34: node_plugin.RunResponse.type:type_name -> node_plugin.ResponseType
 	30, // 35: node_plugin.RunResponse.log:type_name -> node_plugin.LogPayload
 	31, // 36: node_plugin.RunResponse.progress:type_name -> node_plugin.ProgressPayload
 	32, // 37: node_plugin.RunResponse.result:type_name -> node_plugin.ResultPayload
 	33, // 38: node_plugin.RunResponse.error:type_name -> node_plugin.ErrorPayload
 	6,  // 39: node_plugin.LogPayload.level:type_name -> node_plugin.LogLevel
-	56, // 40: node_plugin.LogPayload.fields:type_name -> node_plugin.LogPayload.FieldsEntry
-	57, // 41: node_plugin.ResultPayload.output:type_name -> node_plugin.ResultPayload.OutputEntry
+	58, // 40: node_plugin.LogPayload.fields:type_name -> node_plugin.LogPayload.FieldsEntry
+	59, // 41: node_plugin.ResultPayload.output:type_name -> node_plugin.ResultPayload.OutputEntry
 	7,  // 42: node_plugin.ResultPayload.status:type_name -> node_plugin.ExecutionStatus
 	8,  // 43: node_plugin.ErrorPayload.error_type:type_name -> node_plugin.ErrorType
-	58, // 44: node_plugin.ErrorPayload.details:type_name -> node_plugin.ErrorPayload.DetailsEntry
-	59, // 45: node_plugin.SubscribeTriggerRequest.filters:type_name -> node_plugin.SubscribeTriggerRequest.FiltersEntry
+	60, // 44: node_plugin.ErrorPayload.details:type_name -> node_plugin.ErrorPayload.DetailsEntry
+	61, // 45: node_plugin.SubscribeTriggerRequest.filters:type_name -> node_plugin.SubscribeTriggerRequest.FiltersEntry
 	11, // 46: node_plugin.TriggerEvent.payload:type_name -> node_plugin.Value
-	14, // 47: node_plugin.StopRequest.context:type_name -> node_plugin.ExecutionContext
-	9,  // 48: node_plugin.StopResponse.status:type_name -> node_plugin.StopStatus
-	26, // 49: node_plugin.TestCredentialRequest.credential:type_name -> node_plugin.Credential
-	60, // 50: node_plugin.TestCredentialResponse.info:type_name -> node_plugin.TestCredentialResponse.InfoEntry
-	10, // 51: node_plugin.HealthCheckResponse.status:type_name -> node_plugin.HealthStatus
-	61, // 52: node_plugin.HealthCheckResponse.details:type_name -> node_plugin.HealthCheckResponse.DetailsEntry
-	43, // 53: node_plugin.HealthCheckResponse.resource_usage:type_name -> node_plugin.ResourceUsage
-	10, // 54: node_plugin.HealthCheckDetail.status:type_name -> node_plugin.HealthStatus
-	11, // 55: node_plugin.MapValue.FieldsEntry.value:type_name -> node_plugin.Value
-	11, // 56: node_plugin.NodeConfig.ParametersEntry.value:type_name -> node_plugin.Value
-	11, // 57: node_plugin.WorkflowConfig.GlobalVarsEntry.value:type_name -> node_plugin.Value
-	11, // 58: node_plugin.Credential.FieldsEntry.value:type_name -> node_plugin.Value
-	11, // 59: node_plugin.RunRequest.ParametersEntry.value:type_name -> node_plugin.Value
-	11, // 60: node_plugin.RunRequest.ParentOutputEntry.value:type_name -> node_plugin.Value
-	11, // 61: node_plugin.RunRequest.GlobalVarsEntry.value:type_name -> node_plugin.Value
-	11, // 62: node_plugin.RunRequest.LocalVarsEntry.value:type_name -> node_plugin.Value
-	11, // 63: node_plugin.ResultPayload.OutputEntry.value:type_name -> node_plugin.Value
-	42, // 64: node_plugin.HealthCheckResponse.DetailsEntry.value:type_name -> node_plugin.HealthCheckDetail
-	15, // 65: node_plugin.NodePluginService.GetMetadata:input_type -> node_plugin.GetMetadataRequest
-	22, // 66: node_plugin.NodePluginService.Init:input_type -> node_plugin.InitRequest
-	28, // 67: node_plugin.NodePluginService.Run:input_type -> node_plugin.RunRequest
-	34, // 68: node_plugin.NodePluginService.SubscribeTrigger:input_type -> node_plugin.SubscribeTriggerRequest
-	36, // 69: node_plugin.NodePluginService.Stop:input_type -> node_plugin.StopRequest
-	38, // 70: node_plugin.NodePluginService.TestCredential:input_type -> node_plugin.TestCredentialRequest
-	40, // 71: node_plugin.NodePluginService.HealthCheck:input_type -> node_plugin.HealthCheckRequest
-	16, // 72: node_plugin.NodePluginService.GetMetadata:output_type -> node_plugin.GetMetadataResponse
-	27, // 73: node_plugin.NodePluginService.Init:output_type -> node_plugin.InitResponse
-	29, // 74: node_plugin.NodePluginService.Run:output_type -> node_plugin.RunResponse
-	35, // 75: node_plugin.NodePluginService.SubscribeTrigger:output_type -> node_plugin.TriggerEvent
-	37, // 76: node_plugin.NodePluginService.Stop:output_type -> node_plugin.StopResponse
-	39, // 77: node_plugin.NodePluginService.TestCredential:output_type -> node_plugin.TestCredentialResponse
-	41, // 78: node_plugin.NodePluginService.HealthCheck:output_type -> node_plugin.HealthCheckResponse
-	72, // [72:79] is the sub-list for method output_type
-	65, // [65:72] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	11, // 47: node_plugin.DeliverResponseRequest.body:type_name -> node_plugin.Value
+	62, // 48: node_plugin.DeliverResponseRequest.headers:type_name -> node_plugin.DeliverResponseRequest.HeadersEntry
+	14, // 49: node_plugin.StopRequest.context:type_name -> node_plugin.ExecutionContext
+	9,  // 50: node_plugin.StopResponse.status:type_name -> node_plugin.StopStatus
+	26, // 51: node_plugin.TestCredentialRequest.credential:type_name -> node_plugin.Credential
+	63, // 52: node_plugin.TestCredentialResponse.info:type_name -> node_plugin.TestCredentialResponse.InfoEntry
+	10, // 53: node_plugin.HealthCheckResponse.status:type_name -> node_plugin.HealthStatus
+	64, // 54: node_plugin.HealthCheckResponse.details:type_name -> node_plugin.HealthCheckResponse.DetailsEntry
+	45, // 55: node_plugin.HealthCheckResponse.resource_usage:type_name -> node_plugin.ResourceUsage
+	10, // 56: node_plugin.HealthCheckDetail.status:type_name -> node_plugin.HealthStatus
+	11, // 57: node_plugin.MapValue.FieldsEntry.value:type_name -> node_plugin.Value
+	11, // 58: node_plugin.NodeConfig.ParametersEntry.value:type_name -> node_plugin.Value
+	11, // 59: node_plugin.WorkflowConfig.GlobalVarsEntry.value:type_name -> node_plugin.Value
+	11, // 60: node_plugin.Credential.FieldsEntry.value:type_name -> node_plugin.Value
+	11, // 61: node_plugin.RunRequest.ParametersEntry.value:type_name -> node_plugin.Value
+	11, // 62: node_plugin.RunRequest.ParentOutputEntry.value:type_name -> node_plugin.Value
+	11, // 63: node_plugin.RunRequest.GlobalVarsEntry.value:type_name -> node_plugin.Value
+	11, // 64: node_plugin.RunRequest.LocalVarsEntry.value:type_name -> node_plugin.Value
+	11, // 65: node_plugin.ResultPayload.OutputEntry.value:type_name -> node_plugin.Value
+	44, // 66: node_plugin.HealthCheckResponse.DetailsEntry.value:type_name -> node_plugin.HealthCheckDetail
+	15, // 67: node_plugin.NodePluginService.GetMetadata:input_type -> node_plugin.GetMetadataRequest
+	22, // 68: node_plugin.NodePluginService.Init:input_type -> node_plugin.InitRequest
+	28, // 69: node_plugin.NodePluginService.Run:input_type -> node_plugin.RunRequest
+	34, // 70: node_plugin.NodePluginService.SubscribeTrigger:input_type -> node_plugin.SubscribeTriggerRequest
+	38, // 71: node_plugin.NodePluginService.Stop:input_type -> node_plugin.StopRequest
+	40, // 72: node_plugin.NodePluginService.TestCredential:input_type -> node_plugin.TestCredentialRequest
+	42, // 73: node_plugin.NodePluginService.HealthCheck:input_type -> node_plugin.HealthCheckRequest
+	36, // 74: node_plugin.NodePluginService.DeliverResponse:input_type -> node_plugin.DeliverResponseRequest
+	16, // 75: node_plugin.NodePluginService.GetMetadata:output_type -> node_plugin.GetMetadataResponse
+	27, // 76: node_plugin.NodePluginService.Init:output_type -> node_plugin.InitResponse
+	29, // 77: node_plugin.NodePluginService.Run:output_type -> node_plugin.RunResponse
+	35, // 78: node_plugin.NodePluginService.SubscribeTrigger:output_type -> node_plugin.TriggerEvent
+	39, // 79: node_plugin.NodePluginService.Stop:output_type -> node_plugin.StopResponse
+	41, // 80: node_plugin.NodePluginService.TestCredential:output_type -> node_plugin.TestCredentialResponse
+	43, // 81: node_plugin.NodePluginService.HealthCheck:output_type -> node_plugin.HealthCheckResponse
+	37, // 82: node_plugin.NodePluginService.DeliverResponse:output_type -> node_plugin.DeliverResponseResponse
+	75, // [75:83] is the sub-list for method output_type
+	67, // [67:75] is the sub-list for method input_type
+	67, // [67:67] is the sub-list for extension type_name
+	67, // [67:67] is the sub-list for extension extendee
+	0,  // [0:67] is the sub-list for field type_name
 }
 
-func init() { file_proto_node_plugin_proto_init() }
-func file_proto_node_plugin_proto_init() {
-	if File_proto_node_plugin_proto != nil {
+func init() { file_plugins_base_go_proto_node_plugin_proto_init() }
+func file_plugins_base_go_proto_node_plugin_proto_init() {
+	if File_plugins_base_go_proto_node_plugin_proto != nil {
 		return
 	}
-	file_proto_node_plugin_proto_msgTypes[0].OneofWrappers = []any{
+	file_plugins_base_go_proto_node_plugin_proto_msgTypes[0].OneofWrappers = []any{
 		(*Value_NullValue)(nil),
 		(*Value_StringValue)(nil),
 		(*Value_IntValue)(nil),
@@ -4012,7 +4172,7 @@ func file_proto_node_plugin_proto_init() {
 		(*Value_ListValue)(nil),
 		(*Value_MapValue)(nil),
 	}
-	file_proto_node_plugin_proto_msgTypes[18].OneofWrappers = []any{
+	file_plugins_base_go_proto_node_plugin_proto_msgTypes[18].OneofWrappers = []any{
 		(*RunResponse_Log)(nil),
 		(*RunResponse_Progress)(nil),
 		(*RunResponse_Result)(nil),
@@ -4022,18 +4182,18 @@ func file_proto_node_plugin_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_node_plugin_proto_rawDesc), len(file_proto_node_plugin_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_plugins_base_go_proto_node_plugin_proto_rawDesc), len(file_plugins_base_go_proto_node_plugin_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   51,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_node_plugin_proto_goTypes,
-		DependencyIndexes: file_proto_node_plugin_proto_depIdxs,
-		EnumInfos:         file_proto_node_plugin_proto_enumTypes,
-		MessageInfos:      file_proto_node_plugin_proto_msgTypes,
+		GoTypes:           file_plugins_base_go_proto_node_plugin_proto_goTypes,
+		DependencyIndexes: file_plugins_base_go_proto_node_plugin_proto_depIdxs,
+		EnumInfos:         file_plugins_base_go_proto_node_plugin_proto_enumTypes,
+		MessageInfos:      file_plugins_base_go_proto_node_plugin_proto_msgTypes,
 	}.Build()
-	File_proto_node_plugin_proto = out.File
-	file_proto_node_plugin_proto_goTypes = nil
-	file_proto_node_plugin_proto_depIdxs = nil
+	File_plugins_base_go_proto_node_plugin_proto = out.File
+	file_plugins_base_go_proto_node_plugin_proto_goTypes = nil
+	file_plugins_base_go_proto_node_plugin_proto_depIdxs = nil
 }

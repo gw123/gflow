@@ -17,7 +17,7 @@ export class HttpNodeRunnerBrowser implements NodeRunner {
         };
 
         log(`Interpolating parameters...`);
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         if (node.type === 'webhook') {
             // Webhook in browser is just a simulation trigger

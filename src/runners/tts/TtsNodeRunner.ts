@@ -5,7 +5,7 @@ import { interpolate } from '../utils';
 export class TtsNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     
     const text = params.text || params.prompt;
     const voiceName = params.voice || 'Puck'; // Puck, Charon, Kore, Fenrir, Zephyr

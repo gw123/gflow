@@ -13,7 +13,7 @@ export class DefaultRunner implements NodeRunner {
         await new Promise(resolve => setTimeout(resolve, 800));
         
         // Interpolate all parameters to show what the node actually received
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
         
         return {
             status: 'success',

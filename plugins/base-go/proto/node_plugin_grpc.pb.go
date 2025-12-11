@@ -12,7 +12,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.33.0
-// source: proto/node_plugin.proto
+// source: plugins/base-go/proto/node_plugin.proto
 
 package proto
 
@@ -36,6 +36,7 @@ const (
 	NodePluginService_Stop_FullMethodName             = "/node_plugin.NodePluginService/Stop"
 	NodePluginService_TestCredential_FullMethodName   = "/node_plugin.NodePluginService/TestCredential"
 	NodePluginService_HealthCheck_FullMethodName      = "/node_plugin.NodePluginService/HealthCheck"
+	NodePluginService_DeliverResponse_FullMethodName  = "/node_plugin.NodePluginService/DeliverResponse"
 )
 
 // NodePluginServiceClient is the client API for NodePluginService service.
@@ -59,6 +60,8 @@ type NodePluginServiceClient interface {
 	TestCredential(ctx context.Context, in *TestCredentialRequest, opts ...grpc.CallOption) (*TestCredentialResponse, error)
 	// HealthCheck 健康检查
 	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+	// DeliverResponse 将工作流响应投递给触发器插件（用于同步 HTTP 等场景）
+	DeliverResponse(ctx context.Context, in *DeliverResponseRequest, opts ...grpc.CallOption) (*DeliverResponseResponse, error)
 }
 
 type nodePluginServiceClient struct {
@@ -157,6 +160,16 @@ func (c *nodePluginServiceClient) HealthCheck(ctx context.Context, in *HealthChe
 	return out, nil
 }
 
+func (c *nodePluginServiceClient) DeliverResponse(ctx context.Context, in *DeliverResponseRequest, opts ...grpc.CallOption) (*DeliverResponseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeliverResponseResponse)
+	err := c.cc.Invoke(ctx, NodePluginService_DeliverResponse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodePluginServiceServer is the server API for NodePluginService service.
 // All implementations must embed UnimplementedNodePluginServiceServer
 // for forward compatibility.
@@ -178,6 +191,8 @@ type NodePluginServiceServer interface {
 	TestCredential(context.Context, *TestCredentialRequest) (*TestCredentialResponse, error)
 	// HealthCheck 健康检查
 	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
+	// DeliverResponse 将工作流响应投递给触发器插件（用于同步 HTTP 等场景）
+	DeliverResponse(context.Context, *DeliverResponseRequest) (*DeliverResponseResponse, error)
 	mustEmbedUnimplementedNodePluginServiceServer()
 }
 
@@ -208,6 +223,9 @@ func (UnimplementedNodePluginServiceServer) TestCredential(context.Context, *Tes
 }
 func (UnimplementedNodePluginServiceServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
+}
+func (UnimplementedNodePluginServiceServer) DeliverResponse(context.Context, *DeliverResponseRequest) (*DeliverResponseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeliverResponse not implemented")
 }
 func (UnimplementedNodePluginServiceServer) mustEmbedUnimplementedNodePluginServiceServer() {}
 func (UnimplementedNodePluginServiceServer) testEmbeddedByValue()                           {}
@@ -342,6 +360,24 @@ func _NodePluginService_HealthCheck_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodePluginService_DeliverResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeliverResponseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodePluginServiceServer).DeliverResponse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodePluginService_DeliverResponse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodePluginServiceServer).DeliverResponse(ctx, req.(*DeliverResponseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodePluginService_ServiceDesc is the grpc.ServiceDesc for NodePluginService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -369,6 +405,10 @@ var NodePluginService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "HealthCheck",
 			Handler:    _NodePluginService_HealthCheck_Handler,
 		},
+		{
+			MethodName: "DeliverResponse",
+			Handler:    _NodePluginService_DeliverResponse_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -382,5 +422,5 @@ var NodePluginService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "proto/node_plugin.proto",
+	Metadata: "plugins/base-go/proto/node_plugin.proto",
 }

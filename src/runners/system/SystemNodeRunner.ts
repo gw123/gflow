@@ -3,7 +3,7 @@ import { interpolate } from '../utils';
 
 export class SystemNodeRunner implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     const logs: string[] = [];
     
     // Simulate network/process latency

@@ -1,25 +1,41 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-	"sync"
-	"time"
+    "bytes"
+    "context"
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "io"
+    "log"
+    "net/http"
+    "os"
+    "strconv"
+    "strings"
+    "sync"
+    "time"
 
 	"github.com/google/uuid"
 	"github.com/gw123/gflow/plugins/base-go"
 	pb "github.com/gw123/gflow/plugins/base-go/proto"
 )
+
+// WorkflowResponse represents a response from workflow execution
+type WorkflowResponse struct {
+	Body       interface{}       `json:"body,omitempty"`
+	StatusCode int               `json:"status_code,omitempty"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	Error      string            `json:"error,omitempty"`
+}
+
+// ResponseChannel for receiving workflow responses
+type ResponseChannel struct {
+	EventID  string
+	Response chan *WorkflowResponse
+	Timeout  time.Duration
+}
 
 type GatewayPlugin struct {
 	base.DefaultHandler
@@ -32,6 +48,8 @@ type GatewayPlugin struct {
 	currentSec    securityConfig
 	// 用于向所有订阅者广播事件的通道列表
 	subscribers []chan *pb.TriggerEvent
+	// 用于同步响应的等待通道
+	pendingResponses map[string]*ResponseChannel
 }
 
 func (p *GatewayPlugin) GetMetadata(ctx context.Context) (*pb.GetMetadataResponse, error) {
@@ -80,9 +98,11 @@ type securityConfig struct {
 }
 
 type routeConfig struct {
-	Path           string   `json:"path"`
-	Methods        []string `json:"methods"`
-	TargetWorkflow string   `json:"target_workflow,omitempty"`
+	Path            string   `json:"path"`
+	Methods         []string `json:"methods"`
+	TargetWorkflow  string   `json:"target_workflow,omitempty"`
+	ResponseTimeout int64    `json:"response_timeout_ms,omitempty"` // Timeout in milliseconds for sync response
+	SyncResponse    bool     `json:"sync_response,omitempty"`       // Whether to wait for workflow response
 }
 
 // startHTTPServer 启动或重启 HTTP 服务器
@@ -167,9 +187,18 @@ func (p *GatewayPlugin) startHTTPServer(filters map[string]string) error {
 		}
 		// If ANY present, allow all
 		allowAny := methods["ANY"]
-		handler := p.makeHandler(methods, allowAny, rc.TargetWorkflow, sec)
+		// Default timeout is 30 seconds if sync response is enabled
+		timeoutMs := rc.ResponseTimeout
+		if rc.SyncResponse && timeoutMs <= 0 {
+			timeoutMs = 30000
+		}
+		handler := p.makeHandler(methods, allowAny, rc.TargetWorkflow, sec, rc.SyncResponse, timeoutMs)
 		mux.HandleFunc(rc.Path, handler)
-		log.Printf("📥 HTTP Gateway route registered: %v %s (workflow=%s)", rc.Methods, rc.Path, rc.TargetWorkflow)
+		syncStr := ""
+		if rc.SyncResponse {
+			syncStr = fmt.Sprintf(", sync=%v, timeout=%dms", rc.SyncResponse, timeoutMs)
+		}
+		log.Printf("📥 HTTP Gateway route registered: %v %s (workflow=%s%s)", rc.Methods, rc.Path, rc.TargetWorkflow, syncStr)
 	}
 
 	// 创建新的 HTTP 服务器
@@ -235,14 +264,12 @@ func (p *GatewayPlugin) broadcastEvents() {
 
 // SubscribeTrigger 订阅触发事件
 func (p *GatewayPlugin) SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error {
-	filters := req.GetFilters()
+    filters := req.GetFilters()
 
-	// 如果服务器未启动或配置发生变化，重启服务器
-	if !p.started {
-		if err := p.startHTTPServer(filters); err != nil {
-			return err
-		}
-	}
+    // 根据当前 filters 启动/重启 HTTP 服务器（允许动态更新配置）
+    if err := p.startHTTPServer(filters); err != nil {
+        return err
+    }
 
 	// 创建订阅者通道
 	subChan := make(chan *pb.TriggerEvent, 64)
@@ -280,7 +307,7 @@ func (p *GatewayPlugin) SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream
 	}
 }
 
-func (p *GatewayPlugin) makeHandler(methods map[string]bool, allowAny bool, workflow string, sec securityConfig) http.HandlerFunc {
+func (p *GatewayPlugin) makeHandler(methods map[string]bool, allowAny bool, workflow string, sec securityConfig, syncResponse bool, responseTimeoutMs int64) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Method check
 		if !allowAny {
@@ -419,14 +446,125 @@ func (p *GatewayPlugin) makeHandler(methods map[string]bool, allowAny bool, work
 			TargetWorkflow: workflow,
 		}
 
+        // For synchronous responses, create a response channel
+        // Allow enabling sync via query param `sync_response=true|1`
+        // and override timeout via `response_timeout_ms=<number>`
+        var respChan *ResponseChannel
+        wantSync := syncResponse
+        if q := r.URL.Query().Get("sync_response"); q != "" {
+            if strings.EqualFold(q, "true") || q == "1" { wantSync = true }
+        }
+        // Optional header to enable sync: X-Sync-Response: true
+        if h := r.Header.Get("X-Sync-Response"); h != "" {
+            if strings.EqualFold(h, "true") || h == "1" { wantSync = true }
+        }
+
+        timeoutMs := responseTimeoutMs
+        if q := r.URL.Query().Get("response_timeout_ms"); q != "" {
+            if v, err := strconv.ParseInt(q, 10, 64); err == nil && v > 0 { timeoutMs = v }
+        }
+        if h := r.Header.Get("X-Response-Timeout-Ms"); h != "" {
+            if v, err := strconv.ParseInt(h, 10, 64); err == nil && v > 0 { timeoutMs = v }
+        }
+        // If sync is requested at request-time but no timeout provided via route or request,
+        // default to 30s to ensure per-request sync works without route config.
+        if wantSync && timeoutMs <= 0 {
+            timeoutMs = 30000
+        }
+
+        if wantSync && timeoutMs > 0 {
+            respChan = &ResponseChannel{
+                EventID:  ev.EventId,
+                Response: make(chan *WorkflowResponse, 1),
+                Timeout:  time.Duration(timeoutMs) * time.Millisecond,
+            }
+            p.mu.Lock()
+            p.pendingResponses[ev.EventId] = respChan
+            p.mu.Unlock()
+        }
+
 		// push to channel
 		select {
 		case p.eventChan <- ev:
 			// ok
 		case <-time.After(2 * time.Second):
 			log.Printf("⚠️ 事件通道阻塞，丢弃事件 %s", ev.EventId)
+			// Clean up pending response if we couldn't send the event
+			if respChan != nil {
+				p.mu.Lock()
+				delete(p.pendingResponses, ev.EventId)
+				p.mu.Unlock()
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":    "service_unavailable",
+				"message":  "Event channel blocked",
+				"event_id": ev.EventId,
+			})
+			return
 		}
 
+        // If synchronous response is enabled, wait for the response
+        if respChan != nil {
+            select {
+            case resp := <-respChan.Response:
+				// Set response headers
+				w.Header().Set("Content-Type", "application/json")
+				if resp.Headers != nil {
+					for k, v := range resp.Headers {
+						w.Header().Set(k, v)
+					}
+				}
+
+				// Handle error response
+				if resp.Error != "" {
+					w.WriteHeader(http.StatusInternalServerError)
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{
+						"error":    "workflow_error",
+						"message":  resp.Error,
+						"event_id": ev.EventId,
+					})
+					return
+				}
+
+				// Set status code (default 200)
+				statusCode := resp.StatusCode
+				if statusCode == 0 {
+					statusCode = http.StatusOK
+				}
+				w.WriteHeader(statusCode)
+
+				// Write response body
+				if resp.Body != nil {
+					_ = json.NewEncoder(w).Encode(resp.Body)
+				} else {
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{
+						"success":  true,
+						"event_id": ev.EventId,
+					})
+				}
+				return
+
+            case <-time.After(time.Duration(respChan.Timeout)):
+                // Timeout - clean up and return 504
+                p.mu.Lock()
+                delete(p.pendingResponses, ev.EventId)
+                p.mu.Unlock()
+
+                log.Printf("⚠️ Response timeout for event %s after %dms", ev.EventId, timeoutMs)
+                w.Header().Set("Content-Type", "application/json")
+                w.WriteHeader(http.StatusGatewayTimeout)
+                _ = json.NewEncoder(w).Encode(map[string]interface{}{
+                    "error":    "gateway_timeout",
+                    "message":  "Workflow execution timed out",
+                    "event_id": ev.EventId,
+                })
+                return
+            }
+        }
+
+		// Async response (default behavior)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -454,10 +592,73 @@ func isJSONContent(ct string) bool {
 	return strings.Contains(ct, "application/json") || strings.Contains(ct, "+json")
 }
 
+// deliverPendingResponse delivers a workflow response to a waiting HTTP request
+func (p *GatewayPlugin) deliverPendingResponse(eventID string, response *WorkflowResponse) bool {
+    p.mu.Lock()
+    respChan, exists := p.pendingResponses[eventID]
+    if exists {
+        delete(p.pendingResponses, eventID)
+    }
+    p.mu.Unlock()
+
+	if !exists || respChan == nil {
+		log.Printf("⚠️ No pending request found for event %s", eventID)
+		return false
+	}
+
+	select {
+	case respChan.Response <- response:
+		log.Printf("✅ Response delivered for event %s", eventID)
+		return true
+	case <-time.After(100 * time.Millisecond):
+		log.Printf("⚠️ Response channel blocked for event %s", eventID)
+		return false
+	}
+}
+
+// DeliverResponse implements the gRPC RPC to deliver synchronous workflow response back to HTTP client
+func (p *GatewayPlugin) DeliverResponse(ctx context.Context, req *pb.DeliverResponseRequest) (*pb.DeliverResponseResponse, error) {
+    // Build WorkflowResponse from proto
+    var body interface{}
+    if req.HasResponse && req.Body != nil {
+        body = base.ValueToGo(req.Body)
+    }
+
+    resp := &WorkflowResponse{
+        Body:       body,
+        StatusCode: int(req.StatusCode),
+        Headers:    req.Headers,
+        Error:      req.Error,
+    }
+
+    ok := p.deliverPendingResponse(req.EventId, resp)
+    if !ok {
+        return &pb.DeliverResponseResponse{Success: false, Error: fmt.Sprintf("no pending request for event_id=%s", req.EventId)}, nil
+    }
+    return &pb.DeliverResponseResponse{Success: true}, nil
+}
+
+// cleanupExpiredResponses removes expired pending responses
+func (p *GatewayPlugin) cleanupExpiredResponses() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		p.mu.Lock()
+		// Note: In a production system, you'd track creation time
+		// For now, we rely on the timeout in makeHandler
+		p.mu.Unlock()
+	}
+}
+
 func main() {
 	plugin := &GatewayPlugin{}
 	// 初始化订阅者列表
 	plugin.subscribers = []chan *pb.TriggerEvent{}
+	// 初始化等待响应的映射
+	plugin.pendingResponses = make(map[string]*ResponseChannel)
+	// 启动清理协程
+	go plugin.cleanupExpiredResponses()
 	// 启动插件服务，使用指定的50053端口
 	// 通过命令行参数传递端口号给base.Serve
 	os.Args = append(os.Args, "--port", "50053")

@@ -15,7 +15,7 @@ export class MysqlNodeRunnerServer implements NodeRunner {
         };
 
         log(`[MySQL] Interpolating parameters...`);
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         try {
             // Extract connection configuration

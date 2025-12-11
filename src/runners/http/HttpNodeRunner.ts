@@ -14,7 +14,7 @@ export class HttpNodeRunner implements NodeRunner {
     };
 
     log(`Interpolating parameters...`);
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     
     if (node.type === 'webhook') {
         // Webhook in Client Side is just a simulation trigger

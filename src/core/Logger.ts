@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
+// 环境检测（浏览器/Node）
+const isNode = typeof process !== 'undefined' && !!(process as any).versions && !!(process as any).versions.node;
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+
 /**
  * Logger Utility - 日志工具类
  * 支持同时输出到控制台和文件
@@ -45,16 +49,18 @@ export class EnhancedLogger {
 
   constructor(options: LoggerOptions = {}) {
     // 默认配置
-    this.logFile = options.logFile || path.join(process.cwd(), 'logs', 'gflow.log');
+    // 在浏览器环境下不要调用 process.cwd，也默认不写文件
+    this.logFile = options.logFile || (isNode ? path.join(process.cwd(), 'logs', 'gflow.log') : 'gflow.log');
     this.level = options.level || 'info';
     this.consoleOutput = options.consoleOutput !== false;
-    this.fileOutput = options.fileOutput !== false;
+    // 浏览器默认不进行文件输出；Node 默认开启文件输出（除非显式关闭）
+    this.fileOutput = options.fileOutput !== undefined ? options.fileOutput : isNode;
     this.name = options.name;
     this.fields = options.fields || {};
     this.errorContext = options.errorContext;
 
     // 确保日志目录存在
-    if (this.fileOutput) {
+    if (this.fileOutput && isNode) {
       const logDir = path.dirname(this.logFile);
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
@@ -105,11 +111,13 @@ export class EnhancedLogger {
    * 写入日志到文件
    */
   private writeToFile(message: string): void {
-    if (!this.fileOutput) return;
+    // 仅在 Node 环境写文件，浏览器环境直接忽略
+    if (!this.fileOutput || !isNode) return;
 
     try {
       fs.appendFileSync(this.logFile, message + '\n');
     } catch (err) {
+      // 使用直接console输出以避免循环依赖
       console.error(`[Logger Error] Failed to write to log file: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
@@ -163,7 +171,12 @@ export class EnhancedLogger {
         throw new Error(formattedMessage);
       } else if (level === 'fatal') {
         console.error(formattedMessage);
-        process.exit(1);
+        // 仅在 Node 环境尝试退出进程；浏览器抛出错误即可
+        if (isNode && typeof (process as any).exit === 'function') {
+          (process as any).exit(1);
+        } else {
+          throw new Error(formattedMessage);
+        }
       }
     }
   }

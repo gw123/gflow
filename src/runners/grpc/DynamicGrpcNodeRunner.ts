@@ -117,7 +117,7 @@ export class DynamicGrpcNodeRunner implements NodeRunner {
         const { log } = context;
 
         // 参数插值
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         log(`[gRPC] Executing plugin '${this.kind}' at ${this.endpoint}`);
 

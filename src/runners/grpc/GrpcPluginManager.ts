@@ -58,6 +58,41 @@ class GrpcPluginManagerClass {
     // 日志器
     private logger = glog.defaultLogger().named('GrpcPluginManager');
 
+    // Convert a JavaScript value to proto-loader compatible Value
+    private toProtoValue(value: any): any {
+        if (value === null || value === undefined) {
+            return { null_value: 0 };
+        }
+        const t = typeof value;
+        if (t === 'string') {
+            return { string_value: value };
+        }
+        if (t === 'number') {
+            if (Number.isInteger(value)) {
+                return { int_value: value };
+            }
+            return { double_value: value };
+        }
+        if (t === 'boolean') {
+            return { bool_value: value };
+        }
+        if (value instanceof Uint8Array) {
+            return { bytes_value: value };
+        }
+        if (Array.isArray(value)) {
+            return { list_value: { values: value.map(v => this.toProtoValue(v)) } };
+        }
+        if (t === 'object') {
+            const fields: Record<string, any> = {};
+            for (const [k, v] of Object.entries(value)) {
+                fields[k] = this.toProtoValue(v);
+            }
+            return { map_value: { fields } };
+        }
+        // Fallback to string
+        return { string_value: String(value) };
+    }
+
     /**
      * 规范化端点字符串用于重复注册判断（忽略协议与本地地址差异）
      */
@@ -168,6 +203,9 @@ class GrpcPluginManagerClass {
             await this.initialize();
         }
 
+        // 规范化配置（特别是 filters 字段，统一为字符串）
+        config = this.normalizePluginConfig(config);
+
         const { kind, endpoint } = config;
 
         this.logger.infof('Registering plugin: %s at %s', kind, endpoint);
@@ -254,6 +292,45 @@ class GrpcPluginManagerClass {
 
             return false;
         }
+    }
+
+    /**
+     * 规范化插件配置，将 filters 的值统一转换为字符串，
+     * 便于通过 gRPC map<string,string> 传递。
+     * - 如果 routes_json 为对象/数组，则 JSON.stringify
+     * - 其他非字符串（数字/布尔）一律转为字符串
+     */
+    private normalizePluginConfig(config: GrpcPluginConfig): GrpcPluginConfig {
+        const cfg: any = { ...(config as any) };
+        if (cfg.filters && typeof cfg.filters === 'object') {
+            const normalized: Record<string, string> = {};
+            for (const [key, val] of Object.entries(cfg.filters)) {
+                if (val === null || val === undefined) {
+                    continue;
+                }
+                // routes_json 支持在 YAML 中写成数组/对象，这里统一转为 JSON 字符串
+                if (key === 'routes_json' && (typeof val === 'object')) {
+                    try {
+                        normalized[key] = JSON.stringify(val);
+                    } catch {
+                        normalized[key] = String(val);
+                    }
+                    continue;
+                }
+                // 统一转换为字符串
+                if (typeof val === 'object') {
+                    try {
+                        normalized[key] = JSON.stringify(val);
+                    } catch {
+                        normalized[key] = String(val);
+                    }
+                } else {
+                    normalized[key] = String(val);
+                }
+            }
+            cfg.filters = normalized;
+        }
+        return cfg as GrpcPluginConfig;
     }
 
     /**
@@ -574,25 +651,40 @@ class GrpcPluginManagerClass {
         const source = event?.source;
         const traceId = event?.trace_id;
         const eventId = event?.event_id;
+        // 从事件中读取目标工作流名称（由触发端指定）
+        const targetWorkflowName: string | undefined = (event?.target_workflow || event?.targetWorkflow);
+        const normalizedTargetName = typeof targetWorkflowName === 'string' ? targetWorkflowName.trim() : undefined;
 
         const workflows = this.readWorkflows();
         const matched: any[] = [];
 
         for (const wfRecord of workflows) {
-            // 跳过未启用的工作流（支持顶层 enabled 与 content.enabled）
-            if (wfRecord && (wfRecord.enabled === false || (wfRecord.content && wfRecord.content.enabled === false))) continue;
-            const wf = wfRecord.content;
+            // 支持两种结构：顶层字段或 content 包裹
+            const wf = (wfRecord && wfRecord.content) ? wfRecord.content : wfRecord;
+            const isEnabled = (wfRecord?.enabled !== false) && (wf?.enabled !== false);
+            if (!isEnabled) continue;
             if (!wf?.nodes) continue;
-            const hasTriggerNode = wf.nodes.some((n: any) => 
-                n.type === kind && ((n.meta && n.meta.category === 'trigger') || true)
-            );
+
+            const wfName = wf?.name || wfRecord?.name;
+            const hasTriggerNode = wf.nodes.some((n: any) => n.type === kind);
+            const nameMatched = !normalizedTargetName || (wfName === normalizedTargetName);
+
+            // 若指定了目标工作流名称，则仅按名称匹配（不强制要求包含触发节点）
+            if (normalizedTargetName) {
+                if (nameMatched) {
+                    matched.push(wf);
+                }
+                continue;
+            }
+
+            // 未指定目标名称时，按触发器类型匹配
             if (hasTriggerNode) {
                 matched.push(wf);
             }
         }
 
         if (matched.length === 0) {
-            this.logger.infof(`No workflows matched trigger [${kind}] for source=${source || '-'} event=${eventId || '-'} `);
+            this.logger.infof(`No workflows matched trigger [${kind}] for source=${source || '-'} event=${eventId || '-'} target=${normalizedTargetName || '-'} `);
             return;
         }
 
@@ -609,10 +701,97 @@ class GrpcPluginManagerClass {
                 };
 
                 const engine = new ServerWorkflowEngine(wf);
-                await engine.run();
+                const result = await engine.run({ eventId });
+
+                // If there's a response context with a response, deliver it to the trigger plugin
+                if (result.responseContext?.hasResponse && eventId) {
+                    await this.deliverResponseToTrigger(kind, eventId, result.responseContext);
+                } else if (eventId && result.responseContext) {
+                    // Workflow completed without explicit response node - send default accepted response
+                    await this.deliverResponseToTrigger(kind, eventId, {
+                        hasResponse: true,
+                        statusCode: 200,
+                        body: {
+                            accepted: true,
+                            event_id: eventId,
+                            message: 'Workflow completed without explicit response'
+                        }
+                    });
+                }
             } catch (err: any) {
                 this.logger.error(`Failed to execute workflow ${wf?.name} for trigger ${kind}:`, err?.message || err);
+                // If we have an eventId, try to deliver an error response
+                if (eventId) {
+                    await this.deliverResponseToTrigger(kind, eventId, {
+                        hasResponse: true,
+                        statusCode: 500,
+                        body: { error: 'workflow_error', message: err?.message || 'Unknown error' }
+                    });
+                }
             }
+        }
+    }
+
+    /**
+     * Deliver workflow response to the trigger plugin
+     */
+    private async deliverResponseToTrigger(kind: string, eventId: string, responseContext: any): Promise<void> {
+        // 使用已维护的客户端映射，不依赖 RegisteredGrpcPlugin 上不存在的 client 属性
+        const client = this.clients.get(kind);
+        if (!client) {
+            this.logger.warn(`Cannot deliver response: plugin ${kind} not found or not connected`);
+            return;
+        }
+
+        try {
+            this.logger.infof(`Response ready for event ${eventId}: status=${responseContext.statusCode || 200}`);
+
+            // 保障：若 body 为 JSON 字符串，尝试解析为对象，避免网关作为字符串编码
+            let responseBody = responseContext.body;
+            if (typeof responseBody === 'string') {
+                const trimmed = responseBody.trim();
+                if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                    try {
+                        responseBody = JSON.parse(trimmed);
+                        this.logger.info('DeliverResponse: parsed body string to JSON object');
+                    } catch (e: any) {
+                        this.logger.warn(`DeliverResponse: body parse failed, keeping string: ${e.message}`);
+                    }
+                }
+            }
+
+            const request: any = {
+                event_id: eventId,
+                body: this.toProtoValue(responseBody),
+                status_code: responseContext.statusCode || 200,
+                headers: responseContext.headers || {},
+                error: responseContext.error || '',
+                has_response: responseContext.hasResponse ?? true,
+            };
+
+            await new Promise<void>((resolve, reject) => {
+                const deadline = new Date();
+                deadline.setSeconds(deadline.getSeconds() + 10);
+                client.DeliverResponse(request, { deadline }, (err: any, resp: any) => {
+                    if (err) {
+                        // If server does not implement yet
+                        if (err.code === grpc.status.UNIMPLEMENTED) {
+                            this.logger.warn(`DeliverResponse not implemented by ${kind}; please update plugin server.`);
+                            resolve();
+                            return;
+                        }
+                        reject(err);
+                        return;
+                    }
+                    if (!resp?.success) {
+                        const msg = resp?.error || 'DeliverResponse returned unsuccessful';
+                        this.logger.warn(`DeliverResponse unsuccessful for event ${eventId}: ${msg}`);
+                    }
+                    resolve();
+                });
+            });
+        } catch (err: any) {
+            this.logger.error(`Failed to deliver response for event ${eventId}:`, err?.message || err);
         }
     }
 

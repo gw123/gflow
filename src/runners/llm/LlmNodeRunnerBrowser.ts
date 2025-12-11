@@ -45,7 +45,7 @@ class LangfuseSpanMock {
 export class LlmNodeRunnerBrowser implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
         const { log } = context;
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
         const logs: string[] = [];
 
         // --- 1. Extract Config & Credentials ---

@@ -97,7 +97,7 @@ export class GrpcNodeRunner implements NodeRunner {
         const { log } = context;
 
         // 1. Parameter Interpolation
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
         const endpoint = params.endpoint || 'localhost:50051';
 
         // Simulated Metadata Check

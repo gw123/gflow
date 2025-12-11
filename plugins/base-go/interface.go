@@ -1,9 +1,9 @@
 package base
 
 import (
-	"context"
+    "context"
 
-	pb "github.com/gw123/gflow/plugins/base-go/proto"
+    pb "github.com/gw123/gflow/plugins/base-go/proto"
 )
 
 // PluginHandler defines the interface that plugins must implement
@@ -11,8 +11,8 @@ type PluginHandler interface {
   // GetMetadata returns the plugin metadata
   GetMetadata(ctx context.Context) (*pb.GetMetadataResponse, error)
 
-	// Init initializes the plugin
-	Init(ctx context.Context, req *pb.InitRequest) (*pb.InitResponse, error)
+    // Init initializes the plugin
+    Init(ctx context.Context, req *pb.InitRequest) (*pb.InitResponse, error)
 
     // Run executes the plugin logic
     Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) error
@@ -20,14 +20,17 @@ type PluginHandler interface {
     // SubscribeTrigger streams trigger events to the server
     SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error
 
-	// Stop stops the plugin execution
-	Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error)
+    // DeliverResponse delivers synchronous workflow response back to trigger
+    DeliverResponse(ctx context.Context, req *pb.DeliverResponseRequest) (*pb.DeliverResponseResponse, error)
 
-	// TestCredential tests the provided credentials
-	TestCredential(ctx context.Context, req *pb.TestCredentialRequest) (*pb.TestCredentialResponse, error)
+    // Stop stops the plugin execution
+    Stop(ctx context.Context, req *pb.StopRequest) (*pb.StopResponse, error)
 
-	// HealthCheck checks the plugin health
-	HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error)
+    // TestCredential tests the provided credentials
+    TestCredential(ctx context.Context, req *pb.TestCredentialRequest) (*pb.TestCredentialResponse, error)
+
+    // HealthCheck checks the plugin health
+    HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error)
 }
 
 // DefaultHandler provides a default implementation for optional methods
@@ -52,4 +55,9 @@ func (h *DefaultHandler) TestCredential(ctx context.Context, req *pb.TestCredent
 // Default no-op SubscribeTrigger; trigger plugins should override
 func (h *DefaultHandler) SubscribeTrigger(req *pb.SubscribeTriggerRequest, stream pb.NodePluginService_SubscribeTriggerServer) error {
   return nil
+}
+
+// Default no-op DeliverResponse; trigger plugins should override when supporting sync response
+func (h *DefaultHandler) DeliverResponse(ctx context.Context, req *pb.DeliverResponseRequest) (*pb.DeliverResponseResponse, error) {
+    return &pb.DeliverResponseResponse{Success: false, Error: "DeliverResponse not implemented"}, nil
 }

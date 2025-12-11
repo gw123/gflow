@@ -7,6 +7,7 @@ import { User, api } from './api/client';
 import { workflowToFlow, flowToWorkflow, getLayoutedElements } from './utils';
 import yaml from 'js-yaml';
 import { SAMPLE_YAML } from './constants';
+import { glog } from './core/Logger';
 
 // --- UI Store ---
 interface ToastMessage {
@@ -71,12 +72,12 @@ export const useUIStore = create<UIState>((set) => ({
   executionPanelOpen: false,
   showYamlView: false,
   setPanelOpen: (panel, isOpen) => {
-    console.log(`[UIStore] Setting panel '${panel}' to ${isOpen}`);
+    glog.debug(`[UIStore] Setting panel '${panel}' to ${isOpen}`);
     set((state) => ({ ...state, [panel]: isOpen }));
-    console.log(`[UIStore] Panel '${panel}' state updated`);
+    glog.debug(`[UIStore] Panel '${panel}' state updated`);
     const newState = useUIStore.getState();
-    console.log(`[UIStore] Full state after update:`, newState);
-    console.log(`[UIStore] executionPanelOpen value after update:`, newState.executionPanelOpen);
+    glog.debug(`[UIStore] Full state after update:`, newState);
+    glog.debug(`[UIStore] executionPanelOpen value after update:`, newState.executionPanelOpen);
   },
 
   selectedNodeId: null,
@@ -119,7 +120,7 @@ export const useUserStore = create<UserState>((set, get) => ({
           const creds = await api.getSecrets();
           set({ credentials: creds });
       } catch (e) {
-          console.error("Failed to fetch credentials");
+          glog.error("Failed to fetch credentials");
       }
   },
   logout: () => {

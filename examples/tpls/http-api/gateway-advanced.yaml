@@ -1,0 +1,318 @@
+# HTTP Gateway 高级示例
+# 展示 Gateway 插件的完整功能，包括 HMAC 认证、多路由配置等
+
+name: "HTTP Gateway Advanced Demo"
+
+global:
+  # 安全配置
+  hmacSecret: "advanced-secret-key-2024"
+  # API 配置
+  apiConfig: {
+    baseUrl: "https://api.example.com",
+    timeout: 5000
+  }
+
+nodes:
+  # 1. HTTP Gateway 触发器 - 高级配置
+  - name: "AdvancedGateway"
+    type: "http_gateway"
+    parameters:
+      # HTTP 监听端口
+      http_port: "8081"
+      # 路由配置 - JSON 格式（更灵活）
+      routes_json: |
+        [
+          {
+            "path": "/api/v2/users",
+            "methods": ["POST", "GET"],
+            "target_workflow": "HTTP Gateway Advanced Demo"
+          },
+          {
+            "path": "/api/v2/products/:id",
+            "methods": ["GET", "PUT", "DELETE"],
+            "target_workflow": "HTTP Gateway Advanced Demo"
+          },
+          {
+            "path": "/api/v2/webhook/*",
+            "methods": ["ANY"],
+            "target_workflow": "HTTP Gateway Advanced Demo"
+          }
+        ]
+      # HMAC 认证配置
+      hmac_secret: "={{ $global.hmacSecret }}"
+      # 签名头配置
+      signature_header: "X-Gateway-Signature"
+      timestamp_header: "X-Gateway-Timestamp"
+      # 时间戳偏差（毫秒）
+      timestamp_skew_ms: "60000"
+
+  # 2. HMAC 签名验证
+  - name: "VerifyHMAC"
+    type: "js"
+    parameters:
+      input:
+        triggerPayload: "={{ $global.TRIGGER.payload }}"
+      code: |
+        const { triggerPayload } = input;
+        const payload = triggerPayload;
+        console.log("🔐 开始 HMAC 验证...");
+        
+        // HMAC 验证在插件内部已完成，这里仅做额外验证
+        const headers = payload.headers || {};
+        const signature = headers['X-Gateway-Signature'] || '';
+        const timestamp = headers['X-Gateway-Timestamp'] || '';
+        
+        if (!signature || !timestamp) {
+          throw new Error('Missing signature or timestamp');
+        }
+        
+        console.log("✅ HMAC 验证通过");
+        
+        return {
+          hmacVerified: true,
+          signature: signature,
+          timestamp: timestamp,
+          payload: payload
+        };
+
+  # 3. 解析请求参数
+  - name: "ParseParams"
+    type: "js"
+    parameters:
+      code: |
+        const data = input;
+        const payload = data.payload;
+        
+        // 解析请求数据
+        const method = payload.method;
+        const path = payload.path;
+        const body = payload.body || {};
+        const query = payload.query || {};
+        
+        // 解析路径参数（示例）
+        const pathParts = path.split('/');
+        let pathParams = {};
+        
+        // 处理 /api/v2/products/:id 格式的路径
+        if (path.startsWith('/api/v2/products/')) {
+          pathParams = {
+            productId: pathParts[4] || ''
+          };
+        }
+        
+        // 处理 /api/v2/webhook/* 格式的路径
+        if (path.startsWith('/api/v2/webhook/')) {
+          pathParams = {
+            webhookType: pathParts[4] || '',
+            webhookId: pathParts[5] || ''
+          };
+        }
+        
+        return {
+          method: method,
+          path: path,
+          body: body,
+          query: query,
+          pathParams: pathParams,
+          fullUrl: `http://localhost:8081${path}`
+        };
+
+  # 4. 请求分类
+  - name: "ClassifyRequest"
+    type: "js"
+    parameters:
+      code: |
+        const request = input;
+        
+        let category = "unknown";
+        let action = "unknown";
+        
+        // 分类逻辑
+        if (request.path.startsWith('/api/v2/users')) {
+          category = "users";
+          action = request.method === "POST" ? "create_user" : "get_users";
+        } else if (request.path.startsWith('/api/v2/products')) {
+          category = "products";
+          if (request.method === "GET") {
+            action = "get_product";
+          } else if (request.method === "PUT") {
+            action = "update_product";
+          } else if (request.method === "DELETE") {
+            action = "delete_product";
+          }
+        } else if (request.path.startsWith('/api/v2/webhook')) {
+          category = "webhook";
+          action = `webhook_${request.pathParams.webhookType || 'unknown'}`;
+        }
+        
+        return {
+          category: category,
+          action: action,
+          ...request
+        };
+
+  # 5. 用户管理处理
+  - name: "HandleUserRequest"
+    type: "js"
+    parameters:
+      code: |
+        const request = input;
+        
+        if (request.action === "create_user") {
+          // 模拟创建用户
+          const user = {
+            id: `USER-${Date.now()}`,
+            ...request.body,
+            createdAt: new Date().toISOString(),
+            status: "active"
+          };
+          
+          return {
+            success: true,
+            user: user,
+            message: "User created successfully"
+          };
+        } else {
+          // 模拟获取用户列表
+          const users = [
+            { id: "USER-1", name: "User 1", email: "user1@example.com" },
+            { id: "USER-2", name: "User 2", email: "user2@example.com" }
+          ];
+          
+          return {
+            success: true,
+            users: users,
+            count: users.length,
+            message: "Users retrieved successfully"
+          };
+        }
+
+  # 6. 产品管理处理
+  - name: "HandleProductRequest"
+    type: "js"
+    parameters:
+      code: |
+        const request = input;
+        const productId = request.pathParams.productId;
+        
+        switch (request.action) {
+          case "get_product":
+            return {
+              success: true,
+              product: {
+                id: productId,
+                name: `Product ${productId}`,
+                price: 99.99,
+                stock: 100
+              },
+              message: "Product retrieved successfully"
+            };
+          
+          case "update_product":
+            return {
+              success: true,
+              product: {
+                id: productId,
+                ...request.body,
+                updatedAt: new Date().toISOString()
+              },
+              message: "Product updated successfully"
+            };
+          
+          case "delete_product":
+            return {
+              success: true,
+              deletedId: productId,
+              message: "Product deleted successfully"
+            };
+          
+          default:
+            return {
+              success: false,
+              error: "Unknown product action",
+              code: 400
+            };
+        }
+
+  # 7. Webhook 处理
+  - name: "HandleWebhook"
+    type: "js"
+    parameters:
+      code: |
+        const request = input;
+        const webhookType = request.pathParams.webhookType;
+        
+        console.log(`📡 处理 Webhook: ${webhookType}`);
+        console.log("📋 Webhook 数据:", JSON.stringify(request.body, null, 2));
+        
+        // 模拟不同类型的 webhook 处理
+        let result = {
+          success: true,
+          webhookType: webhookType,
+          processedAt: new Date().toISOString(),
+          data: request.body
+        };
+        
+        if (webhookType === "payment") {
+          // 支付 webhook 处理
+          result.paymentStatus = request.body.status || "pending";
+          result.transactionId = request.body.transactionId || "";
+        } else if (webhookType === "shipping") {
+          // 物流 webhook 处理
+          result.shippingStatus = request.body.status || "processing";
+          result.trackingNumber = request.body.trackingNumber || "";
+        }
+        
+        return result;
+
+  # 8. 统一响应构建
+  - name: "BuildResponse"
+    type: "js"
+    parameters:
+      code: |
+        const result = input;
+        
+        // 根据处理结果构建统一响应
+        let response = {
+          success: result.success || false,
+          timestamp: new Date().toISOString(),
+          requestId: `REQ-${Date.now()}`
+        };
+        
+        if (result.success) {
+          response.message = result.message || "Request processed successfully";
+          
+          // 根据不同类型添加数据
+          if (result.user) response.user = result.user;
+          if (result.users) response.users = result.users;
+          if (result.product) response.product = result.product;
+          if (result.deletedId) response.deletedId = result.deletedId;
+          if (result.webhookType) response.webhook = result;
+        } else {
+          response.message = result.message || "Request failed";
+          response.error = result.error || "Unknown error";
+          response.code = result.code || 500;
+        }
+        
+        console.log("📤 构建最终响应:", JSON.stringify(response, null, 2));
+        
+        return response;
+
+connections:
+  AdvancedGateway:
+    - - { node: "VerifyHMAC" }
+  VerifyHMAC:
+    - - { node: "ParseParams" }
+  ParseParams:
+    - - { node: "ClassifyRequest" }
+  ClassifyRequest:
+    # 根据分类路由到不同处理节点
+    - - { node: "HandleUserRequest", when: [{ value1: "={{ $P.category }}", operation: "==", value2: "users" }] }
+    - - { node: "HandleProductRequest", when: [{ value1: "={{ $P.category }}", operation: "==", value2: "products" }] }
+    - - { node: "HandleWebhook", when: [{ value1: "={{ $P.category }}", operation: "==", value2: "webhook" }] }
+  HandleUserRequest:
+    - - { node: "BuildResponse" }
+  HandleProductRequest:
+    - - { node: "BuildResponse" }
+  HandleWebhook:
+    - - { node: "BuildResponse" }

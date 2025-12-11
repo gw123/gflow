@@ -43,6 +43,9 @@ service NodePluginService {
   
   // HealthCheck 健康检查
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+  // DeliverResponse 将工作流响应投递给触发器插件（用于同步 HTTP 等场景）
+  rpc DeliverResponse(DeliverResponseRequest) returns (DeliverResponseResponse);
 }
 
 // =============================================================================
@@ -446,6 +449,26 @@ message TriggerEvent {
   string target_workflow = 5;
   // 触发发生时间
   int64 timestamp_ms = 6;
+}
+
+// =============================================================================
+// DeliverResponse - 投递工作流同步响应
+// =============================================================================
+
+// DeliverResponseRequest 包含要投递的响应信息
+message DeliverResponseRequest {
+  string event_id = 1;                 // 事件 ID（对应触发请求）
+  Value body = 2;                      // 响应体（任意结构）
+  int32 status_code = 3;               // HTTP 状态码（默认 200）
+  map<string, string> headers = 4;     // 响应头
+  string error = 5;                    // 错误信息（可选）
+  bool has_response = 6;               // 是否包含响应
+}
+
+// DeliverResponseResponse 表示投递结果
+message DeliverResponseResponse {
+  bool success = 1;                    // 是否成功投递
+  string error = 2;                    // 错误信息（可选）
 }
 
 // =============================================================================

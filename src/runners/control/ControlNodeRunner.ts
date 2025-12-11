@@ -9,7 +9,7 @@ import { interpolate } from '../utils';
  */
 export class ControlNodeRunner implements NodeRunner {
     async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
-        const params = interpolate(node.parameters, context);
+        const params = interpolate(node.parameters, context, node);
 
         // Handle If/Condition nodes
         if (node.type === 'if' || node.type === 'condition') {

@@ -6,7 +6,7 @@ import { pcmToGeminiBlob } from '../audioUtils';
 export class MediaNodeRunnerBrowser implements NodeRunner {
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
     
     const mode = params.mode || 'audio'; // audio, video, both
     const duration = Number(params.duration) || 5;

@@ -55,7 +55,7 @@ export class WorkflowEngine {
         this.callbacks.onUpdate({ ...this.state });
     }
 
-    public async execute(mode: 'run' | 'step' = 'run') {
+    public async execute(mode: 'run' | 'step' = 'run', options?: { eventId?: string }) {
         if (this.state.isRunning && !this.state.isPaused) return;
         
         this.mode = mode;
@@ -65,6 +65,11 @@ export class WorkflowEngine {
         if (!this.state.isPaused && !this.state.waitingForInput) {
             this.state.nodeResults = {};
             this.state.logs = [];
+            // Initialize response context for synchronous trigger responses
+            this.state.responseContext = {
+                hasResponse: false,
+                eventId: options?.eventId
+            };
             this.log(`Starting execution in ${mode} mode...`);
         } else {
             this.log(`Resuming execution...`);

@@ -4,7 +4,7 @@ import vm from 'vm';
 import path from 'path';
 // Fix: Import from ../src/core because server is at root and core is in src/core
 import { WorkflowEngine as CoreEngine } from '../core/WorkflowEngine';
-import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../core/types';
+import { WorkflowDefinition, NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult, WorkflowExecutionOptions } from '../core/types';
 import { HttpNodeRunnerProxy } from '../runners/http';
 import { JsNodeRunnerProxy } from '../runners/js';
 import { TimeNodeRunnerProxy } from '../runners/time';
@@ -21,6 +21,7 @@ import { Logger, glog } from '../core/Logger';
 import { ManualNodeRunnerProxy } from '../runners/manual';
 import { SystemNodeRunnerProxy } from '../runners/system';
 import { TtsNodeRunnerProxy } from '../runners/tts';
+import { ResponseNodeRunnerProxy } from '../runners/response';
 import { interpolate as sharedInterpolate } from '../runners/utils';
 
 /**
@@ -347,6 +348,10 @@ const getRunner = (type: string): NodeRunner => {
         case 'speak':
             return new TtsNodeRunnerProxy();
 
+        // Response (for synchronous trigger responses)
+        case 'response':
+            return new ResponseNodeRunnerProxy();
+
         // Default fallback
         default:
             return new DefaultRunnerProxy();
@@ -415,7 +420,7 @@ export class ServerWorkflowEngine {
 
                     // Log input parameters
                     if (node.parameters) {
-                        const params = interpolate(node.parameters, context);
+                        const params = interpolate(node.parameters, context, node);
                         this.logger.nodeInput(node.name, params);
                     }
                 }
@@ -462,7 +467,7 @@ export class ServerWorkflowEngine {
         }
     }
 
-    async run() {
+    async run(options?: WorkflowExecutionOptions) {
         // Log workflow start
         const startNodes = this.workflow.nodes
             .filter(n => (n as any).meta?.category === 'trigger' || ['manual', 'webhook', 'timer'].includes(n.type))
@@ -474,8 +479,8 @@ export class ServerWorkflowEngine {
 
         this.logger.workflowStart(this.workflow.nodes.length, startNodes);
 
-        // Execute workflow
-        await this.engine.execute('run');
+        // Execute workflow with optional event ID for response correlation
+        await this.engine.execute('run', { eventId: options?.eventId });
 
         // Determine success
         const hasErrors = Object.values(this.engine.state.nodeResults)
@@ -484,10 +489,17 @@ export class ServerWorkflowEngine {
         // Log workflow end
         this.logger.workflowEnd(!hasErrors, this.engine.state.nodeResults);
 
-        // Return final state
+        // Call response callback if provided and response context has a response
+        const responseContext = this.engine.state.responseContext;
+        if (options?.responseCallback && responseContext) {
+            options.responseCallback(responseContext);
+        }
+
+        // Return final state including response context
         return {
             results: this.engine.state.nodeResults,
-            logs: this.engine.state.logs
+            logs: this.engine.state.logs,
+            responseContext
         };
     }
 }

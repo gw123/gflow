@@ -275,7 +275,7 @@ export class PlayMediaNodeRunnerServer implements NodeRunner {
 
   async run(node: NodeDefinition, context: NodeRunnerContext): Promise<Partial<NodeExecutionResult>> {
     const { log } = context;
-    const params = interpolate(node.parameters, context);
+    const params = interpolate(node.parameters, context, node);
 
     const mediaType = params.mediaType || 'audio'; // audio, video
     let data = params.data;

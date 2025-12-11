@@ -6,6 +6,7 @@
 
 import { createDatabase, createDatabaseFromEnv, Database } from './index';
 import { hashPassword, verifyPassword, encryptJson, decryptJson } from './utils';
+import { glog } from '../../core/Logger';
 
 // ==================== 初始化数据库 ====================
 
@@ -44,7 +45,7 @@ async function examples(db: Database) {
     slug: 'acme',
     plan: 'pro'
   });
-  console.log('Created tenant:', tenant);
+  glog.info('Created tenant:', tenant);
 
   // --- 用户管理 ---
   const passwordHash = hashPassword('secret123');
@@ -55,11 +56,11 @@ async function examples(db: Database) {
     password_hash: passwordHash,
     role: 'admin'
   });
-  console.log('Created user:', user);
+  glog.info('Created user:', user);
 
   // 验证密码
   const isValid = verifyPassword('secret123', user.password_hash);
-  console.log('Password valid:', isValid);
+  glog.info('Password valid:', isValid);
 
   // --- 工作流管理 ---
   const workflow = await db.workflows.create({
@@ -77,11 +78,11 @@ async function examples(db: Database) {
     },
     created_by: user.id
   });
-  console.log('Created workflow:', workflow);
+  glog.info('Created workflow:', workflow);
 
   // 查询工作流
   const workflows = await db.workflows.findAll(tenant.id, { limit: 10 });
-  console.log('Workflows:', workflows);
+  glog.info('Workflows:', workflows);
 
   // --- 工作流执行记录 ---
   const execution = await db.workflowExecutions.create({
@@ -91,7 +92,7 @@ async function examples(db: Database) {
     trigger_by: user.id,
     input_data: { value: 42 }
   });
-  console.log('Created execution:', execution);
+  glog.info('Created execution:', execution);
 
   // 更新执行状态
   await db.workflowExecutions.update(execution.id, {
@@ -102,7 +103,7 @@ async function examples(db: Database) {
 
   // 获取执行统计
   const stats = await db.workflowExecutions.getStats(tenant.id);
-  console.log('Execution stats:', stats);
+  glog.info('Execution stats:', stats);
 
   // --- 密钥管理 (加密存储) ---
   const secretData = encryptJson({ apiKey: 'sk-xxx', secret: 'yyy' });
@@ -113,11 +114,11 @@ async function examples(db: Database) {
     data_encrypted: secretData,
     created_by: user.id
   });
-  console.log('Created secret:', secret);
+  glog.info('Created secret:', secret);
 
   // 解密读取
   const decryptedData = decryptJson(secret.data_encrypted);
-  console.log('Decrypted secret:', decryptedData);
+  glog.info('Decrypted secret:', decryptedData);
 
   // --- Agent 管理 ---
   const agent = await db.agents.create({
@@ -128,7 +129,7 @@ async function examples(db: Database) {
     temperature: 0.7,
     created_by: user.id
   });
-  console.log('Created agent:', agent);
+  glog.info('Created agent:', agent);
 
   // 添加工具
   const tool = await db.agentTools.create({
@@ -138,7 +139,7 @@ async function examples(db: Database) {
     type: 'builtin',
     config: { maxResults: 5 }
   });
-  console.log('Created agent tool:', tool);
+  glog.info('Created agent tool:', tool);
 
   // 添加 MCP
   const mcp = await db.agentMcps.create({
@@ -149,7 +150,7 @@ async function examples(db: Database) {
     server_args: ['awslabs.aws-documentation-mcp-server@latest'],
     auto_approve: ['search_docs']
   });
-  console.log('Created agent MCP:', mcp);
+  glog.info('Created agent MCP:', mcp);
 
   // --- 存储引擎 ---
   const storageConfig = encryptJson({
@@ -166,7 +167,7 @@ async function examples(db: Database) {
     is_default: true,
     created_by: user.id
   });
-  console.log('Created storage:', storage);
+  glog.info('Created storage:', storage);
 
   // --- 文件管理 ---
   const file = await db.files.create({
@@ -179,7 +180,7 @@ async function examples(db: Database) {
     path: '/uploads/2024/12/document.pdf',
     uploaded_by: user.id
   });
-  console.log('Created file:', file);
+  glog.info('Created file:', file);
 
   // --- 标签管理 ---
   const tag = await db.tags.create({
@@ -188,12 +189,12 @@ async function examples(db: Database) {
     color: '#10B981',
     entity_type: 'workflow'
   });
-  console.log('Created tag:', tag);
+  glog.info('Created tag:', tag);
 
   // 关联标签
   await db.entityTags.addTag(workflow.id, 'workflow', tag.id);
   const workflowTags = await db.entityTags.findTagsByEntity(workflow.id, 'workflow');
-  console.log('Workflow tags:', workflowTags);
+  glog.info('Workflow tags:', workflowTags);
 
   // --- 表单管理 ---
   const form = await db.forms.create({
@@ -210,7 +211,7 @@ async function examples(db: Database) {
     },
     created_by: user.id
   });
-  console.log('Created form:', form);
+  glog.info('Created form:', form);
 
   // 表单提交
   const submission = await db.formSubmissions.create({
@@ -219,7 +220,7 @@ async function examples(db: Database) {
     data: { name: 'John', email: 'john@example.com', message: 'Hello!' },
     ip_address: '127.0.0.1'
   });
-  console.log('Created submission:', submission);
+  glog.info('Created submission:', submission);
 
   // --- 事务示例 ---
   await db.transaction(async () => {
@@ -227,7 +228,7 @@ async function examples(db: Database) {
     await db.workflows.incrementVersion(workflow.id);
   });
 
-  console.log('Transaction completed');
+  glog.info('Transaction completed');
 }
 
 // ==================== 运行示例 ====================
