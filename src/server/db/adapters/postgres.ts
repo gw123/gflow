@@ -4,6 +4,7 @@
 
 import { Pool, PoolClient, PoolConfig } from 'pg';
 import { BaseDatabaseAdapter } from './base';
+import { glog } from '../../../core/Logger';
 
 export interface PostgresConfig {
   host?: string;
@@ -22,6 +23,7 @@ export class PostgresAdapter extends BaseDatabaseAdapter {
   private pool: Pool | null = null;
   private client: PoolClient | null = null;  // 用于事务
   private config: PostgresConfig;
+  private logger = glog.defaultLogger().named('PostgresAdapter');
 
   constructor(config: PostgresConfig = {}) {
     super('postgres');
@@ -64,9 +66,9 @@ export class PostgresAdapter extends BaseDatabaseAdapter {
       testClient.release();
 
       this.connected = true;
-      console.log(`[PostgreSQL] Connected to ${this.config.host}:${this.config.port}/${this.config.database}`);
+      this.logger.info(`Connected to ${this.config.host}:${this.config.port}/${this.config.database}`);
     } catch (err: any) {
-      console.error('[PostgreSQL] Connection failed:', err.message);
+      this.logger.error(`Connection failed: ${err.message}`);
       throw err;
     }
   }
@@ -80,7 +82,7 @@ export class PostgresAdapter extends BaseDatabaseAdapter {
       await this.pool.end();
       this.pool = null;
       this.connected = false;
-      console.log('[PostgreSQL] Disconnected');
+      this.logger.info('Disconnected');
     }
   }
 
@@ -115,7 +117,9 @@ export class PostgresAdapter extends BaseDatabaseAdapter {
       const result = await executor.query(sql, params);
       return result.rows as T[];
     } catch (err: any) {
-      console.error('[PostgreSQL] Query error:', err.message, '\nSQL:', sql);
+      this.logger.error(`Query error: ${err.message}`, {
+        sql: sql
+      });
       throw err;
     }
   }
@@ -134,7 +138,9 @@ export class PostgresAdapter extends BaseDatabaseAdapter {
         insertId
       };
     } catch (err: any) {
-      console.error('[PostgreSQL] Execute error:', err.message, '\nSQL:', sql);
+      this.logger.error(`Execute error: ${err.message}`, {
+        sql: sql
+      });
       throw err;
     }
   }

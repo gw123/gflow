@@ -21,8 +21,6 @@ export class JsNodeRunnerServer implements NodeRunner {
         try {
             log(`Executing JavaScript code (environment: server)`);
 
-            const startTime = Date.now();
-
             // Dynamically import vm module (server-only)
             const vm = await import('vm');
 
@@ -35,15 +33,22 @@ export class JsNodeRunnerServer implements NodeRunner {
                     log: (...args: any[]) => {
                         const msg = args.join(' ');
                         executionLogs.push(msg);
+                        log(msg);
                     },
                     error: (...args: any[]) => {
-                        executionLogs.push('[ERROR] ' + args.join(' '));
+                        const msg = '[ERROR] ' + args.join(' ');
+                        executionLogs.push(msg);
+                        log(msg);
                     },
                     info: (...args: any[]) => {
-                        executionLogs.push('[INFO] ' + args.join(' '));
+                        const msg = '[INFO] ' + args.join(' ');
+                        executionLogs.push(msg);
+                        log(msg);
                     },
                     warn: (...args: any[]) => {
-                        executionLogs.push('[WARN] ' + args.join(' '));
+                        const msg = '[WARN] ' + args.join(' ');
+                        executionLogs.push(msg);
+                        log(msg);
                     }
                 },
                 // Add standard globals
@@ -71,13 +76,6 @@ export class JsNodeRunnerServer implements NodeRunner {
                 displayErrors: true
             });
 
-            const duration = Date.now() - startTime;
-            log(`Execution completed in ${duration}ms`);
-
-            // Output execution logs
-            if (executionLogs.length > 0) {
-                executionLogs.forEach(l => log(l));
-            }
 
             return {
                 status: 'success',

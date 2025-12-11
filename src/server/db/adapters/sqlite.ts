@@ -5,6 +5,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { BaseDatabaseAdapter } from './base';
+import { glog } from '../../../core/Logger';
 
 export interface SQLiteConfig {
   filename?: string;  // 数据库文件路径，默认 ./data/workflow.db
@@ -16,6 +17,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
   private db: Database.Database | null = null;
   private config: SQLiteConfig;
   private inTransaction: boolean = false;
+  private logger = glog.defaultLogger().named('SQLiteAdapter');
 
   constructor(config: SQLiteConfig = {}) {
     super('sqlite');
@@ -39,7 +41,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
 
       this.db = new Database(this.config.filename!, {
         readonly: this.config.readonly,
-        verbose: this.config.verbose ? console.log : undefined
+        verbose: this.config.verbose ? (message: any) => this.logger.debug(message) : undefined
       });
 
       // 启用外键约束
@@ -48,9 +50,9 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       this.db.pragma('journal_mode = WAL');
       
       this.connected = true;
-      console.log(`[SQLite] Connected to ${this.config.filename}`);
+      this.logger.info(`Connected to ${this.config.filename}`);
     } catch (err: any) {
-      console.error('[SQLite] Connection failed:', err.message);
+      this.logger.error(`Connection failed: ${err.message}`);
       throw err;
     }
   }
@@ -60,7 +62,7 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       this.db.close();
       this.db = null;
       this.connected = false;
-      console.log('[SQLite] Disconnected');
+      this.logger.info('Disconnected');
     }
   }
 
@@ -95,7 +97,9 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
       const rows = stmt.all(...params) as T[];
       return rows.map(row => this.parseJsonFields(row));
     } catch (err: any) {
-      console.error('[SQLite] Query error:', err.message, '\nSQL:', sql);
+      this.logger.error(`Query error: ${err.message}`, {
+        sql: sql
+      });
       throw err;
     }
   }
@@ -110,7 +114,9 @@ export class SQLiteAdapter extends BaseDatabaseAdapter {
         insertId: result.lastInsertRowid?.toString()
       };
     } catch (err: any) {
-      console.error('[SQLite] Execute error:', err.message, '\nSQL:', sql);
+      this.logger.error(`Execute error: ${err.message}`, {
+        sql: sql
+      });
       throw err;
     }
   }

@@ -5,6 +5,7 @@
 import crypto from 'node:crypto';
 import { DatabaseAdapter } from '../interface';
 import { DatabaseType, getCreateTableSQL, getCreateIndexSQL } from '../schema';
+import { glog } from '../../../core/Logger';
 
 export abstract class BaseDatabaseAdapter implements DatabaseAdapter {
   protected dbType: DatabaseType;
@@ -30,7 +31,7 @@ export abstract class BaseDatabaseAdapter implements DatabaseAdapter {
    * 执行数据库迁移
    */
   async migrate(): Promise<void> {
-    console.log(`[DB] Running migrations for ${this.dbType}...`);
+    glog.info(`[DB] Running migrations for ${this.dbType}...`);
     
     const tables = getCreateTableSQL(this.dbType);
     const indexes = getCreateIndexSQL(this.dbType);
@@ -40,7 +41,7 @@ export abstract class BaseDatabaseAdapter implements DatabaseAdapter {
       try {
         await this.execute(sql);
       } catch (err: any) {
-        console.error(`[DB] Migration error: ${err.message}`);
+        glog.error(`[DB] Migration error: ${err.message}`);
         throw err;
       }
     }
@@ -52,12 +53,12 @@ export abstract class BaseDatabaseAdapter implements DatabaseAdapter {
       } catch (err: any) {
         // 索引可能已存在，忽略错误
         if (!err.message.includes('already exists')) {
-          console.warn(`[DB] Index warning: ${err.message}`);
+          glog.warn(`[DB] Index warning: ${err.message}`);
         }
       }
     }
 
-    console.log('[DB] Migrations completed successfully');
+    glog.info('[DB] Migrations completed successfully');
   }
 
   /**

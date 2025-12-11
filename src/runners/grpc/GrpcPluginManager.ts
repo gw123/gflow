@@ -15,6 +15,7 @@ import * as protoLoader from '@grpc/proto-loader';
 import { Registry } from '../../registry';
 import { ServerWorkflowEngine } from '../../server/engine';
 import { NodePlugin, PluginParameterDefinition } from '../../types';
+import { glog } from '../../core/Logger';
 import {
     GrpcPluginConfig,
     GrpcPluginsConfig,
@@ -54,6 +55,8 @@ class GrpcPluginManagerClass {
     private workflowsWatcherStarted: boolean = false;
     // 指数退避重试状态映射
     private triggerRetry: Map<string, { delayMs: number; attempts: number; maxDelayMs: number; initialDelayMs: number; timer?: NodeJS.Timeout }> = new Map();
+    // 日志器
+    private logger = glog.defaultLogger().named('GrpcPluginManager');
 
     /**
      * 规范化端点字符串用于重复注册判断（忽略协议与本地地址差异）
@@ -111,9 +114,9 @@ class GrpcPluginManagerClass {
             this.serviceDefinition = (this.protoDefinition as any).node_plugin.NodePluginService;
 
             this.initialized = true;
-            console.log('[GrpcPluginManager] Initialized successfully');
+            this.logger.info('Initialized successfully');
         } catch (error) {
-            console.error('[GrpcPluginManager] Failed to initialize:', error);
+            this.logger.error('Failed to initialize:', error);
             throw error;
         }
     }
@@ -131,15 +134,15 @@ class GrpcPluginManagerClass {
             const config = yaml.load(configContent) as GrpcPluginsConfig;
 
             if (!config || !config.plugins) {
-                console.warn('[GrpcPluginManager] No plugins found in config');
+                this.logger.warn('No plugins found in config');
                 return;
             }
 
-            console.log(`[GrpcPluginManager] Loading ${config.plugins.length} plugins from config...`);
+            this.logger.infof('Loading %d plugins from config...', config.plugins.length);
 
             for (const pluginConfig of config.plugins) {
                 if (!pluginConfig.enabled) {
-                    console.log(`[GrpcPluginManager] Skipping disabled plugin: ${pluginConfig.kind}`);
+                    this.logger.info(`Skipping disabled plugin: ${pluginConfig.kind}`);
                     continue;
                 }
 
@@ -152,7 +155,7 @@ class GrpcPluginManagerClass {
             // 启动工作流文件变化监听，用于按需启动/停止触发订阅
             this.startWorkflowsWatcher();
         } catch (error) {
-            console.error('[GrpcPluginManager] Failed to load config:', error);
+            this.logger.error('Failed to load config:', error);
             throw error;
         }
     }
@@ -167,7 +170,7 @@ class GrpcPluginManagerClass {
 
         const { kind, endpoint } = config;
 
-        console.log(`[GrpcPluginManager] Registering plugin: ${kind} at ${endpoint}`);
+        this.logger.infof('Registering plugin: %s at %s', kind, endpoint);
 
         try {
             // 若已存在同名且端点一致（规范化后）插件，避免重复注册，合并配置后直接返回
@@ -177,7 +180,7 @@ class GrpcPluginManagerClass {
             if (existing && existing.config && epExisting && epExisting === epIncoming) {
                 existing.config = this.mergePluginConfig(existing.config, config);
                 this.plugins.set(kind, existing);
-                console.log(`[GrpcPluginManager] Plugin ${kind} already registered at ${epExisting}; skipping duplicate registration`);
+                this.logger.infof('Plugin %s already registered at %s; skipping duplicate registration', kind, epExisting);
                 return true;
             }
 
@@ -207,7 +210,7 @@ class GrpcPluginManagerClass {
                         registeredPlugin.metadata = metadata;
                     }
                 } catch (error: any) {
-                    console.warn(`[GrpcPluginManager] Health check failed for ${kind}:`, error.message);
+                    this.logger.warn(`Health check failed for ${kind}:`, error.message);
                     registeredPlugin.status = 'unhealthy';
                     registeredPlugin.error = error.message;
                 }
@@ -227,20 +230,20 @@ class GrpcPluginManagerClass {
                     // 避免重复启动导致立刻取消与重建
                     if (!this.triggerStreams.has(kind)) {
                         this.startTriggerSubscription(kind).catch(err => {
-                            console.warn(`[GrpcPluginManager] Failed to start trigger subscription for ${kind}:`, err?.message || err);
+                            this.logger.warn(`Failed to start trigger subscription for ${kind}:`, err?.message || err);
                         });
                     } else {
-                        console.log(`[GrpcPluginManager] Trigger subscription already active for ${kind}; skipping`);
+                        this.logger.info(`Trigger subscription already active for ${kind}; skipping`);
                     }
                 } else {
-                    console.log(`[GrpcPluginManager] Skip trigger subscription for ${kind}: no workflows reference this trigger`);
+                    this.logger.info(`Skip trigger subscription for ${kind}: no workflows reference this trigger`);
                 }
             }
 
-            console.log(`[GrpcPluginManager] ✅ Successfully registered plugin configuration: ${kind}. Status: ${registeredPlugin.status}`);
+            this.logger.info(`✅ Successfully registered plugin configuration: ${kind}. Status: ${registeredPlugin.status}`);
             return true;
         } catch (error: any) {
-            console.error(`[GrpcPluginManager] Failed to register plugin ${kind}:`, error.message);
+            this.logger.error(`Failed to register plugin ${kind}:`, error.message);
 
             const registeredPlugin: RegisteredGrpcPlugin = {
                 config,
@@ -527,7 +530,7 @@ class GrpcPluginManagerClass {
         const call: grpc.ClientReadableStream<any> = client.SubscribeTrigger(request);
         this.triggerStreams.set(kind, call);
 
-        console.log(`[GrpcPluginManager] ▶ Subscribed trigger stream for ${kind}`);
+        this.logger.info(`▶ Subscribed trigger stream for ${kind}`);
 
         call.on('data', async (event: any) => {
             try {
@@ -535,30 +538,30 @@ class GrpcPluginManagerClass {
                 this.resetTriggerRetry(kind);
                 await this.handleTriggerEvent(kind, event);
             } catch (err: any) {
-                console.error(`[GrpcPluginManager] Error handling trigger event from ${kind}:`, err?.message || err);
+                this.logger.error(`Error handling trigger event from ${kind}:`, err?.message || err);
             }
         });
 
         call.on('error', (err: any) => {
             const msg = err?.message || String(err);
-            console.warn(`[GrpcPluginManager] Trigger stream error for ${kind}:`, msg);
+            this.logger.warn(`Trigger stream error for ${kind}:`, msg);
             // 指数退避重订阅
             this.scheduleTriggerResubscribe(kind, `error: ${msg}`, true);
         });
 
         call.on('end', () => {
-            console.log(`[GrpcPluginManager] Trigger stream ended for ${kind}`);
+            this.logger.info(`Trigger stream ended for ${kind}`);
             const state = this.getTriggerRetry(kind);
             // 如果刚经历错误并已进入退避周期，避免 end 事件再次调度导致频繁重试
             if (state.attempts > 0) {
-                console.log(`[GrpcPluginManager] Skip end resubscribe for ${kind}: backoff in progress (attempts=${state.attempts})`);
+                this.logger.info(`Skip end resubscribe for ${kind}: backoff in progress (attempts=${state.attempts})`);
                 return;
             }
             // 若仍有工作流引用该触发器，则按初始延迟重订阅（不指数增加）
             if (this.shouldSubscribeForTrigger(kind)) {
                 this.scheduleTriggerResubscribe(kind, 'end', false);
             } else {
-                console.log(`[GrpcPluginManager] Not resubscribing ${kind}: no workflows reference this trigger`);
+                this.logger.info(`Not resubscribing ${kind}: no workflows reference this trigger`);
             }
         });
     }
@@ -589,7 +592,7 @@ class GrpcPluginManagerClass {
         }
 
         if (matched.length === 0) {
-            console.log(`[GrpcPluginManager] No workflows matched trigger [${kind}] for source=${source || '-'} event=${eventId || '-'} `);
+            this.logger.infof(`No workflows matched trigger [${kind}] for source=${source || '-'} event=${eventId || '-'} `);
             return;
         }
 
@@ -608,7 +611,7 @@ class GrpcPluginManagerClass {
                 const engine = new ServerWorkflowEngine(wf);
                 await engine.run();
             } catch (err: any) {
-                console.error(`[GrpcPluginManager] Failed to execute workflow ${wf?.name} for trigger ${kind}:`, err?.message || err);
+                this.logger.error(`Failed to execute workflow ${wf?.name} for trigger ${kind}:`, err?.message || err);
             }
         }
     }
@@ -637,13 +640,13 @@ class GrpcPluginManagerClass {
                         workflows.push(workflow);
                     }
                 } catch (e) {
-                    console.warn(`[GrpcPluginManager] Failed to read workflow file ${file}:`, (e as any)?.message || e);
+                    this.logger.warn(`Failed to read workflow file ${file}:`, (e as any)?.message || e);
                 }
             }
             
             return workflows;
         } catch (e) {
-            console.warn('[GrpcPluginManager] Failed to read workflows directory:', (e as any)?.message || e);
+            this.logger.warn('Failed to read workflows directory:', (e as any)?.message || e);
             return [];
         }
     }
@@ -769,7 +772,7 @@ class GrpcPluginManagerClass {
             try {
                 client.close();
             } catch (e) {
-                console.warn(`[GrpcPluginManager] Error closing client ${kind}:`, e);
+                this.logger.warn(`Error closing client ${kind}:`, e);
             }
         }
 
@@ -806,7 +809,7 @@ class GrpcPluginManagerClass {
         try {
             const flowsDir = path.resolve(__dirname, '../../server/data/flows');
             if (!fs.existsSync(flowsDir)) {
-                console.warn('[GrpcPluginManager] Flows directory not found, creating it...');
+                this.logger.warn('Flows directory not found, creating it...');
                 fs.mkdirSync(flowsDir, { recursive: true });
             }
             
@@ -816,15 +819,15 @@ class GrpcPluginManagerClass {
                     try {
                         this.restartAllTriggerSubscriptions();
                     } catch (e) {
-                        console.warn('[GrpcPluginManager] Failed to restart trigger subscriptions on workflows change:', (e as any)?.message || e);
+                        this.logger.warn('Failed to restart trigger subscriptions on workflows change:', (e as any)?.message || e);
                     }
                 }
             });
             
             this.workflowsWatcherStarted = true;
-            console.log('[GrpcPluginManager] Workflows watcher started for YAML directory');
+            this.logger.info('Workflows watcher started for YAML directory');
         } catch (e) {
-            console.warn('[GrpcPluginManager] Failed to start workflows watcher:', (e as any)?.message || e);
+            this.logger.warn('Failed to start workflows watcher:', (e as any)?.message || e);
         }
     }
 
@@ -840,10 +843,10 @@ class GrpcPluginManagerClass {
             const should = this.shouldSubscribeForTrigger(kind);
             const hasStream = this.triggerStreams.has(kind);
             if (should && !hasStream) {
-                console.log(`[GrpcPluginManager] ▶ Starting trigger subscription for ${kind} due to workflows change`);
+                this.logger.info(`▶ Starting trigger subscription for ${kind} due to workflows change`);
                 this.startTriggerSubscription(kind).catch(() => {});
             } else if (!should && hasStream) {
-                console.log(`[GrpcPluginManager] ✋ Stopping trigger subscription for ${kind} (no workflows reference)`);
+                this.logger.info(`✋ Stopping trigger subscription for ${kind} (no workflows reference)`);
                 const existing = this.triggerStreams.get(kind);
                 try { existing?.cancel(); } catch {}
                 this.triggerStreams.delete(kind);
@@ -895,7 +898,7 @@ class GrpcPluginManagerClass {
      */
     private scheduleTriggerResubscribe(kind: string, reason: string, useExponential: boolean = true): void {
         if (!this.shouldSubscribeForTrigger(kind)) {
-            console.log(`[GrpcPluginManager] Not resubscribing ${kind}: no workflows reference this trigger`);
+            this.logger.info(`Not resubscribing ${kind}: no workflows reference this trigger`);
             return;
         }
 
@@ -911,10 +914,10 @@ class GrpcPluginManagerClass {
             state.timer = undefined;
         }
 
-        console.log(`[GrpcPluginManager] ⏳ Resubscribing ${kind} in ${delay}ms (${reason}, attempt ${state.attempts + 1})`);
+        this.logger.info(`⏳ Resubscribing ${kind} in ${delay}ms (${reason}, attempt ${state.attempts + 1})`);
         state.timer = setTimeout(() => {
             this.startTriggerSubscription(kind).catch(err => {
-                console.warn(`[GrpcPluginManager] Failed to resubscribe ${kind}:`, err?.message || err);
+                this.logger.warn(`Failed to resubscribe ${kind}:`, err?.message || err);
             });
         }, delay);
 

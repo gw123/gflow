@@ -6,7 +6,7 @@ import cron from 'node-cron';
 import path from 'path';
 import { Database } from './db';
 import { ServerWorkflowEngine } from './engine';
-import { Logger } from '../core/Logger';
+import { Logger, glog } from '../core/Logger';
 
 interface ScheduledJob {
   workflowId: string;
@@ -34,7 +34,6 @@ export class WorkflowScheduler {
    */
   async start(): Promise<void> {
     const message = '[Scheduler] Starting workflow scheduler...';
-    console.log(message);
     this.logger.info(message);
     await this.loadAndScheduleWorkflows();
   }
@@ -44,7 +43,6 @@ export class WorkflowScheduler {
    */
   stop(): void {
     const message = '[Scheduler] Stopping workflow scheduler...';
-    console.log(message);
     this.logger.info(message);
     this.jobs.forEach(({ job }) => job.stop());
     this.jobs.clear();
@@ -76,11 +74,9 @@ export class WorkflowScheduler {
       }
 
       const message = `[Scheduler] Loaded ${this.jobs.size} scheduled workflows`;
-      console.log(message);
       this.logger.info(message);
     } catch (err) {
       const errorMessage = '[Scheduler] Failed to load workflows:';
-      console.error(errorMessage, err);
       this.logger.error(errorMessage, err);
     }
   }
@@ -118,7 +114,6 @@ export class WorkflowScheduler {
     // 验证并创建调度任务
     if (schedule && cron.validate(schedule)) {
       const message = `[Scheduler] Scheduling workflow [${workflow.name}] with cron: ${schedule}`;
-      console.log(message);
       this.logger.info(message);
       
       const job = cron.schedule(schedule, async () => {
@@ -134,7 +129,6 @@ export class WorkflowScheduler {
    */
   private async executeWorkflow(workflow: any): Promise<void> {
     const triggerMessage = `[Scheduler] Triggering workflow: ${workflow.name}`;
-    console.log(triggerMessage);
     this.logger.info(triggerMessage);
 
     try {
@@ -160,11 +154,9 @@ export class WorkflowScheduler {
       });
 
       const successMessage = `[Scheduler] Workflow ${workflow.name} completed successfully`;
-      console.log(successMessage);
       this.logger.info(successMessage);
     } catch (err: any) {
       const errorMessage = `[Scheduler] Workflow ${workflow.name} failed: ${err.message}`;
-      console.error(errorMessage);
       this.logger.error(errorMessage);
 
       // 记录失败

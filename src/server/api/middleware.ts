@@ -6,11 +6,12 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthRequest, AuthUser, AsyncHandler, ErrorCodes } from './types';
 import { error, ApiException } from './response';
 import { Database } from '../db';
+import { glog } from '../../core/Logger';
 
 // ==================== 错误处理中间件 ====================
 
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-  console.error('[API Error]', err);
+  glog.error('[API Error]', err);
 
   // 处理自定义 API 异常
   if (err instanceof ApiException) {
@@ -155,7 +156,13 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
     const { statusCode } = res;
     
     const logLevel = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-    console[logLevel](`[${method}] ${originalUrl} ${statusCode} ${duration}ms`);
+    if (logLevel === 'error') {
+      glog.error(`[${method}] ${originalUrl} ${statusCode} ${duration}ms`);
+    } else if (logLevel === 'warn') {
+      glog.warn(`[${method}] ${originalUrl} ${statusCode} ${duration}ms`);
+    } else {
+      glog.info(`[${method}] ${originalUrl} ${statusCode} ${duration}ms`);
+    }
   });
 
   next();

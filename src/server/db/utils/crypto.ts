@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import { glog } from '../../../core/Logger';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
@@ -19,7 +20,7 @@ function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   
   if (!key) {
-    console.warn('[Crypto] WARNING: ENCRYPTION_KEY not set, using default key. This is insecure for production!');
+    glog.warn('[Crypto] WARNING: ENCRYPTION_KEY not set, using default key. This is insecure for production!');
     // 开发环境默认密钥 (生产环境必须设置 ENCRYPTION_KEY)
     return crypto.scryptSync('default-dev-key-do-not-use-in-production', 'salt', KEY_LENGTH);
   }

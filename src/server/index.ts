@@ -9,10 +9,14 @@ import yaml from 'js-yaml';
 import { ServerWorkflowEngine } from './engine';
 import { GrpcPluginManager } from '../runners/grpc/server';
 import { Registry } from '../registry';
+import { glog } from '../core/Logger';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Create logger instance
+const logger = glog.defaultLogger().named('Server');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_DIR = path.join(__dirname, '../../config');
@@ -49,38 +53,38 @@ const writeJson = (file: string, data: any) => {
 // Workflow YAML Helpers
 const readWorkflows = () => {
     if (!fs.existsSync(FLOWS_DIR)) {
-        console.log(`[WorkflowLoader] Flows directory not found: ${FLOWS_DIR}`);
+        logger.info(`[WorkflowLoader] Flows directory not found: ${FLOWS_DIR}`);
         return [];
     }
     
     const workflows: any[] = [];
     const files = fs.readdirSync(FLOWS_DIR);
     
-    console.log(`[WorkflowLoader] Loading workflows from directory: ${FLOWS_DIR}`);
-    console.log(`[WorkflowLoader] Found ${files.length} files in flows directory`);
+    logger.info(`[WorkflowLoader] Loading workflows from directory: ${FLOWS_DIR}`);
+    logger.info(`[WorkflowLoader] Found ${files.length} files in flows directory`);
     
     for (const file of files) {
         if (file.endsWith('.yaml') || file.endsWith('.yml')) {
             try {
                 const filePath = path.join(FLOWS_DIR, file);
-                console.log(`[WorkflowLoader] Reading workflow file: ${file}`);
+                logger.info(`[WorkflowLoader] Reading workflow file: ${file}`);
                 
                 const yamlData = fs.readFileSync(filePath, 'utf8');
                 const workflow = yaml.load(yamlData) as any;
                 
                 if (workflow && workflow.id && workflow.content) {
-                    console.log(`[WorkflowLoader] ✅ Successfully loaded workflow: ${workflow.id} - ${workflow.name}`);
+                    logger.info(`[WorkflowLoader] ✅ Successfully loaded workflow: ${workflow.id} - ${workflow.name}`);
                     workflows.push(workflow);
                 } else {
-                    console.warn(`[WorkflowLoader] ⚠️  Invalid workflow format in file: ${file}`);
+                    logger.warn(`[WorkflowLoader] ⚠️  Invalid workflow format in file: ${file}`);
                 }
             } catch (e) {
-                console.error(`[WorkflowLoader] ❌ Error reading workflow file ${file}:`, e);
+                logger.error(`[WorkflowLoader] ❌ Error reading workflow file ${file}:`, e);
             }
         }
     }
     
-    console.log(`[WorkflowLoader] Finished loading ${workflows.length} valid workflows`);
+    logger.info(`[WorkflowLoader] Finished loading ${workflows.length} valid workflows`);
     return workflows;
 };
 
@@ -110,7 +114,7 @@ app.use(express.json() as any);
 const activeJobs = new Map<string, any>();
 
 const loadAndScheduleWorkflows = () => {
-    console.log("Loading scheduled workflows...");
+    logger.info("Loading scheduled workflows...");
     const workflows = readWorkflows();
 
     // Clear existing jobs
@@ -137,14 +141,14 @@ const loadAndScheduleWorkflows = () => {
             }
 
             if (schedule && cron.validate(schedule)) {
-                console.log(`Scheduling workflow [${wf.name}] with cron: ${schedule}`);
+                logger.info(`Scheduling workflow [${wf.name}] with cron: ${schedule}`);
                 const job = cron.schedule(schedule, async () => {
-                    console.log(`[Cron] Triggering workflow ${wf.name}`);
+                    logger.info(`[Cron] Triggering workflow ${wf.name}`);
                     try {
                         const engine = new ServerWorkflowEngine(wf);
                         await engine.run();
                     } catch (err) {
-                        console.error(`[Cron] Error executing ${wf.name}:`, err);
+                        logger.error(`[Cron] Error executing ${wf.name}:`, err);
                     }
                 });
                 activeJobs.set(wfRecord.id, job);
@@ -162,36 +166,36 @@ try {
         fs.watch(FLOWS_DIR, { interval: 2000, recursive: false }, (eventType, filename) => {
             if (filename && (filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
                 try {
-                    console.log(`[Scheduler] Workflow file changed: ${filename}, reloading...`);
+                    logger.info(`[Scheduler] Workflow file changed: ${filename}, reloading...`);
                     loadAndScheduleWorkflows();
                 } catch (e) {
-                    console.warn('[Scheduler] Failed to reload workflows on change:', (e as any)?.message || e);
+                    logger.warn('[Scheduler] Failed to reload workflows on change:', (e as any)?.message || e);
                 }
             }
         });
-        console.log('[Scheduler] Workflows directory watcher started');
+        logger.info('[Scheduler] Workflows directory watcher started');
     }
 } catch (e) {
-    console.warn('[Scheduler] Failed to start workflows watcher:', (e as any)?.message || e);
+    logger.warn('[Scheduler] Failed to start workflows watcher:', (e as any)?.message || e);
 }
 
 // Initialize gRPC Plugins
 const initializeGrpcPlugins = async () => {
     if (fs.existsSync(PLUGINS_CONFIG_FILE)) {
         try {
-            console.log('[Server] Loading gRPC plugins from:', PLUGINS_CONFIG_FILE);
+            logger.info('[Server] Loading gRPC plugins from:', PLUGINS_CONFIG_FILE);
             await GrpcPluginManager.loadFromConfig(PLUGINS_CONFIG_FILE);
-            console.log('[Server] gRPC plugins loaded successfully');
+            logger.info('[Server] gRPC plugins loaded successfully');
         } catch (error) {
-            console.error('[Server] Failed to load gRPC plugins:', error);
+            logger.error('[Server] Failed to load gRPC plugins:', error);
         }
     } else {
-        console.log('[Server] No plugins config found at:', PLUGINS_CONFIG_FILE);
+        logger.info('[Server] No plugins config found at:', PLUGINS_CONFIG_FILE);
     }
 };
 
 // Run async initialization
-initializeGrpcPlugins().catch(console.error);
+initializeGrpcPlugins().catch(error => logger.error('Failed to initialize gRPC plugins:', error));
 
 
 // --- SERVER EXECUTION API ---
@@ -225,7 +229,7 @@ app.post('/api/execute', async (req, res) => {
         const result = await engine.run();
         res.json(result);
     } catch (e: any) {
-        console.error("Execution Error:", e);
+        logger.error("Execution Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -465,4 +469,4 @@ app.post('/api/plugins/:kind/health', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => logger.info(`Server running on http://localhost:${PORT}`));

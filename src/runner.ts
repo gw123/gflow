@@ -3,6 +3,7 @@ import { WorkflowDefinition, WorkflowExecutionState, NodeExecutionResult, NodeDe
 import { WorkflowEngine } from './core/WorkflowEngine';
 import { Registry } from './registry';
 import { evaluateCondition } from './runners/utils';
+import { glog } from './core/Logger';
 import './builtins'; // Ensure main thread has registry for UI runners
 
 export class WorkflowRunner {
@@ -46,7 +47,7 @@ export class WorkflowRunner {
       try {
           await this.engine.execute(mode);
       } catch (e) {
-          console.error("Workflow Execution Failed", e);
+          glog.error("Workflow Execution Failed", e);
       }
   }
 
@@ -84,21 +85,23 @@ export class WorkflowRunner {
           }
       });
 
+      const logger = glog.defaultLogger().named('SingleRun');
+      
       const context = {
           workflow: this.engine['workflow'],
           executionState: this.state,
           global: this.engine['workflow'].global || {},
           inputs: inputs,
           waitForInput: undefined, // Single node usually doesn't wait
-          log: (m: string) => console.log(`[SingleRun] ${m}`)
+          log: (m: string) => logger.info(m)
       };
 
       try {
           const result = await runner.run(node, context);
-          console.log("Node Result:", result);
+          logger.info("Node Result:", result);
           // Optionally update UI with this result?
       } catch (e) {
-          console.error("Single Node Error:", e);
+          logger.error("Single Node Error:", e);
       }
   }
 }

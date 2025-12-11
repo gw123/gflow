@@ -1,4 +1,6 @@
 
+import { glog } from '../core/Logger';
+
 // --- Utility: Interpolate Variables ---
 
 // Helper to safely evaluate JS expressions within the workflow context
@@ -25,7 +27,7 @@ const safeEval = (code: string, context: any) => {
 
   } catch (e: any) {
     // Log error to help debug workflow configuration errors
-    console.error(`[Interpolation Error] Failed to evaluate expression: "${code}"`, e.message);
+    glog.error(`[Interpolation Error] Failed to evaluate expression: "${code}"`, e.message);
     return undefined;
   }
 };

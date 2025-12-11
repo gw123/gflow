@@ -1,14 +1,17 @@
 import { NodeRunner, NodeDefinition, NodeRunnerContext, NodeExecutionResult } from '../../types';
 import { interpolate } from '../utils';
 import { GoogleGenAI } from "@google/genai";
+import { glog } from '../../core/Logger';
 
 // Mock Langfuse Web SDK to avoid fs dependency issues
+const logger = glog.defaultLogger().named('LangfuseMock');
+
 class LangfuseWebMock {
     constructor(config: any) {
-        console.log("[Langfuse Mock] Initialized with", config);
+        logger.info("Initialized with", { config });
     }
     trace(config: any) {
-        console.log("[Langfuse Mock] Trace started", config);
+        logger.info("Trace started", { config });
         return new LangfuseTraceMock();
     }
 }
@@ -16,21 +19,21 @@ class LangfuseWebMock {
 class LangfuseTraceMock {
     id = "mock-trace-" + Date.now();
     update(data: any) {
-        console.log("[Langfuse Mock] Trace updated", data);
+        logger.info("Trace updated", { data });
     }
     generation(data: any) {
-        console.log("[Langfuse Mock] Generation started", data);
+        logger.info("Generation started", { data });
         return new LangfuseSpanMock();
     }
     span(data: any) {
-        console.log("[Langfuse Mock] Span started", data);
+        logger.info("Span started", { data });
         return new LangfuseSpanMock();
     }
 }
 
 class LangfuseSpanMock {
     end(data: any) {
-        console.log("[Langfuse Mock] Span/Generation ended", data);
+        logger.info("Span/Generation ended", { data });
     }
 }
 

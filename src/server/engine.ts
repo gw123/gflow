@@ -16,7 +16,7 @@ import { AiImageNodeRunnerProxy } from '../runners/ai-image';
 import { GrpcNodeRunnerProxy } from '../runners/grpc';
 import { InteractionNodeRunnerProxy } from '../runners/interaction';
 import { LlmNodeRunnerProxy } from '../runners/llm';
-import { Logger } from '../core/Logger';
+import { Logger, glog } from '../core/Logger';
 
 import { ManualNodeRunnerProxy } from '../runners/manual';
 import { SystemNodeRunnerProxy } from '../runners/system';
@@ -70,19 +70,19 @@ class ServerLogger {
         this.workflowName = workflowName;
         this.startTime = Date.now();
         
-        // 创建日志实例，支持同时输出到控制台和文件
+        // 创建日志实例，只写文件不输出控制台（控制台由 glog 负责）
         this.logger = new Logger({
             logFile: path.join(process.cwd(), 'logs', `${workflowName.toLowerCase().replace(/\s+/g, '-')}.log`),
             level: 'info',
-            consoleOutput: true,
+            consoleOutput: false,
             fileOutput: true
         });
         
-        // 基础日志实例（用于系统级日志）
+        // 基础日志实例（用于系统级日志），只写文件不输出控制台
         this.baseLogger = new Logger({
             logFile: path.join(process.cwd(), 'logs', 'gflow.log'),
             level: 'info',
-            consoleOutput: true,
+            consoleOutput: false,
             fileOutput: true
         });
     }
@@ -101,7 +101,7 @@ class ServerLogger {
     
     // 原始控制台输出，用于保持原有格式
     private consoleLog(message: string) {
-        console.log(message);
+        glog.info(message);
         // 同时写入到日志文件（无颜色）
         const plainMessage = message.replace(/\x1b\[[0-9;]*m/g, '');
         this.logger.info(plainMessage);
@@ -236,7 +236,7 @@ const safeEval = (code: any, context: any) => {
         // Timeout prevents infinite loops
         return script.runInContext(vmContext, { timeout: 1000 });
     } catch (e: any) {
-        console.error(`[Server Interpolation Error] Failed to evaluate: "${code}"`, e.message);
+        glog.error(`[Server Interpolation Error] Failed to evaluate: "${code}"`, e.message);
         return undefined;
     }
 };
@@ -424,8 +424,8 @@ export class ServerWorkflowEngine {
                 const wrappedContext: NodeRunnerContext = {
                     ...context,
                     log: (msg: string) => {
+                        // Only log through ServerLogger, avoid duplicate context.log calls
                         this.logger.nodeLog(node.name, msg);
-                        context.log(msg);
                     }
                 };
 
