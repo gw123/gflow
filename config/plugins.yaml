@@ -74,7 +74,7 @@ plugins:
     filters:
       http_port: 8080
       # 方案一：精确绑定路由到唯一工作流，并开启同步响应
-      routes_json:
+      routes:
         - path: "/api/v1/orders"
           methods: ["POST"]
           target_workflow: "Response Node Test Workflow"
