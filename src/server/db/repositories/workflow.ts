@@ -18,6 +18,34 @@ export class WorkflowRepository extends BaseRepository<Workflow, CreateWorkflowD
     super(db, 'workflows');
   }
 
+  async search(
+    tenantId: string,
+    query: string,
+    status?: Workflow['status'],
+    options: QueryOptions = {}
+  ): Promise<PaginatedResult<Workflow>> {
+    const { limit = 50, offset = 0, orderBy = 'updated_at', orderDir = 'desc' } = options;
+    const like = `%${query}%`;
+    const whereParts = ['tenant_id = ' + this.db.getPlaceholder(1), '(name LIKE ' + this.db.getPlaceholder(2) + ' OR description LIKE ' + this.db.getPlaceholder(3) + ')'];
+    const params: any[] = [tenantId, like, like];
+    if (status) {
+      whereParts.push('status = ' + this.db.getPlaceholder(4));
+      params.push(status);
+    }
+    const whereClause = whereParts.join(' AND ');
+    const countSql = `SELECT COUNT(*) as total FROM ${this.tableName} WHERE ${whereClause}`;
+    const countResult = await this.db.query<{ total: number }>(countSql, params);
+    const total = Number(countResult[0]?.total || 0);
+    const dataSql = `
+      SELECT * FROM ${this.tableName}
+      WHERE ${whereClause}
+      ORDER BY ${orderBy} ${orderDir.toUpperCase()}
+      LIMIT ${this.db.getPlaceholder(params.length + 1)} OFFSET ${this.db.getPlaceholder(params.length + 2)}
+    `;
+    const data = await this.db.query<Workflow>(dataSql, [...params, limit, offset]);
+    return { data, total, limit, offset };
+  }
+
   /**
    * 根据状态查找工作流
    */

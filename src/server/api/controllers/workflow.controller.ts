@@ -5,7 +5,8 @@
 import { Response } from 'express';
 import { AuthRequest, parsePagination } from '../types';
 import { success, created, paginated, ApiException } from '../response';
-import { Database, ErrorCodes } from '../../db';
+import { Database } from '../../db';
+import { ErrorCodes } from '../types';
 import { ServerWorkflowEngine } from '../../engine';
 
 export class WorkflowController {
@@ -17,17 +18,27 @@ export class WorkflowController {
   list = async (req: AuthRequest, res: Response) => {
     const tenantId = req.tenantId!;
     const { limit, offset } = parsePagination(req.query);
-    const { status } = req.query;
+    const { status, search, sortBy, sortOrder } = req.query as any;
+    const orderByMap: Record<string, string> = {
+      name: 'name',
+      updatedAt: 'updated_at',
+      createdAt: 'created_at'
+    };
+    const orderBy = orderByMap[sortBy] || 'updated_at';
+    const orderDir = (String(sortOrder || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
 
     let result;
-    if (status) {
-      result = await this.db.workflows.findByStatus(
+    if (search) {
+      result = await this.db.workflows.search(
         tenantId,
-        status as any,
-        { limit, offset }
+        String(search),
+        status ? (status as any) : undefined,
+        { limit, offset, orderBy, orderDir }
       );
+    } else if (status) {
+      result = await this.db.workflows.findByStatus(tenantId, status as any, { limit, offset, orderBy, orderDir });
     } else {
-      result = await this.db.workflows.findAll(tenantId, { limit, offset });
+      result = await this.db.workflows.findAll(tenantId, { limit, offset, orderBy, orderDir });
     }
 
     return paginated(res, result.data, result.total, limit, offset);
@@ -155,7 +166,7 @@ export class WorkflowController {
 
     try {
       // 执行工作流
-      const engine = new ServerWorkflowEngine(workflow.content);
+      const engine = new ServerWorkflowEngine(workflow.content as any);
       const result = await engine.run();
 
       // 更新执行记录
@@ -200,7 +211,7 @@ export class WorkflowController {
     }
 
     try {
-      const engine = new ServerWorkflowEngine(workflow);
+      const engine = new ServerWorkflowEngine(workflow as any);
       const result = await engine.run();
 
       return success(res, {

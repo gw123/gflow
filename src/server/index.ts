@@ -163,7 +163,7 @@ loadAndScheduleWorkflows();
 // Watch flows directory changes to reschedule dynamically
 try {
     if (fs.existsSync(FLOWS_DIR)) {
-        fs.watch(FLOWS_DIR, { interval: 2000, recursive: false }, (eventType, filename) => {
+        fs.watch(FLOWS_DIR, { recursive: false }, (eventType, filename) => {
             if (filename && (filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
                 try {
                     logger.info(`[Scheduler] Workflow file changed: ${filename}, reloading...`);
@@ -301,16 +301,48 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // --- Workflow CRUD ---
-app.get('/api/workflows', (req, res) =>
-    res.json(
-        readWorkflows().map((w: any) => ({
-            id: w.id,
-            name: w.name,
-            updatedAt: w.updatedAt,
-            enabled: (w.enabled !== false) && (!w.content || w.content.enabled !== false),
-        }))
-    )
-);
+app.get('/api/workflows', (req, res) => {
+    let workflows = readWorkflows().map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        updatedAt: w.updatedAt,
+        enabled: (w.enabled !== false) && (!w.content || w.content.enabled !== false),
+    }));
+
+    // Filter
+    const search = req.query.search as string;
+    if (search) {
+        workflows = workflows.filter((w: any) => w.name.toLowerCase().includes(search.toLowerCase()));
+    }
+
+    // Sort
+    const sortBy = (req.query.sortBy as string) || 'updatedAt';
+    const sortOrder = (req.query.sortOrder as string) || 'desc';
+    
+    workflows.sort((a: any, b: any) => {
+        const valA = a[sortBy];
+        const valB = b[sortBy];
+        
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // Pagination
+    console.log('--- Executing GET /api/workflows (Updated) ---');
+    const total = workflows.length;
+    const limit = parseInt(req.query.limit as string) || 100;
+    const offset = parseInt(req.query.offset as string) || 0;
+    
+    const paginatedWorkflows = workflows.slice(offset, offset + limit);
+
+    res.json({
+        data: paginatedWorkflows,
+        total,
+        limit,
+        offset
+    });
+});
 
 app.get('/api/workflows/:id', (req, res) => {
     const w = readWorkflows().find((w: any) => w.id === req.params.id);

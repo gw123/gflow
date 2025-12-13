@@ -73,6 +73,7 @@ export interface WorkflowRepository extends Repository<Workflow, CreateWorkflowD
   findByStatus(tenantId: string, status: Workflow['status'], options?: QueryOptions): Promise<PaginatedResult<Workflow>>;
   findTemplates(options?: QueryOptions): Promise<PaginatedResult<Workflow>>;
   incrementVersion(id: string): Promise<number>;
+  search(tenantId: string, query: string, status?: Workflow['status'], options?: QueryOptions): Promise<PaginatedResult<Workflow>>;
 }
 
 export interface WorkflowExecutionRepository extends Repository<WorkflowExecution, CreateWorkflowExecutionDTO, UpdateWorkflowExecutionDTO> {
