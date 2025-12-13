@@ -58,6 +58,16 @@ plugins:
     filters:
       interval_ms: 1500   # 每 1.5 秒一个事件
       count: 10           # 推送 10 次后结束（为 0 则无限）
+  - name: "db_operator"
+    kind: "db_operator"
+    endpoint: "localhost:50054"
+    enabled: true
+    health_check: true
+    description: "数据库操作插件"
+    version: "1.0.0"
+    category: "plugin"
+    icon: "Plug"
+    color: "green"
 
   # HTTP Gateway 插件
   - name: "HTTP Gateway"
@@ -77,13 +87,17 @@ plugins:
       routes:
         - path: "/api/v1/orders"
           methods: ["POST"]
-          target_workflow: "Response Node Test Workflow"
+          target_workflow: "SQLite DB Operator Workflow"
           sync_response: true
           response_timeout_ms: 30000
         - path: "/api/v1/status"
           methods: ["GET"]
           target_workflow: "Response Node Test Workflow"
-
+        - path: "/api/v1/db"
+          methods: ["GET"]
+          target_workflow: "SQLite DB Operator Workflow"
+          sync_response: true
+          response_timeout_ms: 30000
   # 可以添加更多插件
   # - name: "Custom Plugin"
   #   kind: "custom_node"

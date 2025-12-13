@@ -95,3 +95,14 @@ plugins:
       # timestamp_header: "X-Timestamp"
       # timestamp_skew_ms: "300000"
 ```
+
+测试
+
+ curl -X POST http://localhost:8080/api/v1/orders\?sync_response=true\
+     -H 'X-API-Key: gateway-secret-123' \
+     -H 'Content-Type: application/json' \
+     -d '{\"productId\": \"PROD-123\", \"quantity\": 2}' | jq
+
+
+
+ curl -X GET http://localhost:8080/api/v1/db | jq
