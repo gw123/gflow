@@ -87,7 +87,7 @@ plugins:
       routes:
         - path: "/api/v1/orders"
           methods: ["POST"]
-          target_workflow: "SQLite DB Operator Workflow"
+          target_workflow: "HTTP Gateway Trigger Demo"
           sync_response: true
           response_timeout_ms: 30000
         - path: "/api/v1/status"
@@ -98,6 +98,7 @@ plugins:
           target_workflow: "SQLite DB Operator Workflow"
           sync_response: true
           response_timeout_ms: 30000
+          
   # 可以添加更多插件
   # - name: "Custom Plugin"
   #   kind: "custom_node"
