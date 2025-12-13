@@ -51,16 +51,16 @@ func (m *Manager) Deliver(eventID string, response *WorkflowResponse) error {
 	m.mu.Unlock()
 
 	if !exists || respChan == nil {
-		glog.Log().Warnf("No pending request found for event %s", eventID)
+		glog.Log().Named("gateway").WithField("event_id", eventID).Warn("No pending request found for event")
 		return &NoPendingRequestError{EventID: eventID}
 	}
 
 	select {
 	case respChan <- response:
-		glog.Log().Infof("Response delivered for event %s", eventID)
+		glog.Log().Named("gateway").WithField("event_id", eventID).Info("Response delivered for event")
 		return nil
 	case <-time.After(100 * time.Millisecond):
-		glog.Log().Warnf("Response channel blocked for event %s", eventID)
+		glog.Log().Named("gateway").WithField("event_id", eventID).Warn("Response channel blocked for event")
 		return &ResponseChannelBlockedError{EventID: eventID}
 	}
 }

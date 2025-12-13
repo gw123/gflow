@@ -87,6 +87,9 @@ func (h *WorkflowHandler) Handle(w http.ResponseWriter, r *http.Request, workflo
 		TargetWorkflow: workflow,
 	}
 
+	// Add event_id to logger for tracing
+	logger = logger.WithField("event_id", ev.EventId)
+
 	// Check if sync response is requested via query param or header
 	wantSync, timeoutMs := h.checkSyncRequest(r, syncResponse, responseTimeoutMs)
 
@@ -97,10 +100,12 @@ func (h *WorkflowHandler) Handle(w http.ResponseWriter, r *http.Request, workflo
 	}
 
 	// Publish event
+	logger.Debug("Publishing event to workflow")
 	if err := h.eventManager.Publish(ev); err != nil {
 		if respChan != nil {
 			h.responseManager.Unregister(ev.EventId)
 		}
+		logger.Errorf("Event publish failed: %v", err)
 		h.sendErrorResponse(w, http.StatusServiceUnavailable, "service_unavailable", "Event channel blocked", ev.EventId)
 		return
 	}

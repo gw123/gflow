@@ -28,14 +28,28 @@ func (s *Server) GetMetadata(ctx context.Context, req *pb.GetMetadataRequest) (*
 
 func (s *Server) Init(ctx context.Context, req *pb.InitRequest) (*pb.InitResponse, error) {
 	execId := "unknown"
+	workflowId := "unknown"
+	nodeId := "unknown"
+
 	if req.Context != nil {
 		execId = req.Context.ExecutionId
+		workflowId = req.Context.WorkflowId
+		nodeId = req.Context.NodeId
 	}
-	glog.Log().Named("plugin").WithField("exec_id", execId).Info("初始化插件")
+
+	glog.Log().Named("plugin").
+		WithField("exec_id", execId).
+		WithField("workflow", workflowId).
+		WithField("node", nodeId).
+		Info("初始化插件")
 
 	resp, err := s.handler.Init(ctx, req)
 	if err != nil {
-		glog.Log().Named("plugin").WithField("exec_id", execId).Errorf("插件初始化失败: %v", err)
+		glog.Log().Named("plugin").
+			WithField("exec_id", execId).
+			WithField("workflow", workflowId).
+			WithField("node", nodeId).
+			Errorf("插件初始化失败: %v", err)
 		return nil, err
 	}
 	return resp, nil
@@ -72,6 +86,8 @@ func (s *Server) Run(req *pb.RunRequest, stream pb.NodePluginService_RunServer) 
 
 	glog.Log().Named("plugin").
 		WithField("exec_id", execId).
+		WithField("workflow", workflowId).
+		WithField("node", nodeId).
 		WithField("duration", duration.String()).
 		Info("插件执行完成")
 	return nil

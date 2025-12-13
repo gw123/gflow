@@ -117,7 +117,11 @@ func (s *Server) registerRoute(mux *http.ServeMux, route RouteConfig) {
 	if route.SyncResponse {
 		syncStr = fmt.Sprintf(", sync=%v, timeout=%dms", route.SyncResponse, timeoutMs)
 	}
-	glog.Log().Infof("HTTP Gateway route registered: %v %s (workflow=%s%s)", route.Methods, route.Path, route.TargetWorkflow, syncStr)
+	glog.Log().Named("gateway").
+		WithField("path", route.Path).
+		WithField("methods", route.Methods).
+		WithField("workflow", route.TargetWorkflow).
+		Infof("HTTP Gateway route registered%s", syncStr)
 }
 
 // makeRouteHandler creates an HTTP handler for a route

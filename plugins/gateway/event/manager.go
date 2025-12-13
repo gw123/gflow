@@ -68,7 +68,9 @@ func (m *Manager) broadcastEvents() {
 			case subChan <- ev:
 				// ok
 			case <-time.After(100 * time.Millisecond):
-				glog.Log().Warnf("订阅者通道阻塞，跳过事件 %s", ev.EventId)
+				glog.Log().Named("gateway").
+					WithField("event_id", ev.EventId).
+					Warn("订阅者通道阻塞，跳过事件")
 			}
 		}
 		m.mu.Unlock()
