@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"reflect"
 	"sync"
 
 	"github.com/gw123/gflow/plugins/base-go"
@@ -101,9 +102,18 @@ func (p *GatewayPlugin) startHTTPServerOnce(config *ServerConfig) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// If server already started, skip
+	// If server already started, check config changes and restart if needed
 	if p.serverStarted {
-		glog.Log().Named("gateway").Debug("HTTP服务器已启动，跳过重复启动")
+		if p.currentConfig != nil && reflect.DeepEqual(*p.currentConfig, *config) {
+			glog.Log().Named("gateway").Debug("HTTP服务器已启动，配置未变更，跳过重复启动")
+			return nil
+		}
+		// Config changed - restart server with new config
+		glog.Log().Named("gateway").Info("检测到配置变更，重启 HTTP 服务器以应用新路由")
+		if err := p.startHTTPServer(config); err != nil {
+			return err
+		}
+		p.currentConfig = config
 		return nil
 	}
 
@@ -113,6 +123,7 @@ func (p *GatewayPlugin) startHTTPServerOnce(config *ServerConfig) error {
 	}
 
 	p.serverStarted = true
+	p.currentConfig = config
 	return nil
 }
 
