@@ -144,6 +144,7 @@ interface WorkflowState {
   onConnect: (connection: Connection) => void;
   
   loadWorkflow: (wf: WorkflowDefinition, id?: string | null) => void;
+  setCurrentWorkflowId: (id: string | null) => void;
   updateWorkflowData: (partial: Partial<WorkflowDefinition>) => void;
   updateNode: (nodeDef: NodeDefinition) => void;
   deleteNode: (nodeId: string) => void;
@@ -185,6 +186,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       const { nodes, edges } = workflowToFlow(wf);
       set({ workflowData: wf, nodes, edges, currentWorkflowId: id });
   },
+
+  setCurrentWorkflowId: (id) => set({ currentWorkflowId: id }),
 
   updateWorkflowData: (partial) => {
       set((state) => ({ workflowData: { ...state.workflowData, ...partial } }));

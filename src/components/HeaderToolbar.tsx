@@ -38,8 +38,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             ui.showToast("Workflow saved to server", "success");
          } else {
             const created = await api.createWorkflow(currentData.name, currentData);
-            // We should probably update store with ID
-            // But store doesn't support setting ID directly cleanly yet without reload
+            wfStore.setCurrentWorkflowId(created.id);
             ui.showToast("New workflow created on server", "success");
          }
       } catch (e: any) {

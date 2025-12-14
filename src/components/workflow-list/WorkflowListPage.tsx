@@ -87,12 +87,27 @@ export const WorkflowListPage: React.FC<WorkflowListPageProps> = ({
         }
     };
 
-    const handleEdit = (wf: WorkflowRecord) => {
-        onEditWorkflow(wf.content, wf.id);
+    const handleEdit = async (wf: WorkflowRecord) => {
+        try {
+            // Check if content is present, otherwise fetch it
+            if (!wf.content) {
+                setLoading(true);
+                const fullWf = await api.getWorkflow(wf.id);
+                onEditWorkflow(fullWf.content, wf.id);
+            } else {
+                onEditWorkflow(wf.content, wf.id);
+            }
+        } catch (e: any) {
+            console.error("Failed to load workflow details:", e);
+            notify("Failed to load workflow details: " + e.message, "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleExecute = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
+        console.log("Execute clicked for id:", id);
         if (!confirm("Execute this workflow now?")) return;
 
         try {
@@ -102,12 +117,14 @@ export const WorkflowListPage: React.FC<WorkflowListPageProps> = ({
             // Optionally auto-open history
             // setHistoryId(id); 
         } catch (e: any) {
+            console.error("Execution failed:", e);
             notify("Execution failed: " + e.message, "error");
         }
     };
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
+        console.log("Delete clicked for id:", id);
         if (!confirm("Are you sure you want to delete this workflow?")) return;
 
         try {
@@ -115,6 +132,7 @@ export const WorkflowListPage: React.FC<WorkflowListPageProps> = ({
             notify("Workflow deleted", "success");
             loadWorkflows(); // Refresh list
         } catch (e: any) {
+            console.error("Delete failed:", e);
             notify("Failed to delete: " + e.message, "error");
         }
     };

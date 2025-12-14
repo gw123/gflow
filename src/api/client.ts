@@ -249,10 +249,10 @@ class ApiClient {
   }
 
   async executeWorkflowById(id: string, input?: any): Promise<ServerExecutionResponse> {
-    const res = await fetch(`${API_BASE}/workflows/${id}/execute`, {
+    const res = await fetch(`${API_BASE}/execute`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ input })
+      body: JSON.stringify({ workflowId: id, input })
     });
 
     const raw = await res.json();
