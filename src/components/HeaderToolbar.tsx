@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
    LayoutDashboard, Box, FolderOpen, Save, Upload, Laptop, Cloud, Play,
-   StepForward, Globe, Wrench, Key, Settings, Sparkles, UserCircle, ArrowLeft
+   StepForward, Globe, Wrench, Key, Settings, Sparkles, UserCircle, ArrowLeft,
+   Edit2, Check, X
 } from 'lucide-react';
 import { useUserStore, useUIStore, useWorkflowStore, useExecutionStore } from '../stores';
 import { api } from '../api/client';
@@ -23,6 +24,25 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
    const userStore = useUserStore();
    const wfStore = useWorkflowStore();
    const execStore = useExecutionStore();
+
+   const [isEditingName, setIsEditingName] = useState(false);
+   const [tempName, setTempName] = useState('');
+
+   const startEditing = () => {
+      setTempName(wfStore.workflowData.name || '');
+      setIsEditingName(true);
+   };
+
+   const saveName = () => {
+      if (tempName.trim()) {
+         wfStore.updateWorkflowData({ name: tempName.trim() });
+      }
+      setIsEditingName(false);
+   };
+
+   const cancelEditing = () => {
+      setIsEditingName(false);
+   };
 
    const handleSaveWorkflow = async () => {
       if (!userStore.user) {
@@ -60,15 +80,58 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   <span className="hidden sm:inline">Back to Editor</span>
                </button>
             ) : (
-               <div
-                  className="flex items-center gap-2 text-blue-600 dark:text-blue-500 font-bold text-lg tracking-tight cursor-pointer"
-                  onClick={() => onViewChange('workflow_list')}
-                  title="Go to Dashboard"
-               >
-                  <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                     <LayoutDashboard size={20} />
+               <div className="flex items-center gap-3">
+                  <div
+                     className="flex items-center gap-2 text-blue-600 dark:text-blue-500 font-bold text-lg tracking-tight cursor-pointer"
+                     onClick={() => onViewChange('workflow_list')}
+                     title="Go to Dashboard"
+                  >
+                     <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <LayoutDashboard size={20} />
+                     </div>
+                     G-Flow
                   </div>
-                  G-Flow
+                  
+                  {wfStore.workflowData.name && (
+                     <>
+                        <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+                        
+                        {isEditingName ? (
+                           <div className="flex items-center gap-1">
+                              <input 
+                                 type="text"
+                                 value={tempName}
+                                 onChange={(e) => setTempName(e.target.value)}
+                                 className="px-2 py-1 text-sm border border-blue-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200 dark:bg-slate-800 dark:text-slate-100"
+                                 autoFocus
+                                 onKeyDown={(e) => {
+                                    if(e.key === 'Enter') saveName();
+                                    if(e.key === 'Escape') cancelEditing();
+                                 }}
+                              />
+                              <button onClick={saveName} className="p-1 text-green-600 hover:bg-green-50 rounded dark:hover:bg-green-900/30">
+                                 <Check size={14} />
+                              </button>
+                              <button onClick={cancelEditing} className="p-1 text-red-600 hover:bg-red-50 rounded dark:hover:bg-red-900/30">
+                                 <X size={14} />
+                              </button>
+                           </div>
+                        ) : (
+                           <div className="flex items-center gap-2 group">
+                              <span className="font-medium text-slate-700 dark:text-slate-200 text-sm truncate max-w-[200px]" title={wfStore.workflowData.name}>
+                                 {wfStore.workflowData.name}
+                              </span>
+                              <button 
+                                 onClick={startEditing}
+                                 className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-blue-600 transition-all"
+                                 title="Rename Workflow"
+                              >
+                                 <Edit2 size={12} />
+                              </button>
+                           </div>
+                        )}
+                     </>
+                  )}
                </div>
             )}
 
