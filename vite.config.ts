@@ -25,6 +25,13 @@ export default defineConfig(({ mode }) => {
         NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
         VITE_API_BASE: JSON.stringify(env.VITE_API_BASE || '')
       }
+    },
+    build: {
+      rollupOptions: {
+        external: [
+          'fs', 'path', 'os', 'child_process', 'crypto', 'stream', 'buffer', 'util', 'events', 'net', 'tls', 'zlib', 'http', 'https', 'url', 'querystring', 'punycode', 'assert', 'constants', 'vm', 'mysql2', 'mysql2/promise', 'better-sqlite3'
+        ]
+      }
     }
   };
 });

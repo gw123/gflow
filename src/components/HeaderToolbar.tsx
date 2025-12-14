@@ -84,17 +84,8 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                      <Box size={18} />
                   </button>
                )}
-               <button
-                  onClick={() => onViewChange(currentView === 'workflow_list' ? 'editor' : 'workflow_list')}
-                  className={`p-2 rounded-md transition-colors ${currentView === 'workflow_list'
-                        ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20'
-                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                     }`}
-                  title="Workflow Manager"
-               >
-                  <FolderOpen size={18} />
-               </button>
-
+               {/* Workflow Manager button removed as per requirement */}
+               
                {currentView === 'editor' && (
                   <button
                      onClick={handleSaveWorkflow}
@@ -154,6 +145,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                </>
             )}
 
+            {/* Navigation buttons removed as per requirement - now on Home Page
             <button
                onClick={() => onViewChange('workflow_list')}
                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors hidden md:flex"
@@ -184,6 +176,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             >
                <Key size={14} /> Secrets
             </button>
+            */}
 
             <button
                onClick={() => ui.setModalOpen('configModalOpen', true)}

@@ -1,5 +1,5 @@
-
 import React, { useCallback, useEffect, useRef, useMemo } from 'react';
+import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import ReactFlow, {
   Controls,
   Background,
@@ -32,19 +32,18 @@ import CustomNode from './components/CustomNode';
 
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { ModalsManager } from './components/ModalsManager';
-import { WorkflowListPage } from './components/workflow-list/WorkflowListPage';
+
+// Import Pages
+import { HomePage } from './pages/HomePage';
+import { SecretsPage, ToolsPage, ApiPage, WorkflowsPage, StoragePage } from './pages/Wrappers';
 
 // Import Stores
 import { useUIStore, useUserStore, useWorkflowStore, useExecutionStore } from './stores';
 
-const AppContent: React.FC = () => {
+const EditorLayout: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow();
-
-  // State for View Switching
-  const [currentView, setCurrentView] = React.useState<'editor' | 'workflow_list'>(
-    typeof window !== 'undefined' && window.location.hash === '#workflows' ? 'workflow_list' : 'editor'
-  );
+  const navigate = useNavigate();
 
   // Stores
   const ui = useUIStore();
@@ -85,28 +84,18 @@ const AppContent: React.FC = () => {
   // --- Initialization ---
 
   useEffect(() => {
-    const onHashChange = () => {
-      const hash = window.location.hash;
-      if (hash === '#workflows') {
-        setCurrentView('workflow_list');
-      } else {
-        setCurrentView('editor');
-      }
-    };
-    window.addEventListener('hashchange', onHashChange);
-    onHashChange();
-
     // Initial Load
     try {
-      const parsed = yaml.load(SAMPLE_YAML) as WorkflowDefinition;
-      wfStore.loadWorkflow(parsed);
+      if (!wfStore.workflowData.nodes || wfStore.workflowData.nodes.length === 0) {
+          const parsed = yaml.load(SAMPLE_YAML) as WorkflowDefinition;
+          wfStore.loadWorkflow(parsed);
+      }
     } catch (e) {
       console.error("Failed to parse initial sample YAML", e);
     }
 
     // Check Auth
     api.getMe().then(userStore.setUser).catch(() => { });
-    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   // --- Handlers ---
@@ -172,8 +161,6 @@ const AppContent: React.FC = () => {
   // --- Execution Logic ---
 
   const handleRunNode = async (nodeName: string) => {
-    console.log(`[App] handleRunNode called for node: ${nodeName}`);
-
     if (!runnerRef.current) {
       const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
       const runner = new WorkflowRunner(currentData, (state) => {
@@ -186,27 +173,20 @@ const AppContent: React.FC = () => {
   };
 
   const handleNextStep = () => {
-    console.log("[App] handleNextStep called");
     return runnerRef.current?.nextStep();
   };
 
   const handleResume = () => {
-    console.log("[App] handleResume called");
     return runnerRef.current?.resume();
   };
 
   const handleSubmitInput = (data: any) => {
-    console.log("[App] handleSubmitInput called with data:", data);
     return runnerRef.current?.submitInput(data);
   };
 
   const handleRunWorkflow = async (mode: 'run' | 'step' = 'run') => {
-    console.log(`[App] handleRunWorkflow called with mode: ${mode}`);
-    console.log(`[App] Current execution state - isRunning: ${execStore.executionState.isRunning}, isPaused: ${execStore.executionState.isPaused}, waitingForInput: ${execStore.executionState.waitingForInput}`);
-
     if (execStore.executionState.isRunning && !execStore.executionState.isPaused && !execStore.executionState.waitingForInput) {
       ui.showToast("Workflow is already running", "info");
-      console.log(`[App] Workflow already running, showing toast`);
       return;
     }
 
@@ -219,13 +199,10 @@ const AppContent: React.FC = () => {
       ui.setTestReport(report);
       ui.setModalOpen('testReportOpen', true);
       ui.showToast("Validation failed. Check report.", "error");
-      console.log(`[App] Workflow validation failed, showing test report`);
       return;
     }
 
-    console.log(`[App] Opening execution panel`);
     ui.setPanelOpen('executionPanelOpen', true);
-    // Note: ui.executionPanelOpen may not reflect the new value immediately due to React's asynchronous state updates
 
     if (execStore.runMode === 'cloud') {
       if (!userStore.user) {
@@ -259,7 +236,6 @@ const AppContent: React.FC = () => {
           logs: [...execStore.executionState.logs, `Server Error: ${e.message}`]
         });
         ui.showToast("Server execution failed", "error");
-        console.log(`[App] Cloud execution failed: ${e.message}`);
       }
 
     } else {
@@ -273,9 +249,7 @@ const AppContent: React.FC = () => {
       execStore.setExecutionState({ ...runner.state, isRunning: true });
 
       try {
-        console.log(`[App] Starting local workflow execution`);
         await runner.execute(mode);
-        console.log(`[App] Local workflow execution completed`);
       } catch (e) {
         console.error("[App] Error during workflow execution:", e);
       } finally {
@@ -287,7 +261,6 @@ const AppContent: React.FC = () => {
   };
 
   const updateNodeStatuses = (results: any) => {
-    console.log("[App] updateNodeStatuses called with results:", results);
     const newNodes = wfStore.nodes.map(n => {
       const res = results[n.id];
       if (res) {
@@ -312,24 +285,14 @@ const AppContent: React.FC = () => {
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       <HeaderToolbar
         onRunWorkflow={handleRunWorkflow}
-        currentView={currentView}
+        currentView="editor"
         onViewChange={(view) => {
-          setCurrentView(view);
-          if (typeof window !== 'undefined') {
-            window.location.hash = view === 'workflow_list' ? 'workflows' : '';
+          if (view === 'workflow_list') {
+              navigate('/');
           }
         }}
       />
 
-      {currentView === 'workflow_list' ? (
-        <WorkflowListPage
-          onEditWorkflow={(workflow, id) => {
-            wfStore.loadWorkflow(workflow, id);
-            setCurrentView('editor');
-          }}
-          notify={ui.showToast}
-        />
-      ) : (
         <div className="flex-1 flex overflow-hidden relative">
           <Sidebar />
 
@@ -410,7 +373,6 @@ const AppContent: React.FC = () => {
             </div>
           )}
         </div>
-      )}
 
       <ModalsManager />
 
@@ -427,7 +389,17 @@ const AppContent: React.FC = () => {
 
 const App = () => (
   <ReactFlowProvider>
-    <AppContent />
+    <HashRouter>
+        <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/editor" element={<EditorLayout />} />
+            <Route path="/workflows" element={<WorkflowsPage />} />
+            <Route path="/secrets" element={<SecretsPage />} />
+            <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/apis" element={<ApiPage />} />
+            <Route path="/storage" element={<StoragePage />} />
+        </Routes>
+    </HashRouter>
   </ReactFlowProvider>
 );
 
