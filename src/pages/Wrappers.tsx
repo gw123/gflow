@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore, useUserStore, useWorkflowStore } from '../stores';
-import SecretsManager from '../components/SecretsManager';
 import ToolsManager from '../components/ToolsManager';
 import ApiManager from '../components/ApiManager';
 import { WorkflowListPage } from '../components/workflow-list/WorkflowListPage';
@@ -21,69 +20,9 @@ const BackButton = () => {
     );
 };
 
-export const SecretsPage = () => {
-  const navigate = useNavigate();
-  const userStore = useUserStore();
-  const ui = useUIStore();
-
-  return (
-    <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-40 overflow-hidden flex flex-col">
-       <BackButton />
-       <div className="flex-1 mt-16 p-4 overflow-auto">
-          <SecretsManager
-             isOpen={true}
-             onClose={() => navigate('/')}
-             credentials={userStore.credentials}
-             onSave={userStore.setCredentials}
-             onCredentialUpdate={() => {}}
-             notify={ui.showToast}
-             isServerMode={!!userStore.user}
-             onServerCreate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-             onServerUpdate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
-             onServerDelete={userStore.user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
-          />
-       </div>
-    </div>
-  );
-};
-
-export const ToolsPage = () => {
-  const navigate = useNavigate();
-  const wfStore = useWorkflowStore();
-  const ui = useUIStore();
-
-  return (
-    <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-40 overflow-hidden flex flex-col">
-       <BackButton />
-       <div className="flex-1 mt-16 p-4 overflow-auto">
-          <ToolsManager 
-              isOpen={true}
-              onClose={() => navigate('/')}
-              workflow={wfStore.workflowData}
-              onSave={(tools) => wfStore.updateWorkflowData({ tools })}
-          />
-       </div>
-    </div>
-  );
-};
-
-export const ApiPage = () => {
-  const navigate = useNavigate();
-  const ui = useUIStore();
-
-  return (
-    <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-40 overflow-hidden flex flex-col">
-       <BackButton />
-       <div className="flex-1 mt-16 p-4 overflow-auto">
-          <ApiManager 
-              isOpen={true} 
-              onClose={() => navigate('/')} 
-              notify={ui.showToast} 
-          />
-       </div>
-    </div>
-  );
-};
+export { SecretsPage } from './SecretsPage';
+export { ToolsPage } from './ToolsPage';
+export { ApiPage } from './ApiPage';
 
 export const WorkflowsPage = () => {
     const navigate = useNavigate();

@@ -34,11 +34,12 @@ export class SecretController {
 
     const result = await this.db.secrets.findAll(tenantId, { limit, offset });
     
-    // 不返回加密数据
+    // 返回解密数据 (注意：仅返回给所有者/授权用户)
     const safeSecrets = result.data.map(s => ({
       id: s.id,
       name: s.name,
       type: s.type,
+      data: decryptJson(s.data_encrypted),
       description: s.description,
       created_at: s.created_at,
       updated_at: s.updated_at
@@ -48,7 +49,7 @@ export class SecretController {
   };
 
   /**
-   * 获取单个密钥 (不返回实际数据)
+   * 获取单个密钥 (返回实际数据)
    */
   get = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
@@ -63,11 +64,12 @@ export class SecretController {
       throw ApiException.forbidden();
     }
 
-    // 不返回加密数据
+    // 返回解密数据
     return success(res, {
       id: secret.id,
       name: secret.name,
       type: secret.type,
+      data: decryptJson(secret.data_encrypted),
       description: secret.description,
       created_at: secret.created_at,
       updated_at: secret.updated_at
@@ -94,13 +96,15 @@ export class SecretController {
       created_by: userId
     });
 
-    // 不返回加密数据
+    // 返回解密数据 (方便前端立即使用)
     return created(res, {
       id: secret.id,
       name: secret.name,
       type: secret.type,
+      data: data,
       description: secret.description,
-      created_at: secret.created_at
+      created_at: secret.created_at,
+      updated_at: secret.updated_at
     });
   };
 
@@ -131,11 +135,12 @@ export class SecretController {
 
     const updated = await this.db.secrets.update(id, updateData);
 
-    // 不返回加密数据
+    // 返回解密数据
     return success(res, {
       id: updated!.id,
       name: updated!.name,
       type: updated!.type,
+      data: data || decryptJson(existing.data_encrypted), // Use new data if provided, else old
       description: updated!.description,
       updated_at: updated!.updated_at
     });

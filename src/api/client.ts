@@ -307,6 +307,17 @@ class ApiClient {
     return raw?.data ?? raw;
   }
 
+  async updateSecret(secret: CredentialItem): Promise<CredentialItem> {
+    const res = await fetch(`${API_BASE}/secrets/${secret.id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(secret)
+    });
+    const raw = await res.json();
+    if (!res.ok) throw new Error(raw?.error?.message || raw?.error || 'Failed to update secret');
+    return raw?.data ?? raw;
+  }
+
   async deleteSecret(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/secrets/${id}`, {
       method: 'DELETE',
@@ -318,6 +329,10 @@ class ApiClient {
   // --- API Management ---
 
   async getApis(): Promise<ApiRequest[]> {
+    if (!this.token && typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('gflow_local_apis');
+        return stored ? JSON.parse(stored) : [];
+    }
     const res = await fetch(`${API_BASE}/apis`, { headers: this.getHeaders() });
     const raw = await res.json();
     if (!res.ok) throw new Error(raw?.error?.message || raw?.error || 'Failed to fetch APIs');
@@ -325,6 +340,21 @@ class ApiClient {
   }
 
   async saveApi(apiReq: ApiRequest): Promise<ApiRequest> {
+    if (!this.token && typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('gflow_local_apis');
+        const list: ApiRequest[] = stored ? JSON.parse(stored) : [];
+        const newItem = { ...apiReq, id: apiReq.id === 'new' ? Math.random().toString(36).substring(2) : apiReq.id, updatedAt: new Date().toISOString() };
+        
+        const existsIndex = list.findIndex(r => r.id === newItem.id);
+        if (existsIndex >= 0) {
+            list[existsIndex] = newItem;
+        } else {
+            list.push(newItem);
+        }
+        localStorage.setItem('gflow_local_apis', JSON.stringify(list));
+        return newItem;
+    }
+
     const res = await fetch(`${API_BASE}/apis`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -336,6 +366,16 @@ class ApiClient {
   }
 
   async deleteApi(id: string): Promise<void> {
+    if (!this.token && typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('gflow_local_apis');
+        if (stored) {
+            const list: ApiRequest[] = JSON.parse(stored);
+            const newList = list.filter(r => r.id !== id);
+            localStorage.setItem('gflow_local_apis', JSON.stringify(newList));
+        }
+        return;
+    }
+
     const res = await fetch(`${API_BASE}/apis/${id}`, {
       method: 'DELETE',
       headers: this.getHeaders()

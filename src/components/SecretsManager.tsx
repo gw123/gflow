@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Edit2, Save, Key, Search, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Save, Key, Search, AlertCircle, Loader2, Eye, EyeOff, Copy } from 'lucide-react';
 import { CredentialItem } from '../types';
 import { CREDENTIAL_DEFINITIONS, CredentialDefinition } from '../credential_definitions';
 
@@ -14,8 +14,8 @@ interface SecretsManagerProps {
   
   // New props for async handling
   isServerMode?: boolean;
-  onServerCreate?: (secret: CredentialItem) => Promise<void>;
-  onServerUpdate?: (secret: CredentialItem) => Promise<void>;
+  onServerCreate?: (secret: CredentialItem) => Promise<CredentialItem | void>;
+  onServerUpdate?: (secret: CredentialItem) => Promise<CredentialItem | void>;
   onServerDelete?: (id: string) => Promise<void>;
 }
 
@@ -30,6 +30,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
 
   // Prepare list of filtered credentials
   const filteredCredentials = credentials.filter(c => 
@@ -43,6 +44,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     setSelectedType(cred.type);
     setFormData(JSON.parse(JSON.stringify(cred.data)));
     setErrors({});
+    setVisibleFields({});
   };
 
   const handleCreate = () => {
@@ -52,6 +54,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     setSelectedType(defaultType);
     initFormData(defaultType);
     setErrors({});
+    setVisibleFields({});
   };
 
   const initFormData = (typeName: string) => {
@@ -140,17 +143,21 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     if (isServerMode) {
         setIsSaving(true);
         try {
+            let savedItem = newItem;
             if (editingId === 'new' && onServerCreate) {
-                await onServerCreate(newItem);
+                const result = await onServerCreate(newItem);
+                if (result) savedItem = result;
                 notify("Secret created successfully", "success");
             } else if (onServerUpdate) {
-                await onServerUpdate(newItem);
+                const result = await onServerUpdate(newItem);
+                if (result) savedItem = result;
                 notify("Secret updated successfully", "success");
             }
-            onCredentialUpdate(newItem);
+            onCredentialUpdate(savedItem);
             setEditingId(null);
-        } catch (e) {
-            notify("Failed to save secret to server", "error");
+        } catch (e: any) {
+            console.error("Secret save error:", e);
+            notify(`Failed to save secret: ${e.message || 'Unknown error'}`, "error");
         } finally {
             setIsSaving(false);
         }
@@ -169,9 +176,20 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     }
   };
 
+  const toggleVisibility = (key: string) => {
+      setVisibleFields(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text);
+      notify("Copied to clipboard", "success");
+  };
+
   const renderField = (key: string, value: any) => {
     const isBoolean = typeof value === 'boolean';
     const isObject = typeof value === 'object' && value !== null;
+    const isSensitive = /password|secret|key|token|auth|credential/i.test(key);
+    const isVisible = visibleFields[key];
     
     return (
       <div key={key} className="mb-3">
@@ -204,7 +222,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
         ) : (
           <div className="relative">
             <input 
-              type="text"
+              type={isSensitive && !isVisible ? "password" : "text"}
               value={value}
               onChange={(e) => {
                  setFormData({ ...formData, [key]: e.target.value });
@@ -212,10 +230,21 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
                  delete newErrs[key];
                  setErrors(newErrs);
               }}
-              className={`w-full p-2 text-sm border rounded bg-gray-50 dark:bg-slate-700 outline-none focus:ring-1 ${errors[key] ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-600 focus:ring-blue-500'}`}
+              className={`w-full p-2 text-sm border rounded bg-gray-50 dark:bg-slate-700 outline-none focus:ring-1 pr-16 ${errors[key] ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-600 focus:ring-blue-500'}`}
             />
+            <div className="absolute right-2 top-2 flex items-center gap-1 text-gray-400">
+                {isSensitive && (
+                    <button onClick={() => toggleVisibility(key)} type="button" className="hover:text-blue-500">
+                        {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                )}
+                <button onClick={() => copyToClipboard(String(value))} type="button" className="hover:text-blue-500" title="Copy value">
+                    <Copy size={14} />
+                </button>
+            </div>
+            
             {errors[key] && (
-                <span className="text-[10px] text-red-500 absolute right-1 top-2.5 flex items-center gap-1">
+                <span className="text-[10px] text-red-500 absolute right-16 top-2.5 flex items-center gap-1">
                     <AlertCircle size={10} /> {errors[key]}
                 </span>
             )}
@@ -235,6 +264,11 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                 <Key size={18} className="text-blue-500"/> Secrets Manager
+                {isServerMode ? (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">Cloud</span>
+                ) : (
+                    <span className="text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">Local</span>
+                )}
               </h3>
               <button 
                 onClick={handleCreate}
