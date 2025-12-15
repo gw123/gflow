@@ -111,6 +111,7 @@ export class WorkflowTester {
     const { nodes, global } = this.workflow;
     const nodeNames = new Set(nodes.map(n => n.name));
     const globalKeys = new Set(Object.keys(global || {}));
+    const reservedRoots = new Set<string>(['$global', '$P', '$inputs', '$WORKFLOW', '$NODE', '$node']);
 
     nodes.forEach(node => {
       // 1. Check for empty required fields
@@ -118,15 +119,22 @@ export class WorkflowTester {
 
       // 2. Check Variable References {{ $Node.x }} or {{ $global.x }}
       const paramString = JSON.stringify(node.parameters || {});
-      const matches = paramString.matchAll(/\{\{\s*([$a-zA-Z0-9_.]+)\s*\}\}/g);
+      const matches = paramString.matchAll(/\{\{\s*(.*?)\s*\}\}/g);
       
       for (const match of matches) {
-        const variable = match[1]; // e.g., "$global.apiKey" or "$prevNode.output"
-        const parts = variable.split('.');
-        const root = parts[0];
+        const expression = String(match[1] || '').trim();
+        
+        // Extract root symbol: supports $node["Name"].output, $global.key, $WORKFLOW.x, plain NodeName.output
+        const dollarRootMatch = expression.match(/^\s*(\$[a-zA-Z_][a-zA-Z0-9_]*)/);
+        const plainRootMatch = expression.match(/^\s*([a-zA-Z_][a-zA-Z0-9_-]*)/);
+        const root = dollarRootMatch ? dollarRootMatch[1] : (plainRootMatch ? plainRootMatch[1] : '');
+
+        if (!root) continue;
 
         if (root === '$global') {
-          const key = parts[1];
+          // Try to get the second segment as the global key
+          const globalKeyMatch = expression.match(/^\s*\$global\.(\w+)/);
+          const key = globalKeyMatch ? globalKeyMatch[1] : undefined;
           if (key && !globalKeys.has(key)) {
             issues.push({
               id: `missing-global-${node.name}-${key}`,
@@ -136,10 +144,22 @@ export class WorkflowTester {
               category: 'variable'
             });
           }
-        } else if (root === '$P') {
-          // $P references inputs, hard to validate statically without schema
-        } else if (!nodeNames.has(root)) {
-          // Assuming root is a Node Name
+          continue;
+        }
+
+        // Reserved roots that are valid in interpolation context
+        if (reservedRoots.has(root)) {
+          // $P, $inputs, $WORKFLOW, $NODE, $node(...) are valid; skip validation
+          continue;
+        }
+
+        // If root starts with '$' but isn't a known reserved symbol, skip strict validation to avoid false positives
+        if (root.startsWith('$')) {
+          continue;
+        }
+
+        // Plain node name reference
+        if (!nodeNames.has(root)) {
           issues.push({
             id: `missing-ref-node-${node.name}-${root}`,
             nodeName: node.name,
