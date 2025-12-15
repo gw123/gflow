@@ -6,6 +6,8 @@ import axios from 'axios';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 import { ServerWorkflowEngine } from './engine';
 import { GrpcPluginManager } from '../runners/grpc/server';
 import { Registry } from '../registry';
@@ -109,6 +111,30 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json() as any);
 
+// --- SWAGGER CONFIGURATION --- 
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'GFlow API Documentation',
+      version: '1.0.0',
+      description: 'API documentation for GFlow workflow management system',
+    },
+    servers: [
+      {
+        url: `http://localhost:${PORT}`,
+        description: 'Development server',
+      },
+    ],
+  },
+  apis: ['./src/server/index.ts'],
+};
+
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+// Serve Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // --- SCHEDULER SYSTEM ---
 // Map to store active cron jobs
 const activeJobs = new Map<string, any>();
@@ -198,7 +224,43 @@ const initializeGrpcPlugins = async () => {
 initializeGrpcPlugins().catch(error => logger.error('Failed to initialize gRPC plugins:', error));
 
 
-// --- SERVER EXECUTION API ---
+// --- SERVER EXECUTION API --- 
+/**
+ * @openapi
+ * /api/execute:
+ *   post:
+ *     summary: Execute a workflow
+ *     description: Execute a workflow either by providing the workflow definition or workflow ID
+ *     tags:
+ *       - Workflow Execution
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workflow: 
+ *                 type: object
+ *                 description: The workflow definition to execute
+ *               workflowId: 
+ *                 type: string
+ *                 description: The ID of an existing workflow to execute
+ *             example:
+ *               workflowId: "1234567890"
+ *     responses:
+ *       200:
+ *         description: Workflow executed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description: Workflow execution result
+ *       400:
+ *         description: Bad request - workflow not provided or disabled
+ *       500:
+ *         description: Internal server error during workflow execution
+ */
 app.post('/api/execute', async (req, res) => {
     const { workflow, workflowId } = req.body;
     let targetWorkflow = workflow;
@@ -234,7 +296,64 @@ app.post('/api/execute', async (req, res) => {
     }
 });
 
-// --- Proxy API ---
+// --- Proxy API --- 
+/**
+ * @openapi
+ * /api/proxy:
+ *   post:
+ *     summary: Proxy API request
+ *     description: Forward an API request to another server
+ *     tags:
+ *       - Proxy
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               method: 
+ *                 type: string
+ *                 description: HTTP method (GET, POST, PUT, DELETE, etc.)
+ *               url: 
+ *                 type: string
+ *                 description: Target URL to forward the request to
+ *               headers: 
+ *                 type: object
+ *                 description: HTTP headers to include in the request
+ *               body: 
+ *                 type: object
+ *                 description: Request body
+ *               params: 
+ *                 type: object
+ *                 description: URL parameters
+ *             example:
+ *               method: "GET"
+ *               url: "https://api.example.com/data"
+ *               headers: { "Authorization": "Bearer token" }
+ *     responses:
+ *       200:
+ *         description: Request forwarded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: 
+ *                   type: number
+ *                   description: HTTP status code
+ *                 statusText: 
+ *                   type: string
+ *                   description: HTTP status text
+ *                 data: 
+ *                   type: object
+ *                   description: Response data
+ *                 headers: 
+ *                   type: object
+ *                   description: Response headers
+ *       500:
+ *         description: Internal server error during proxy request
+ */
 app.post('/api/proxy', async (req, res) => {
     const { method, url, headers, body, params } = req.body;
     try {
@@ -255,7 +374,153 @@ app.post('/api/proxy', async (req, res) => {
     }
 });
 
-// --- Auth APIs ---
+// --- Auth APIs --- 
+/**
+ * @openapi
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Create a new user account
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username: 
+ *                 type: string
+ *                 description: Username for the new account
+ *               password: 
+ *                 type: string
+ *                 description: Password for the new account
+ *               email: 
+ *                 type: string
+ *                 description: Email address for the new account
+ *             required:
+ *               - username
+ *               - password
+ *               - email
+ *             example:
+ *               username: "john_doe"
+ *               password: "password123"
+ *               email: "john@example.com"
+ *     responses:
+ *       200:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: User ID
+ *                 username: 
+ *                   type: string
+ *                   description: Username
+ *                 email: 
+ *                   type: string
+ *                   description: Email address
+ *                 createdAt: 
+ *                   type: string
+ *                   description: Account creation timestamp
+ *       400:
+ *         description: Bad request - username already exists
+ */
+
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     summary: Login to user account
+ *     description: Authenticate user and get access token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username: 
+ *                 type: string
+ *                 description: Username
+ *               password: 
+ *                 type: string
+ *                 description: Password
+ *             required:
+ *               - username
+ *               - password
+ *             example:
+ *               username: "john_doe"
+ *               password: "password123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user: 
+ *                   type: object
+ *                   properties:
+ *                     id: 
+ *                       type: string
+ *                       description: User ID
+ *                     username: 
+ *                       type: string
+ *                       description: Username
+ *                     email: 
+ *                       type: string
+ *                       description: Email address
+ *                     createdAt: 
+ *                       type: string
+ *                       description: Account creation timestamp
+ *                 token: 
+ *                   type: string
+ *                   description: Authentication token
+ *       401:
+ *         description: Invalid credentials
+ */
+
+/**
+ * @openapi
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user info
+ *     description: Retrieve information about the currently authenticated user
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User info retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: User ID
+ *                 username: 
+ *                   type: string
+ *                   description: Username
+ *                 email: 
+ *                   type: string
+ *                   description: Email address
+ *                 createdAt: 
+ *                   type: string
+ *                   description: Account creation timestamp
+ *       401:
+ *         description: Unauthorized - no token provided or invalid token
+ */
 app.post('/api/auth/register', (req, res) => {
     const users = readJson(USERS_FILE);
     const { username, password, email } = req.body;
@@ -300,7 +565,265 @@ app.get('/api/auth/me', (req, res) => {
     }
 });
 
-// --- Workflow CRUD ---
+// --- Workflow CRUD --- 
+/**
+ * @openapi
+ * /api/workflows:
+ *   get:
+ *     summary: Get all workflows
+ *     description: Retrieve a list of all workflows with optional filtering and pagination
+ *     tags:
+ *       - Workflow Management
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term to filter workflows by name
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: Field to sort by (default: updatedAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *         description: Sort order (asc or desc, default: desc)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Maximum number of workflows to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Number of workflows to skip before returning results
+ *     responses:
+ *       200:
+ *         description: Workflows retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data: 
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: 
+ *                         type: string
+ *                         description: Workflow ID
+ *                       name: 
+ *                         type: string
+ *                         description: Workflow name
+ *                       updatedAt: 
+ *                         type: string
+ *                         description: Last update timestamp
+ *                       enabled: 
+ *                         type: boolean
+ *                         description: Whether the workflow is enabled
+ *                 total: 
+ *                   type: integer
+ *                   description: Total number of workflows
+ *                 limit: 
+ *                   type: integer
+ *                   description: Number of workflows returned per page
+ *                 offset: 
+ *                   type: integer
+ *                   description: Number of workflows skipped
+ */
+
+/**
+ * @openapi
+ * /api/workflows/{id}:
+ *   get:
+ *     summary: Get a workflow by ID
+ *     description: Retrieve a specific workflow by its ID
+ *     tags:
+ *       - Workflow Management
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workflow ID
+ *     responses:
+ *       200:
+ *         description: Workflow retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: Workflow ID
+ *                 name: 
+ *                   type: string
+ *                   description: Workflow name
+ *                 content: 
+ *                   type: object
+ *                   description: Workflow definition
+ *                 enabled: 
+ *                   type: boolean
+ *                   description: Whether the workflow is enabled
+ *                 updatedAt: 
+ *                   type: string
+ *                   description: Last update timestamp
+ *       404:
+ *         description: Workflow not found
+ */
+
+/**
+ * @openapi
+ * /api/workflows:
+ *   post:
+ *     summary: Create a new workflow
+ *     description: Create a new workflow with the provided definition
+ *     tags:
+ *       - Workflow Management
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: 
+ *                 type: string
+ *                 description: Workflow name
+ *               content: 
+ *                 type: object
+ *                 description: Workflow definition
+ *               enabled: 
+ *                 type: boolean
+ *                 description: Whether the workflow is enabled (default: true)
+ *             required:
+ *               - name
+ *               - content
+ *             example:
+ *               name: "My Workflow"
+ *               content: { "nodes": [], "connections": [] }
+ *               enabled: true
+ *     responses:
+ *       200:
+ *         description: Workflow created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: Workflow ID
+ *                 name: 
+ *                   type: string
+ *                   description: Workflow name
+ *                 content: 
+ *                   type: object
+ *                   description: Workflow definition
+ *                 enabled: 
+ *                   type: boolean
+ *                   description: Whether the workflow is enabled
+ *                 updatedAt: 
+ *                   type: string
+ *                   description: Creation timestamp
+ */
+
+/**
+ * @openapi
+ * /api/workflows/{id}:
+ *   put:
+ *     summary: Update a workflow
+ *     description: Update an existing workflow by its ID
+ *     tags:
+ *       - Workflow Management
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workflow ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: 
+ *                 type: string
+ *                 description: Workflow name
+ *               content: 
+ *                 type: object
+ *                 description: Workflow definition
+ *               enabled: 
+ *                 type: boolean
+ *                 description: Whether the workflow is enabled
+ *             example:
+ *               name: "Updated Workflow"
+ *               enabled: false
+ *     responses:
+ *       200:
+ *         description: Workflow updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: Workflow ID
+ *                 name: 
+ *                   type: string
+ *                   description: Workflow name
+ *                 content: 
+ *                   type: object
+ *                   description: Workflow definition
+ *                 enabled: 
+ *                   type: boolean
+ *                   description: Whether the workflow is enabled
+ *                 updatedAt: 
+ *                   type: string
+ *                   description: Update timestamp
+ *       404:
+ *         description: Workflow not found
+ */
+
+/**
+ * @openapi
+ * /api/workflows/{id}:
+ *   delete:
+ *     summary: Delete a workflow
+ *     description: Delete an existing workflow by its ID
+ *     tags:
+ *       - Workflow Management
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workflow ID
+ *     responses:
+ *       200:
+ *         description: Workflow deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the deletion was successful
+ *       404:
+ *         description: Workflow not found
+ */
 app.get('/api/workflows', (req, res) => {
     let workflows = readWorkflows().map((w: any) => ({
         id: w.id,
@@ -383,7 +906,125 @@ app.delete('/api/workflows/:id', (req, res) => {
     } else res.status(404).json({ error: 'Not found' });
 });
 
-// --- Secrets API ---
+// --- Secrets API --- 
+/**
+ * @openapi
+ * /api/secrets:
+ *   get:
+ *     summary: Get all secrets
+ *     description: Retrieve a list of all secrets
+ *     tags:
+ *       - Secrets Management
+ *     responses:
+ *       200:
+ *         description: Secrets retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: 
+ *                     type: string
+ *                     description: Secret ID
+ *                   name: 
+ *                     type: string
+ *                     description: Secret name
+ *                   type: 
+ *                     type: string
+ *                     description: Secret type
+ *                   data: 
+ *                     type: object
+ *                     description: Secret data
+ *                   updatedAt: 
+ *                     type: string
+ *                     description: Last update timestamp
+ */
+
+/**
+ * @openapi
+ * /api/secrets:
+ *   post:
+ *     summary: Create or update a secret
+ *     description: Create a new secret or update an existing one
+ *     tags:
+ *       - Secrets Management
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id: 
+ *                 type: string
+ *                 description: Secret ID (optional, will be generated if not provided)
+ *               name: 
+ *                 type: string
+ *                 description: Secret name
+ *               type: 
+ *                 type: string
+ *                 description: Secret type
+ *               data: 
+ *                 type: object
+ *                 description: Secret data
+ *             example:
+ *               name: "API_KEY"
+ *               type: "string"
+ *               data: { "value": "secret_key_123" }
+ *     responses:
+ *       200:
+ *         description: Secret created or updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: Secret ID
+ *                 name: 
+ *                   type: string
+ *                   description: Secret name
+ *                 type: 
+ *                   type: string
+ *                   description: Secret type
+ *                 data: 
+ *                   type: object
+ *                   description: Secret data
+ *                 updatedAt: 
+ *                   type: string
+ *                   description: Last update timestamp
+ */
+
+/**
+ * @openapi
+ * /api/secrets/{id}:
+ *   delete:
+ *     summary: Delete a secret
+ *     description: Delete an existing secret by its ID
+ *     tags:
+ *       - Secrets Management
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Secret ID
+ *     responses:
+ *       200:
+ *         description: Secret deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the deletion was successful
+ */
 app.get('/api/secrets', (req, res) => res.json(readJson(SECRETS_FILE)));
 app.post('/api/secrets', (req, res) => {
     const all = readJson(SECRETS_FILE);
@@ -399,7 +1040,111 @@ app.delete('/api/secrets/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// --- APIs API ---
+// --- APIs API --- 
+/**
+ * @openapi
+ * /api/apis:
+ *   get:
+ *     summary: Get all APIs
+ *     description: Retrieve a list of all APIs
+ *     tags:
+ *       - API Management
+ *     responses:
+ *       200:
+ *         description: APIs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: 
+ *                     type: string
+ *                     description: API ID
+ *                   updatedAt: 
+ *                     type: string
+ *                     description: Last update timestamp
+ */
+
+/**
+ * @openapi
+ * /api/apis:
+ *   post:
+ *     summary: Create or update an API
+ *     description: Create a new API or update an existing one
+ *     tags:
+ *       - API Management
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id: 
+ *                 type: string
+ *                 description: API ID (optional, will be generated if not provided)
+ *               name: 
+ *                 type: string
+ *                 description: API name
+ *               url: 
+ *                 type: string
+ *                 description: API URL
+ *               method: 
+ *                 type: string
+ *                 description: HTTP method
+ *               headers: 
+ *                 type: object
+ *                 description: HTTP headers
+ *             example:
+ *               name: "Weather API"
+ *               url: "https://api.weather.com/v1/current.json"
+ *               method: "GET"
+ *               headers: { "Authorization": "Bearer token" }
+ *     responses:
+ *       200:
+ *         description: API created or updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: 
+ *                   type: string
+ *                   description: API ID
+ *                 updatedAt: 
+ *                   type: string
+ *                   description: Last update timestamp
+ */
+
+/**
+ * @openapi
+ * /api/apis/{id}:
+ *   delete:
+ *     summary: Delete an API
+ *     description: Delete an existing API by its ID
+ *     tags:
+ *       - API Management
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API ID
+ *     responses:
+ *       200:
+ *         description: API deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the deletion was successful
+ */
 app.get('/api/apis', (req, res) => res.json(readJson(APIS_FILE)));
 app.post('/api/apis', (req, res) => {
     const all = readJson(APIS_FILE);
@@ -415,7 +1160,219 @@ app.delete('/api/apis/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// --- gRPC Plugins API ---
+// --- gRPC Plugins API --- 
+/**
+ * @openapi
+ * /api/plugins:
+ *   get:
+ *     summary: Get all gRPC plugins
+ *     description: Retrieve a list of all registered gRPC plugins
+ *     tags:
+ *       - Plugins Management
+ *     responses:
+ *       200:
+ *         description: Plugins retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   kind: 
+ *                     type: string
+ *                     description: Plugin kind
+ *                   name: 
+ *                     type: string
+ *                     description: Plugin name
+ *                   endpoint: 
+ *                     type: string
+ *                     description: Plugin endpoint
+ *                   enabled: 
+ *                     type: boolean
+ *                     description: Whether the plugin is enabled
+ *                   status: 
+ *                     type: string
+ *                     description: Plugin status
+ *                   lastHealthCheck: 
+ *                     type: string
+ *                     description: Last health check timestamp
+ *                   error: 
+ *                     type: string
+ *                     description: Error message if any
+ *                   description: 
+ *                     type: string
+ *                     description: Plugin description
+ *                   version: 
+ *                     type: string
+ *                     description: Plugin version
+ *                   category: 
+ *                     type: string
+ *                     description: Plugin category
+ */
+
+/**
+ * @openapi
+ * /api/plugins/{kind}:
+ *   get:
+ *     summary: Get a plugin by kind
+ *     description: Retrieve a specific plugin by its kind
+ *     tags:
+ *       - Plugins Management
+ *     parameters:
+ *       - in: path
+ *         name: kind
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Plugin kind
+ *     responses:
+ *       200:
+ *         description: Plugin retrieved successfully
+ *       404:
+ *         description: Plugin not found
+ */
+
+/**
+ * @openapi
+ * /api/plugins/reload:
+ *   post:
+ *     summary: Reload all plugins
+ *     description: Reload all gRPC plugins from the configuration file
+ *     tags:
+ *       - Plugins Management
+ *     responses:
+ *       200:
+ *         description: Plugins reloaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the reload was successful
+ *                 message: 
+ *                   type: string
+ *                   description: Reload result message
+ *       500:
+ *         description: Failed to reload plugins
+ */
+
+/**
+ * @openapi
+ * /api/plugins:
+ *   post:
+ *     summary: Register a plugin
+ *     description: Manually register a new gRPC plugin
+ *     tags:
+ *       - Plugins Management
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               kind: 
+ *                 type: string
+ *                 description: Plugin kind
+ *               name: 
+ *                 type: string
+ *                 description: Plugin name
+ *               endpoint: 
+ *                 type: string
+ *                 description: Plugin endpoint
+ *               enabled: 
+ *                 type: boolean
+ *                 description: Whether the plugin is enabled
+ *             example:
+ *               kind: "custom-plugin"
+ *               name: "My Custom Plugin"
+ *               endpoint: "localhost:50051"
+ *               enabled: true
+ *     responses:
+ *       200:
+ *         description: Plugin registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the registration was successful
+ *                 message: 
+ *                   type: string
+ *                   description: Registration result message
+ *       400:
+ *         description: Failed to register plugin
+ *       500:
+ *         description: Internal server error during plugin registration
+ */
+
+/**
+ * @openapi
+ * /api/plugins/{kind}:
+ *   delete:
+ *     summary: Unregister a plugin
+ *     description: Unregister an existing gRPC plugin by its kind
+ *     tags:
+ *       - Plugins Management
+ *     parameters:
+ *       - in: path
+ *         name: kind
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Plugin kind
+ *     responses:
+ *       200:
+ *         description: Plugin unregistered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: 
+ *                   type: boolean
+ *                   description: Whether the unregistration was successful
+ *                 message: 
+ *                   type: string
+ *                   description: Unregistration result message
+ *       404:
+ *         description: Plugin not found
+ */
+
+/**
+ * @openapi
+ * /api/plugins/{kind}/health:
+ *   post:
+ *     summary: Check plugin health
+ *     description: Perform a health check on a specific plugin
+ *     tags:
+ *       - Plugins Management
+ *     parameters:
+ *       - in: path
+ *         name: kind
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Plugin kind
+ *     responses:
+ *       200:
+ *         description: Health check performed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 healthy: 
+ *                   type: boolean
+ *                   description: Whether the plugin is healthy
+ *       500:
+ *         description: Failed to perform health check
+ */
 
 // 获取所有已注册的插件
 // 获取所有已注册的插件

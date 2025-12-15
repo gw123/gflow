@@ -21,6 +21,8 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.1",
     "@google/genai": "^1.30.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "@vitejs/plugin-react": "^5.1.1",
     "axios": "^1.13.2",
     "better-sqlite3": "^11.6.0",
@@ -40,6 +42,8 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.10.1",
     "reactflow": "^11.11.4",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "url": "^0.11.4",
     "vite": "^7.2.4",
     "vm": "^0.1.0",
