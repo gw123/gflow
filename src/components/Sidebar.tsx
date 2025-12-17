@@ -4,6 +4,7 @@ import { TEMPLATE_LIBRARY, NODE_TEMPLATES } from '../nodes';
 import { IconMap } from './icons';
 import { Terminal } from 'lucide-react';
 import { Registry } from '../registry';
+import { api } from '../api/client';
 
 // Map category keys to IconMap keys
 const CATEGORY_ICON_NAMES: Record<string, string> = {
@@ -35,38 +36,48 @@ const Sidebar = () => {
   React.useEffect(() => {
     const fetchPlugins = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/plugins');
-        if (!response.ok) return;
-        const data = await response.json();
+        const result = await api.getPlugins();
+        const data = result.data || [];
 
         setLibrary(prevLibrary => {
           const newLibrary = { ...prevLibrary };
 
           data.forEach((plugin: any) => {
-            if (plugin.nodePlugin) {
-              const { nodePlugin } = plugin;
-              // Register visual/template info for client-side usage if not present
-              // Note: We don't have the runner, but visuals are needed for Sidebar icons
-              if (!Registry.get(nodePlugin.type)) {
-                Registry.register({
-                  ...nodePlugin,
-                  runner: {} as any // Stub runner for frontend display purposes
-                });
-              }
+            // Transform plugin data into template format
+            const pluginType = `plugin_${plugin.id}`;
+            const template = {
+              name: plugin.name,
+              type: pluginType,
+              description: plugin.description || '',
+              category: 'plugin',
+              inputs: {},
+              outputs: {}
+            };
 
-              const cat = nodePlugin.category || 'plugin';
-              if (!newLibrary[cat]) {
-                newLibrary[cat] = { description: 'Dynamic Plugins', templates: [] };
-              }
-
-              // Check for duplicates
-              if (!newLibrary[cat].templates.find((t: any) => t.type === nodePlugin.type)) {
-                newLibrary[cat].templates.push(nodePlugin.template);
-              }
-
-              // Update global NODE_TEMPLATES so App.tsx onDrop can find the definition
-              NODE_TEMPLATES[nodePlugin.type] = nodePlugin.template;
+            // Register the plugin as a node type
+            if (!Registry.get(pluginType)) {
+              Registry.register({
+                type: pluginType,
+                name: plugin.name,
+                category: 'plugin',
+                icon: 'Plug',
+                template,
+                runner: {} as any // Stub runner for frontend display purposes
+              });
             }
+
+            const cat = 'plugin';
+            if (!newLibrary[cat]) {
+              newLibrary[cat] = { description: 'Dynamic Plugins', templates: [] };
+            }
+
+            // Check for duplicates
+            if (!newLibrary[cat].templates.find((t: any) => t.type === pluginType)) {
+              newLibrary[cat].templates.push(template);
+            }
+
+            // Update global NODE_TEMPLATES so App.tsx onDrop can find the definition
+            NODE_TEMPLATES[pluginType] = template;
           });
           return newLibrary;
         });
@@ -76,7 +87,7 @@ const Sidebar = () => {
     };
 
     fetchPlugins();
-    const interval = setInterval(fetchPlugins, 5000);
+    const interval = setInterval(fetchPlugins, 120000);
     return () => clearInterval(interval);
   }, []);
 

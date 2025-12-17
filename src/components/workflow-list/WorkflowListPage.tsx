@@ -92,10 +92,13 @@ export const WorkflowListPage: React.FC<WorkflowListPageProps> = ({
             // Check if content is present, otherwise fetch it
             if (!wf.content) {
                 setLoading(true);
-                const fullWf = await api.getWorkflow(wf.id);
-                onEditWorkflow(fullWf.content, wf.id);
+                const fullWf = await api.getWorkflow(wf.name);
+
+                console.log('full wf -> ', fullWf);
+
+                onEditWorkflow(fullWf, wf.name);
             } else {
-                onEditWorkflow(wf.content, wf.id);
+                onEditWorkflow(wf, wf.name);
             }
         } catch (e: any) {
             console.error("Failed to load workflow details:", e);
