@@ -2,7 +2,7 @@
 import { CredentialItem, WorkflowDefinition, NodeExecutionResult } from '../types';
 
 // Allow environment variable override, safely check import.meta.env
-const API_BASE = import.meta.env?.VITE_API_BASE || 'http://localhost:3001/api';
+const API_BASE = import.meta.env?.VITE_API_BASE || 'http://localhost:8100/api/v1';
 
 export interface WorkflowSummary {
   id: string;
@@ -60,15 +60,29 @@ export interface PaginatedExecutions {
 }
 
 export interface User {
-  id: string;
+  user_id: number;
   username: string;
   email?: string;
-  createdAt: string;
+  mobile?: string;
+  avatar?: string;
+  roles?: string[];
+  permissions?: string[];
+  createdAt?: string;
 }
 
 export interface AuthResponse {
-  user: User;
   token: string;
+  user_id: number;
+  username: string;
+  role?: Array<{ id: number; name: string; label: string }>;
+}
+
+export interface UserInfoResponse {
+  user_id: number;
+  username: string;
+  avatar?: string;
+  roles: string[];
+  permissions: string[];
 }
 
 export interface ServerExecutionResponse {
@@ -89,11 +103,69 @@ export interface ApiRequest {
   updatedAt?: string;
 }
 
+export interface Plugin {
+  id: number;
+  name: string;
+  kind: string;
+  endpoint: string;
+  enabled: boolean;
+  health_check: boolean;
+  description: string;
+  version: string;
+  user_id: number;
+}
+
+export interface CreatePluginRequest {
+  name: string;
+  kind: string;
+  endpoint: string;
+  enabled: boolean;
+  health_check: boolean;
+  description: string;
+  version: string;
+}
+
+export interface UpdatePluginRequest {
+  name: string;
+  kind: string;
+  endpoint: string;
+  enabled: boolean;
+  health_check: boolean;
+  description: string;
+  version: string;
+}
+
+export interface PaginatedPlugins {
+  data: Plugin[];
+  pagination: {
+    total_count: number;
+    has_more: boolean;
+    last_id: number;
+    page_size: number;
+    page_num: number;
+  };
+}
+
+export interface ApiResponse<T> {
+  code: string;
+  code_en: string;
+  message?: string;
+  data?: T;
+  pagination?: any;
+}
+
 class ApiClient {
   private token: string | null = null;
 
   constructor() {
     // Load token from localStorage if available on client side
+    if (typeof localStorage !== 'undefined') {
+      this.token = localStorage.getItem('auth_token');
+    }
+  }
+
+  // Initialize token from localStorage (call this on app startup)
+  initializeToken() {
     if (typeof localStorage !== 'undefined') {
       this.token = localStorage.getItem('auth_token');
     }
@@ -120,132 +192,268 @@ class ApiClient {
     return this.token;
   }
 
+  // Debug: Check token status
+  debugTokenStatus() {
+    console.log('[API Debug] Token in memory:', this.token ? this.token.substring(0, 20) + '...' : 'null');
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('auth_token');
+      console.log('[API Debug] Token in localStorage:', stored ? stored.substring(0, 20) + '...' : 'null');
+    }
+  }
+
   // --- Auth ---
 
-  async register(username: string, password: string, email?: string): Promise<User> {
+  /**
+   * 用户注册
+   * POST /api/v1/auth/register
+   */
+  async register(username: string, password: string, email: string, mobile: string): Promise<any> {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, email })
+      body: JSON.stringify({ username, password, email, mobile })
     });
+    const raw = await res.json();
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Registration failed');
+      throw new Error(raw?.message || raw?.error || 'Registration failed');
     }
-    return res.json();
+    return raw;
   }
 
-  async login(username: string, password: string): Promise<AuthResponse> {
+  /**
+   * 用户登录
+   * POST /api/v1/auth/login
+   */
+  async login(username?: string, password?: string, mobile?: string): Promise<AuthResponse> {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, mobile })
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Login failed');
+    const raw = await res.json();
+    
+    console.log('[API] Login response:', raw);
+    
+    // Check for error code in response (backend returns code field for errors)
+    if (raw?.code && raw.code !== '0' && raw.code !== '200') {
+      throw new Error(raw?.message || raw?.error || 'Login failed');
     }
-    const data = await res.json();
-    this.setToken(data.token);
-    return data;
+    
+    if (!res.ok) {
+      throw new Error(raw?.message || raw?.error || 'Login failed');
+    }
+    
+    // Extract data from response (success data is nested in data field)
+    const authData = raw?.data || raw;
+    console.log('[API] Auth data extracted:', authData);
+    
+    if (authData?.token) {
+      console.log('[API] Setting token:', authData.token);
+      this.setToken(authData.token);
+    } else {
+      console.warn('[API] No token found in auth response');
+    }
+    return authData;
   }
 
-  async getMe(): Promise<User> {
-    const res = await fetch(`${API_BASE}/auth/me`, {
+  /**
+   * 获取当前用户信息
+   * GET /api/v1/user/userInfo
+   */
+  async getMe(): Promise<UserInfoResponse> {
+    // If no token, skip the request
+    if (!this.token) {
+      console.warn('[API] No token available for getMe()');
+      throw new Error('No authentication token available');
+    }
+    
+    console.log('[API] Fetching user info with token:', this.token.substring(0, 20) + '...');
+    
+    const res = await fetch(`${API_BASE}/user/userInfo`, {
       headers: this.getHeaders()
     });
+    const raw = await res.json();
+    
+    console.log('[API] User info response:', raw, 'Status:', res.status);
+    
+    // Check for error code in response
+    if (raw?.code && raw.code !== '0' && raw.code !== '200') {
+      this.setToken(null); // Invalid token, clear it
+      throw new Error(raw?.message || raw?.error || 'Failed to fetch user');
+    }
+    
     if (!res.ok) {
       this.setToken(null); // Invalid token, clear it
-      throw new Error('Failed to fetch user');
+      throw new Error(raw?.message || raw?.error || 'Failed to fetch user');
     }
-    return res.json();
+    
+    // Extract data from response (success data is nested in data field)
+    return raw?.data ?? raw;
   }
 
-  logout() {
+  /**
+   * 用户登出
+   * GET /api/v1/auth/logout
+   */
+  async logout(): Promise<void> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/logout`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+      if (!res.ok) {
+        console.warn('Logout request failed, but clearing local token anyway');
+      }
+    } catch (err) {
+      console.warn('Logout request error:', err);
+    }
     this.setToken(null);
   }
 
   // --- Workflows ---
 
+  /**
+   * 获取工作流列表
+   * GET /api/v1/workflow/workflowList
+   */
   async getWorkflows(): Promise<WorkflowSummary[]> {
-    const res = await fetch(`${API_BASE}/workflows`, { headers: this.getHeaders() });
+    const res = await fetch(`${API_BASE}/workflow/workflowList`, { headers: this.getHeaders() });
     const raw = await res.json();
     if (!res.ok) {
-      throw new Error(raw?.error?.message || raw?.error || 'Failed to fetch workflows');
+      throw new Error(raw?.message || raw?.error || 'Failed to fetch workflows');
     }
     const list = Array.isArray(raw?.data) ? raw.data : [];
     return list.map((w: any) => ({
-      id: w.id,
+      id: w.id || w.name,
       name: w.name,
       updatedAt: w.updated_at || w.updatedAt || new Date().toISOString()
     }));
   }
 
+  /**
+   * 获取工作流列表（分页）
+   * GET /api/v1/workflow/workflowList
+   * @param params.keyword - 关键词
+   * @param params.status - 状态
+   * @param params.limit - 每页大小 (page_size)
+   * @param params.offset - 页码 (page_num)
+   */
   async getWorkflowsPaginated(params: QueryParams = {}): Promise<PaginatedWorkflows> {
-    const queryString = new URLSearchParams(
-      Object.entries(params)
-        .filter(([_, v]) => v != null && v !== '')
-        .map(([k, v]) => [k, String(v)])
-    ).toString();
+    const queryParams: Record<string, string> = {};
+    if (params.search) queryParams.keyword = params.search;
+    if (params.status) queryParams.status = params.status;
+    if (params.limit) queryParams.page_size = String(params.limit);
+    if (params.offset !== undefined) queryParams.page_num = String(Math.floor(params.offset / (params.limit || 20)) + 1);
 
-    const res = await fetch(`${API_BASE}/workflows${queryString ? '?' + queryString : ''}`, {
+    const queryString = new URLSearchParams(queryParams).toString();
+
+    const res = await fetch(`${API_BASE}/workflow/workflowList${queryString ? '?' + queryString : ''}`, {
       headers: this.getHeaders()
     });
     const raw = await res.json();
     if (!res.ok) {
-      throw new Error(raw?.error?.message || raw?.error || 'Failed to fetch workflows');
+      throw new Error(raw?.message || raw?.error || 'Failed to fetch workflows');
     }
-    console.log("res==>", raw)
 
     const list = Array.isArray(raw?.data) ? raw.data : [];
     const data = list.map((w: any) => ({
       ...w,
+      id: w.id || w.name,
       updatedAt: w.updated_at || w.updatedAt || new Date().toISOString()
     }));
 
+    const pagination = raw?.pagination || {};
     return {
       data,
-      total: raw.total || 0,
-      limit: raw.limit || 10,
-      offset: raw.offset || 0
+      total: pagination.total_count || raw.total || 0,
+      limit: pagination.page_size || params.limit || 20,
+      offset: ((pagination.page_num || 1) - 1) * (pagination.page_size || params.limit || 20)
     };
   }
 
-  async getWorkflow(id: string): Promise<WorkflowRecord> {
-    const res = await fetch(`${API_BASE}/workflows/${id}`, { headers: this.getHeaders() });
+  /**
+   * 获取工作流详情
+   * GET /api/v1/workflow/{workflowName}
+   */
+  async getWorkflow(workflowName: string): Promise<WorkflowRecord> {
+    const res = await fetch(`${API_BASE}/workflow/${encodeURIComponent(workflowName)}`, { headers: this.getHeaders() });
     const raw = await res.json();
-    if (!res.ok) throw new Error(raw?.error?.message || raw?.error || 'Failed to fetch workflow');
-    return raw?.data ?? raw;
+    if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to fetch workflow');
+    const workflow = raw?.data ?? raw;
+    return {
+      ...workflow,
+      id: workflow.id || workflow.name,
+      updatedAt: workflow.updated_at || workflow.updatedAt || new Date().toISOString()
+    };
   }
 
+  /**
+   * 创建工作流
+   * POST /api/v1/workflow/
+   */
   async createWorkflow(name: string, content: WorkflowDefinition): Promise<WorkflowRecord> {
-    const res = await fetch(`${API_BASE}/workflows`, {
+    const res = await fetch(`${API_BASE}/workflow/`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ name, content })
+      body: JSON.stringify({
+        name,
+        version: (content as any).version || '1.0',
+        nodes: content.nodes || [],
+        connections: content.connections || {},
+        global: content.global || {}
+      })
     });
     const raw = await res.json();
-    if (!res.ok) throw new Error(raw?.error?.message || raw?.error || 'Failed to create workflow');
-    return raw?.data ?? raw;
+    if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to create workflow');
+    const workflow = raw?.data ?? raw;
+    return {
+      ...workflow,
+      id: workflow.id || workflow.name,
+      content,
+      updatedAt: workflow.updated_at || workflow.updatedAt || new Date().toISOString()
+    };
   }
 
-  async updateWorkflow(id: string, name: string, content: WorkflowDefinition): Promise<WorkflowRecord> {
-    const res = await fetch(`${API_BASE}/workflows/${id}`, {
+  /**
+   * 更新工作流
+   * PUT /api/v1/workflow/{workflowName}
+   */
+  async updateWorkflow(workflowName: string, name: string, content: WorkflowDefinition): Promise<WorkflowRecord> {
+    const res = await fetch(`${API_BASE}/workflow/${encodeURIComponent(workflowName)}`, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: JSON.stringify({ name, content })
+      body: JSON.stringify({
+        name,
+        version: (content as any).version || '1.0',
+        nodes: content.nodes || [],
+        connections: content.connections || {},
+        global: content.global || {}
+      })
     });
     const raw = await res.json();
-    if (!res.ok) throw new Error(raw?.error?.message || raw?.error || 'Failed to update workflow');
-    return raw?.data ?? raw;
+    if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to update workflow');
+    const workflow = raw?.data ?? raw;
+    return {
+      ...workflow,
+      id: workflow.id || workflow.name,
+      content,
+      updatedAt: workflow.updated_at || workflow.updatedAt || new Date().toISOString()
+    };
   }
 
-  async deleteWorkflow(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/workflows/${id}`, {
+  /**
+   * 删除工作流
+   * DELETE /api/v1/workflow/{workflowName}
+   */
+  async deleteWorkflow(workflowName: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/workflow/${encodeURIComponent(workflowName)}`, {
       method: 'DELETE',
       headers: this.getHeaders()
     });
-    if (!res.ok) throw new Error('Failed to delete workflow');
+    if (!res.ok) {
+      const raw = await res.json().catch(() => ({}));
+      throw new Error(raw?.message || raw?.error || 'Failed to delete workflow');
+    }
   }
 
   async executeWorkflowById(id: string, input?: any): Promise<ServerExecutionResponse> {
@@ -427,6 +635,110 @@ class ApiClient {
         throw new Error(`Backend server returned HTML (Status ${res.status}). The server might be down or the proxy path is incorrect.`);
       }
       throw new Error(`Invalid JSON response from server (Status ${res.status}): ${e.message}`);
+    }
+  }
+
+  // --- Plugins ---
+
+  /**
+   * 获取插件列表
+   * GET /api/v1/plugins
+   */
+  async getPlugins(params: { page_num?: number; page_size?: number } = {}): Promise<PaginatedPlugins> {
+    const queryParams = new URLSearchParams();
+    if (params.page_num) queryParams.append('page_num', String(params.page_num));
+    if (params.page_size) queryParams.append('page_size', String(params.page_size));
+
+    const queryString = queryParams.toString();
+    const res = await fetch(`${API_BASE}/plugins${queryString ? '?' + queryString : ''}`, {
+      headers: this.getHeaders()
+    });
+    const raw: ApiResponse<Plugin[]> = await res.json();
+    
+    if (!res.ok || raw.code !== '200') {
+      throw new Error(raw?.message || 'Failed to fetch plugins');
+    }
+
+    return {
+      data: raw.data || [],
+      pagination: raw.pagination || {
+        total_count: 0,
+        has_more: false,
+        last_id: 0,
+        page_size: params.page_size || 10,
+        page_num: params.page_num || 1
+      }
+    };
+  }
+
+  /**
+   * 获取插件详情
+   * GET /api/v1/plugins/{id}
+   */
+  async getPlugin(id: number): Promise<Plugin> {
+    const res = await fetch(`${API_BASE}/plugins/${id}`, {
+      headers: this.getHeaders()
+    });
+    const raw: ApiResponse<Plugin> = await res.json();
+    
+    if (!res.ok || raw.code !== '200') {
+      throw new Error(raw?.message || 'Failed to fetch plugin');
+    }
+
+    return raw.data!;
+  }
+
+  /**
+   * 创建插件
+   * POST /api/v1/plugins
+   */
+  async createPlugin(plugin: CreatePluginRequest): Promise<Plugin> {
+    const res = await fetch(`${API_BASE}/plugins`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(plugin)
+    });
+    const raw: ApiResponse<Plugin> = await res.json();
+    
+    if (!res.ok || raw.code !== '200') {
+      throw new Error(raw?.message || 'Failed to create plugin');
+    }
+
+    return raw.data!;
+  }
+
+  /**
+   * 更新插件
+   * PUT /api/v1/plugins/{id}
+   */
+  async updatePlugin(id: number, plugin: UpdatePluginRequest): Promise<Plugin> {
+    const res = await fetch(`${API_BASE}/plugins/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(plugin)
+    });
+    const raw: ApiResponse<Plugin> = await res.json();
+    
+    if (!res.ok || raw.code !== '200') {
+      throw new Error(raw?.message || 'Failed to update plugin');
+    }
+
+    return raw.data!;
+  }
+
+  /**
+   * 删除插件
+   * DELETE /api/v1/plugins/{id}
+   */
+  async deletePlugin(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/plugins/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+    const raw: ApiResponse<void> = await res.json();
+    
+    if (!res.ok || raw.code !== '200') {
+      throw new Error(raw?.message || 'Failed to delete plugin');
     }
   }
 }

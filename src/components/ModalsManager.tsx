@@ -110,7 +110,23 @@ export const ModalsManager: React.FC = () => {
       <AuthModal
           isOpen={ui.authModalOpen}
           onClose={() => ui.setModalOpen('authModalOpen', false)}
-          onLoginSuccess={userStore.setUser}
+          onLoginSuccess={(user) => {
+            // Set user in store
+            userStore.setUser(user);
+            // Also verify token by calling getMe
+            api.getMe().then((userInfo) => {
+              const updatedUser = {
+                user_id: userInfo.user_id,
+                username: userInfo.username,
+                avatar: userInfo.avatar,
+                roles: userInfo.roles,
+                permissions: userInfo.permissions
+              };
+              userStore.setUser(updatedUser);
+            }).catch((err) => {
+              console.error('[ModalsManager] Failed to verify user after login:', err);
+            });
+          }}
       />
 
       <UserProfileModal

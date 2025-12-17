@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Key, Database, Globe, Wrench, Plus, 
-  LogOut, UserCircle
+  LogOut, UserCircle, Plug
 } from 'lucide-react';
 import { useUserStore, useUIStore } from '../stores';
 
@@ -137,6 +137,20 @@ export const HomePage = () => {
            </div>
            <h3 className="text-xl font-bold mb-2 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Tools Management</h3>
            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Manage and configure custom tools, plugins and extensions.</p>
+        </div>
+
+        {/* Plugins */}
+        <div 
+            onClick={() => navigate('/plugins')} 
+            className="group cursor-pointer p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300"
+        >
+           <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Plug size={28} />
+              </div>
+           </div>
+           <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Plugin Management</h3>
+           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Register, configure and manage plugins for extending workflow capabilities.</p>
         </div>
       </div>
     </div>

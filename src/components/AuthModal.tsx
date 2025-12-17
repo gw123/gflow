@@ -27,15 +27,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }
 
     try {
       if (mode === 'login') {
-        const { user } = await api.login(username, password);
+        const authResponse = await api.login(username, password);
+        // Token is automatically saved by api.login() via setToken()
+        // Convert AuthResponse to User object
+        const user: User = {
+          user_id: authResponse.user_id,
+          username: authResponse.username,
+          roles: authResponse.role ? authResponse.role.map(r => r.name) : []
+        };
         onLoginSuccess(user);
         onClose();
       } else {
-        await api.register(username, password, email);
-        // Auto login after register or just switch mode? 
-        // Let's switch to login mode with success message or auto login.
-        // For better UX, let's auto login
-        const { user } = await api.login(username, password);
+        await api.register(username, password, email, '');
+        // Auto login after register
+        const authResponse = await api.login(username, password);
+        // Token is automatically saved by api.login() via setToken()
+        const user: User = {
+          user_id: authResponse.user_id,
+          username: authResponse.username,
+          roles: authResponse.role ? authResponse.role.map(r => r.name) : []
+        };
         onLoginSuccess(user);
         onClose();
       }

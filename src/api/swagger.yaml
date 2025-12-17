@@ -1,0 +1,5013 @@
+basePath: /api/v1
+definitions:
+  app_err.AppError:
+    properties:
+      code:
+        description: 错误代码
+        type: string
+      err:
+        description: 原始错误（可选）
+      file:
+        description: 出错文件名
+        type: string
+      line:
+        description: 出错行号
+        type: integer
+      message:
+        description: 错误消息
+        type: string
+    type: object
+  component.CodeLanguage:
+    enum:
+    - nodejs
+    - python
+    - shell
+    type: string
+    x-enum-varnames:
+    - NodeJS
+    - Python
+    - Shell
+  component.CodeSnippet:
+    properties:
+      code:
+        description: 代码片段内容
+        type: string
+      language:
+        allOf:
+        - $ref: '#/definitions/component.CodeLanguage'
+        description: 代码语言类型
+      metadata:
+        additionalProperties: true
+        description: 元数据，用于存储额外信息，如Node.js版本等
+        type: object
+      name:
+        description: 代码片段名称
+        type: string
+    type: object
+  dto.CreateWorkflowRequest:
+    properties:
+      connections:
+        $ref: '#/definitions/entity.Connection'
+      global:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      nodes:
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+      version:
+        type: string
+    type: object
+  dto.Pagination:
+    properties:
+      has_more:
+        type: boolean
+      last_id:
+        type: integer
+      month_count:
+        type: integer
+      page_num:
+        type: integer
+      page_size:
+        type: integer
+      today_count:
+        type: integer
+      total_count:
+        type: integer
+      week_count:
+        type: integer
+      year_count:
+        type: integer
+    type: object
+  dto.UpdateWorkflowRequest:
+    properties:
+      connections:
+        $ref: '#/definitions/entity.Connection'
+      global:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      nodes:
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+      version:
+        type: string
+    type: object
+  dto.UserInfoResp:
+    properties:
+      avatar:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      roles:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  entity.AICodeSnippet:
+    type: object
+  entity.Artifact:
+    properties:
+      from_path:
+        type: string
+      is_override:
+        type: boolean
+      storage_name:
+        type: string
+      target_path:
+        type: string
+    type: object
+  entity.ConditionItem:
+    properties:
+      operation:
+        type: string
+      value1:
+        type: string
+      value2:
+        type: string
+    type: object
+  entity.Connection:
+    additionalProperties:
+      items:
+        items:
+          $ref: '#/definitions/entity.ConnectionItem'
+        type: array
+      type: array
+    type: object
+  entity.ConnectionItem:
+    properties:
+      condition_combine_way:
+        type: string
+      node:
+        type: string
+      onlyFieldName:
+        description: 仅仅输出指定字段 而不是所以的output中字段
+        type: string
+      parallelNum:
+        description: 如果节点为并行节点，则需要设置并行数量 默认为1
+        type: integer
+      spiltResult:
+        description: 当父节点输出结果是数组时候，分拆分别执行
+        type: boolean
+      when:
+        items:
+          $ref: '#/definitions/entity.ConditionItem'
+        type: array
+    type: object
+  entity.DistributedNode:
+    properties:
+      created_at:
+        type: string
+      desc:
+        type: string
+      host_ip:
+        type: string
+      id:
+        type: integer
+      node_name:
+        type: string
+      program_port:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  entity.DistributedProgram:
+    properties:
+      created_at:
+        type: string
+      host_ip:
+        type: string
+      id:
+        type: integer
+      node_name:
+        type: string
+      program_port:
+        type: string
+      user_id:
+        type: integer
+      workflow_name:
+        type: string
+    type: object
+  entity.DistributedProgramStatus:
+    properties:
+      cpu_usage:
+        description: CPU 使用率
+        type: number
+      heartbeat_time:
+        description: 心跳时间
+        type: string
+      host_ip:
+        description: 主机 IP
+        type: string
+      id:
+        type: integer
+      memory_usage:
+        description: 内存使用量
+        type: number
+      node_name:
+        description: 程序标识
+        type: string
+      parallel_task_count:
+        description: 并行任务数
+        type: integer
+      pid:
+        description: 进程 ID
+        type: integer
+      program_port:
+        description: 程序端口
+        type: string
+      program_status:
+        description: 程序状态
+        type: string
+      role:
+        description: 角色
+        type: string
+      workflow_name:
+        description: 工作流名称 runner 时候存在
+        type: string
+    type: object
+  entity.FunctionDefinition:
+    properties:
+      created_at:
+        type: string
+      desc:
+        description: 函数描述
+        type: string
+      endpoint:
+        description: 服务调用地址LB 地址如FaaS
+        type: string
+      headers:
+        description: 请求头
+        items:
+          $ref: '#/definitions/entity.HeaderItem'
+        type: array
+      id:
+        type: string
+      method:
+        description: 请求方法
+        type: string
+      name:
+        description: 函数名称，全局唯一
+        type: string
+      parameters:
+        description: 参数模板或默认配置
+        items:
+          $ref: '#/definitions/entity.FunctionParams'
+        type: array
+      status:
+        $ref: '#/definitions/entity.ServiceStatus'
+      tags:
+        description: 标签 (使用自定义 StringArray 类型)
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  entity.FunctionInstance:
+    properties:
+      description:
+        description: 实例描述
+        type: string
+      endpoint:
+        description: 服务调用地址
+        type: string
+      function_definition_id:
+        description: 关联的函数定义ID
+        type: string
+      header:
+        description: 请求头
+        items:
+          $ref: '#/definitions/entity.HeaderItem'
+        type: array
+      id:
+        type: string
+      last_heartbeat:
+        type: string
+      method:
+        description: 请求方法
+        type: string
+      parameters:
+        description: 参数配置
+        items:
+          $ref: '#/definitions/entity.FunctionParams'
+        type: array
+      registered_at:
+        type: string
+      status:
+        $ref: '#/definitions/entity.ServiceStatus'
+      tags:
+        description: 标签 (使用自定义 StringArray 类型)
+        items:
+          type: string
+        type: array
+      weight:
+        description: 用于负载均衡
+        type: integer
+    type: object
+  entity.FunctionParams:
+    properties:
+      default: {}
+      desc:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/entity.FunctionParams'
+        type: array
+      name:
+        type: string
+      required:
+        type: boolean
+      type:
+        type: string
+    type: object
+  entity.HeaderItem:
+    properties:
+      key:
+        type: string
+      value:
+        type: string
+    type: object
+  entity.LowCode:
+    properties:
+      content:
+        description: 表达yaml模版内容
+        type: string
+      created_at:
+        description: 创建时间
+        type: string
+      desc:
+        type: string
+      id:
+        type: integer
+      name:
+        description: 模板名称
+        type: string
+      params:
+        description: 表单参数
+        items:
+          type: string
+        type: array
+      status:
+        description: 模板状态
+        type: string
+      tags:
+        description: 标签
+        items:
+          type: string
+        type: array
+      updated_at:
+        description: 更新时间
+        type: string
+      user_id:
+        description: 模板 ID
+        type: integer
+    type: object
+  entity.Node:
+    properties:
+      connection:
+        $ref: '#/definitions/entity.ConnectionItem'
+      credential_type:
+        type: string
+      credentials:
+        description: 节点直接配置的密钥
+        type: object
+      delay:
+        type: number
+      desc:
+        type: string
+      global:
+        additionalProperties: true
+        type: object
+      ignore_error:
+        type: boolean
+      init_delay:
+        type: integer
+      input:
+        additionalProperties:
+          type: string
+        type: object
+      input_artifact:
+        $ref: '#/definitions/entity.Artifact'
+      name:
+        type: string
+      output:
+        additionalProperties: true
+        type: object
+      output_artifact:
+        $ref: '#/definitions/entity.Artifact'
+      parameters:
+        type: object
+      position:
+        $ref: '#/definitions/entity.Position'
+      retry_times:
+        type: integer
+      run_index:
+        type: integer
+      run_number:
+        type: integer
+      secret:
+        allOf:
+        - $ref: '#/definitions/entity.NodeSecret'
+        description: 节点引用的密钥
+      secret_name:
+        description: 效果同 secret.secret_name
+        type: string
+      type:
+        type: string
+    type: object
+  entity.NodeRunLog:
+    properties:
+      end_at:
+        description: 时间索引
+        type: string
+      id:
+        type: integer
+      input:
+        additionalProperties: true
+        description: 无索引
+        type: object
+      log:
+        description: "日志内容，无长度限制 \t// 软删除支持"
+        type: string
+      log_at:
+        description: 时间索引
+        type: string
+      node_name:
+        type: string
+      output:
+        additionalProperties: true
+        description: 索引
+        type: object
+      run_index:
+        type: integer
+      start_at:
+        description: 时间索引
+        type: string
+      status:
+        description: 限制为 128 个字符，联合索引
+        type: string
+      trace_id:
+        description: 限制为 128 个字符
+        type: string
+      workflow_name:
+        description: 限制为不超过 128 个字符，联合索引
+        type: string
+      workflow_version:
+        description: 限制为不超过 128 个字符
+        type: string
+    type: object
+  entity.NodeSecret:
+    properties:
+      name:
+        description: secret_name 的缩写
+        type: string
+      secret_id:
+        type: integer
+      secret_name:
+        type: string
+      secret_type:
+        type: string
+    type: object
+  entity.Position:
+    properties:
+      x:
+        type: number
+      "y":
+        type: number
+    type: object
+  entity.Project:
+    properties:
+      created_at:
+        type: string
+      desc:
+        description: 描述信息
+        type: string
+      git_url:
+        description: 代码地址
+        type: string
+      id:
+        type: integer
+      language:
+        description: 编程语言
+        type: string
+      language_version:
+        description: 语言版本
+        type: string
+      name:
+        type: string
+      status:
+        description: 状态
+        type: string
+      tags:
+        description: 标签 (使用自定义 StringArray 类型)
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        description: 用户 ID (可以为 NULL
+        type: integer
+    type: object
+  entity.PromptTemplate:
+    properties:
+      content:
+        description: 模板内容
+        type: string
+      created_at:
+        description: 创建时间
+        type: string
+      desc:
+        description: 模板名称
+        type: string
+      id:
+        type: integer
+      name:
+        description: 模板名称
+        type: string
+      status:
+        description: 模板状态
+        type: string
+      tags:
+        description: 标签
+        items:
+          type: string
+        type: array
+      updated_at:
+        description: 更新时间
+        type: string
+      user_id:
+        description: 模板 ID
+        type: integer
+    type: object
+  entity.Role:
+    properties:
+      id:
+        type: integer
+      label:
+        type: string
+      name:
+        type: string
+    type: object
+  entity.Secret:
+    properties:
+      created_at:
+        type: string
+      desc:
+        description: '密钥描述信息 可以辅助模型： example:'
+        type: string
+      id:
+        type: integer
+      kind:
+        description: '大分类： example: AI'
+        type: string
+      name:
+        type: string
+      project_name:
+        type: string
+      provider:
+        description: '服务提供方： example: openai,tencent,huawei,baidu,anthropic,cohere,google'
+        type: string
+      type:
+        description: '密钥具体类型标准： example: openai'
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      value: {}
+    type: object
+  entity.ServiceStatus:
+    enum:
+    - unknown
+    - online
+    - offline
+    type: string
+    x-enum-varnames:
+    - StatusUnknown
+    - StatusOnline
+    - StatusOffline
+  entity.Stack:
+    properties:
+      toRunNodes:
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+      workflowEntity:
+        $ref: '#/definitions/entity.WorkflowEntity'
+    type: object
+  entity.Step:
+    properties:
+      index:
+        type: integer
+      nodeName:
+        type: string
+      output:
+        additionalProperties: true
+        type: object
+      parentNode:
+        $ref: '#/definitions/entity.Node'
+    type: object
+  entity.Storage:
+    properties:
+      bucket:
+        type: string
+      capacity:
+        description: 以字节为单位的容量
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      secret:
+        $ref: '#/definitions/entity.Secret'
+      secret_id:
+        description: 密钥ID
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  entity.StorageConfig:
+    properties:
+      access_key_id:
+        type: string
+      base_path:
+        description: -- local
+        type: string
+      bucket:
+        type: string
+      endpoint:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      path_style:
+        type: boolean
+      region:
+        type: string
+      secret_access_key:
+        type: string
+      type:
+        type: string
+      username:
+        description: -- ftp
+        type: string
+    type: object
+  entity.Task:
+    properties:
+      assigned_to:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      init_command:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      node_name:
+        type: string
+      parent_task:
+        allOf:
+        - $ref: '#/definitions/entity.Task'
+        description: 关联关系
+      parent_task_id:
+        type: string
+      priority:
+        $ref: '#/definitions/entity.TaskPriority'
+      started_at:
+        type: string
+      status:
+        $ref: '#/definitions/entity.TaskStatus'
+      status_history:
+        items:
+          $ref: '#/definitions/entity.TaskStatusHistory'
+        type: array
+      sub_tasks:
+        items:
+          $ref: '#/definitions/entity.Task'
+        type: array
+      updated_at:
+        type: string
+      worker_id:
+        type: string
+      workflow_id:
+        type: string
+      workflow_instant:
+        type: string
+      workflow_name:
+        type: string
+    type: object
+  entity.TaskPriority:
+    enum:
+    - low
+    - medium
+    - high
+    - urgent
+    type: string
+    x-enum-varnames:
+    - TaskPriorityLow
+    - TaskPriorityMedium
+    - TaskPriorityHigh
+    - TaskPriorityUrgent
+  entity.TaskStatus:
+    enum:
+    - pending
+    - running
+    - completed
+    - failed
+    - cancelled
+    - blocked
+    type: string
+    x-enum-varnames:
+    - TaskStatusPending
+    - TaskStatusRunning
+    - TaskStatusCompleted
+    - TaskStatusFailed
+    - TaskStatusCancelled
+    - TaskStatusBlocked
+  entity.TaskStatusHistory:
+    properties:
+      changed_at:
+        type: string
+      changed_by:
+        type: string
+      from_status:
+        $ref: '#/definitions/entity.TaskStatus'
+      id:
+        type: integer
+      reason:
+        type: string
+      task_id:
+        type: string
+      to_status:
+        $ref: '#/definitions/entity.TaskStatus'
+    type: object
+  entity.WaitingNode:
+    properties:
+      endAt:
+        type: string
+      executor:
+        type: string
+      ext:
+        additionalProperties: true
+        type: object
+      id:
+        type: integer
+      nodeName:
+        type: string
+      runIndex:
+        type: integer
+      stack:
+        $ref: '#/definitions/entity.Stack'
+      startAt:
+        type: string
+      status:
+        type: string
+      traceID:
+        type: string
+      workflowName:
+        type: string
+    type: object
+  entity.Workflow:
+    properties:
+      codes:
+        items:
+          $ref: '#/definitions/component.CodeSnippet'
+        type: array
+      connections:
+        $ref: '#/definitions/entity.Connection'
+      global:
+        additionalProperties: true
+        type: object
+      http_trigger:
+        type: string
+      httpWrapNodes:
+        items:
+          $ref: '#/definitions/http_wrap_config.HTTPWrapNodeConfig'
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+      nodes:
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+      publishers:
+        items:
+          $ref: '#/definitions/mq.Config'
+        type: array
+      run_times:
+        type: integer
+      storages:
+        additionalProperties:
+          $ref: '#/definitions/entity.StorageConfig'
+        type: object
+      stream_log:
+        $ref: '#/definitions/mq.Config'
+      sub_connections:
+        additionalProperties:
+          $ref: '#/definitions/entity.Connection'
+        type: object
+      subscribers:
+        items:
+          $ref: '#/definitions/mq.Config'
+        type: array
+      user_id:
+        type: integer
+      version:
+        type: string
+    type: object
+  entity.WorkflowEntity:
+    properties:
+      P:
+        additionalProperties: true
+        type: object
+      args:
+        additionalProperties: true
+        type: object
+      end_at:
+        type: string
+      global:
+        additionalProperties: true
+        type: object
+      index:
+        type: integer
+      mergeDeps:
+        additionalProperties:
+          additionalProperties:
+            type: boolean
+          type: object
+        description: merge节点 -> 上游节点 -> 是否完成
+        type: object
+      mergeInputs:
+        additionalProperties:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          type: object
+        description: merge节点 -> 上游节点 -> 输出
+        type: object
+      nextToRunNodes:
+        description: 待执行节点队列
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+      ret_error: {}
+      runningCount:
+        format: int64
+        type: integer
+      start_at:
+        type: string
+      status:
+        type: string
+      steps:
+        items:
+          $ref: '#/definitions/entity.Step'
+        type: array
+      subWorkflowName:
+        description: 子工作流名称
+        type: string
+      trace_id:
+        type: string
+      waitMergeNodes:
+        description: 等待merge节点队列
+        items:
+          $ref: '#/definitions/entity.Node'
+        type: array
+    type: object
+  entity.WorkflowRunLog:
+    properties:
+      end_at:
+        description: 时间索引
+        type: string
+      global:
+        additionalProperties: true
+        description: 无索引
+        type: object
+      id:
+        type: integer
+      input:
+        additionalProperties: true
+        description: 索引
+        type: object
+      log_at:
+        description: 时间索引
+        type: string
+      output:
+        additionalProperties: true
+        type: object
+      start_at:
+        description: 时间索引
+        type: string
+      status:
+        description: 限制为 128 个字符，联合索引
+        type: string
+      trace_id:
+        description: 限制为 128 个字符
+        type: string
+      workflow_name:
+        description: 限制为不超过 128 个字符，联合索引
+        type: string
+      workflow_version:
+        description: 限制为不超过 128 个字符
+        type: string
+    type: object
+  http_wrap_config.BodyConditions:
+    properties:
+      equals: {}
+      exists:
+        type: boolean
+      field:
+        type: string
+    type: object
+  http_wrap_config.HTTPRequestConfig:
+    properties:
+      body: {}
+      contentType:
+        type: string
+      curlCmd:
+        type: string
+      followRedirects:
+        type: boolean
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      maxRedirects:
+        type: integer
+      method:
+        type: string
+      proxy:
+        $ref: '#/definitions/http_wrap_config.ProxyConfig'
+      queryParams:
+        additionalProperties:
+          type: string
+        type: object
+      retries:
+        type: integer
+      sslverification:
+        type: boolean
+      timeout:
+        type: integer
+      url:
+        type: string
+    type: object
+  http_wrap_config.HTTPResponseConfig:
+    properties:
+      exportBody:
+        additionalProperties:
+          type: string
+        type: object
+      exportHeader:
+        additionalProperties:
+          type: string
+        type: object
+      successConditions:
+        $ref: '#/definitions/http_wrap_config.SuccessConditions'
+    type: object
+  http_wrap_config.HTTPWrapNodeConfig:
+    properties:
+      httpRequest:
+        $ref: '#/definitions/http_wrap_config.HTTPRequestConfig'
+      httpResponse:
+        $ref: '#/definitions/http_wrap_config.HTTPResponseConfig'
+      nodeType:
+        type: string
+    type: object
+  http_wrap_config.ProxyConfig:
+    properties:
+      enabled:
+        type: boolean
+      password:
+        type: string
+      url:
+        type: string
+      username:
+        type: string
+    type: object
+  http_wrap_config.SuccessConditions:
+    properties:
+      expectedBodyConditions:
+        items:
+          $ref: '#/definitions/http_wrap_config.BodyConditions'
+        type: array
+      statusCode:
+        items:
+          type: integer
+        type: array
+    type: object
+  kafka_mq.KafkaOption:
+    properties:
+      brokers:
+        items:
+          type: string
+        type: array
+      groupID:
+        description: Only for consumers
+        type: string
+      maxBytes:
+        description: Maximum fetch size for consumer
+        type: integer
+      minBytes:
+        description: Minimum fetch size for consumer
+        type: integer
+      read_timeout:
+        type: integer
+      write_timeout:
+        type: integer
+    type: object
+  mq.Config:
+    properties:
+      kafka:
+        allOf:
+        - $ref: '#/definitions/kafka_mq.KafkaOption'
+        description: Kafka 配置（可选）
+      metadata:
+        additionalProperties:
+          type: string
+        description: 额外的元数据信息
+        type: object
+      name:
+        description: 实例名称
+        type: string
+      redis:
+        allOf:
+        - $ref: '#/definitions/redis_mq.RedisOption'
+        description: Redis 配置（可选）
+      rocketMQ:
+        allOf:
+        - $ref: '#/definitions/rocket_mq.RocketMQOption'
+        description: RocketMQ 配置（可选）
+      topic:
+        type: string
+      type:
+        description: 类型：redis、kafka、rocketmq
+        type: string
+    type: object
+  redis_mq.RedisOption:
+    properties:
+      addr:
+        type: string
+      db:
+        type: integer
+      password:
+        type: string
+      timeout:
+        description: Timeout for blocking operations (in seconds)
+        type: integer
+    type: object
+  resp.Response:
+    properties:
+      code:
+        type: string
+      code_en:
+        type: string
+      data: {}
+      doc:
+        type: string
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/dto.Pagination'
+    type: object
+  rocket_mq.RocketMQOption:
+    properties:
+      access_key:
+        type: string
+      consumer_group:
+        type: string
+      endpoint:
+        type: string
+      namespace:
+        type: string
+      secret_key:
+        type: string
+      timeout:
+        type: integer
+    type: object
+  v1.ActivityItem:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      status:
+        description: success, running, failed, pending
+        type: string
+      title:
+        type: string
+      type:
+        description: task, workflow, log
+        type: string
+      updated_at:
+        type: string
+    type: object
+  v1.CreateTaskLogsRequest:
+    properties:
+      logs:
+        items:
+          $ref: '#/definitions/v1.TaskLogEntry'
+        minItems: 1
+        type: array
+    required:
+    - logs
+    type: object
+  v1.CreateTaskRequest:
+    properties:
+      assigned_to:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      init_command:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      priority:
+        $ref: '#/definitions/entity.TaskPriority'
+      status:
+        $ref: '#/definitions/entity.TaskStatus'
+      workflow_name:
+        type: string
+    required:
+    - created_by
+    - name
+    type: object
+  v1.DashboardStatsResponse:
+    properties:
+      runningTasks:
+        type: integer
+      totalTasks:
+        type: integer
+      totalWorkflows:
+        type: integer
+      waitingNodes:
+        type: integer
+    type: object
+  v1.GetPendingTasksResponse:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/entity.Task'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.GetTaskLogsResponse:
+    properties:
+      limit:
+        type: integer
+      logs:
+        items:
+          $ref: '#/definitions/v1.TaskLog'
+        type: array
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  v1.RegisterReq:
+    properties:
+      email:
+        type: string
+      mobile:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - mobile
+    - password
+    - username
+    type: object
+  v1.TaskLog:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      level:
+        type: string
+      message:
+        type: string
+      node_name:
+        type: string
+      source:
+        type: string
+      task_id:
+        type: string
+      timestamp:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  v1.TaskLogEntry:
+    properties:
+      level:
+        type: string
+      message:
+        type: string
+      node_name:
+        type: string
+      source:
+        type: string
+      timestamp:
+        type: string
+    required:
+    - level
+    - message
+    type: object
+  v1.TaskSubmissionRequest:
+    properties:
+      input:
+        additionalProperties: true
+        type: object
+      priority:
+        type: string
+      taskName:
+        type: string
+      workflowName:
+        type: string
+    required:
+    - workflowName
+    type: object
+  v1.UpdateTaskRequest:
+    properties:
+      assigned_to:
+        type: string
+      description:
+        type: string
+      init_command:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      priority:
+        $ref: '#/definitions/entity.TaskPriority'
+      workflow_name:
+        type: string
+    type: object
+  v1.UpdateTaskStatusRequest:
+    properties:
+      changed_by:
+        type: string
+      reason:
+        type: string
+      status:
+        $ref: '#/definitions/entity.TaskStatus'
+    required:
+    - changed_by
+    - status
+    type: object
+  v1.UpdateTaskStatusResponse:
+    properties:
+      status:
+        type: string
+      task_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  v1.doLoginResponse:
+    properties:
+      role:
+        items:
+          $ref: '#/definitions/entity.Role'
+        type: array
+      token:
+        type: string
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  v1.loginInfoReq:
+    properties:
+      mobile:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8100
+info:
+  contact:
+    email: support@mytool.zone
+    name: API Support
+    url: http://www.mytool.zone
+  description: 智能工作流管理平台API，提供工作流管理、任务调度、分布式执行等功能
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Workflow API
+  version: "1.0"
+paths:
+  /api/v1/ai/answer:
+    get:
+      consumes:
+      - application/json
+      description: 获取AI对问题的回答
+      parameters:
+      - description: 问题文本
+        in: query
+        name: question
+        required: true
+        type: string
+      - description: 项目名称
+        in: query
+        name: projectName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取AI答案
+      tags:
+      - AI
+  /api/v1/ai/config:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前LLM模型的配置信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取LLM配置
+      tags:
+      - AI
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录并获取访问令牌
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.loginInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功，返回令牌和用户信息
+          schema:
+            $ref: '#/definitions/v1.doLoginResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "401":
+          description: 登录失败
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 用户登录
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    get:
+      consumes:
+      - application/json
+      description: 用户登出系统
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未登录或令牌失效
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号
+      parameters:
+      - description: 注册信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.RegisterReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 注册成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 用户注册
+      tags:
+      - auth
+  /api/v1/codes:
+    get:
+      consumes:
+      - application/json
+      description: 获取AI代码片段列表，支持分页和筛选
+      parameters:
+      - description: 关键词搜索
+        in: query
+        name: keyword
+        type: string
+      - description: 项目名称
+        in: query
+        name: project_name
+        type: string
+      - description: 编程语言
+        in: query
+        name: language
+        type: string
+      - description: 文件路径
+        in: query
+        name: file_path
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.AICodeSnippet'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取AI代码片段列表
+      tags:
+      - AICode
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的AI代码片段
+      parameters:
+      - description: 代码片段信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.AICodeSnippet'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建AI代码片段
+      tags:
+      - AICode
+  /api/v1/codes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定ID的AI代码片段
+      parameters:
+      - description: 代码片段ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除AI代码片段
+      tags:
+      - AICode
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取AI代码片段的详细信息
+      parameters:
+      - description: 代码片段ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.AICodeSnippet'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取AI代码片段详情
+      tags:
+      - AICode
+    put:
+      consumes:
+      - application/json
+      description: 更新指定ID的AI代码片段信息
+      parameters:
+      - description: 代码片段ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新的代码片段信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.AICodeSnippet'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新AI代码片段
+      tags:
+      - AICode
+  /api/v1/codes/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据查询文本进行向量相似度搜索AI代码片段
+      parameters:
+      - description: 查询文本
+        in: query
+        name: query
+        required: true
+        type: string
+      - default: 5
+        description: 返回结果数量
+        in: query
+        name: topN
+        type: integer
+      - description: 项目名称
+        in: query
+        name: projectName
+        type: string
+      - description: 编程语言
+        in: query
+        name: language
+        type: string
+      - description: 语言版本
+        in: query
+        name: languageVersion
+        type: string
+      - description: 标签（逗号分隔）
+        in: query
+        name: tags
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.AICodeSnippet'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 向量搜索AI代码片段
+      tags:
+      - AICode
+  /api/v1/dashboard/activities:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统最近的任务和工作流执行活动
+      parameters:
+      - description: 限制返回数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            items:
+              $ref: '#/definitions/v1.ActivityItem'
+            type: array
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 获取最近活动列表
+      tags:
+      - dashboard
+  /api/v1/dashboard/stats:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统的任务、工作流和等待节点的统计信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/v1.DashboardStatsResponse'
+      summary: 获取仪表盘统计数据
+      tags:
+      - dashboard
+  /api/v1/deploy/logs:
+    get:
+      consumes:
+      - application/json
+      description: 获取发布日志列表
+      parameters:
+      - description: 工作流名称
+        in: query
+        name: workflow_name
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 查询发布日志
+      tags:
+      - Deploy
+  /api/v1/deploy/logs/{historyID}:
+    get:
+      consumes:
+      - application/json
+      description: 根据历史ID获取发布日志详情
+      parameters:
+      - description: 历史ID
+        in: path
+        name: historyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取发布日志详情
+      tags:
+      - Deploy
+  /api/v1/deploy/publish:
+    post:
+      consumes:
+      - application/json
+      description: 发布项目
+      parameters:
+      - description: 项目ID
+        in: query
+        name: project_id
+        required: true
+        type: string
+      - description: 版本
+        in: query
+        name: version
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 发布项目
+      tags:
+      - Deploy
+  /api/v1/deploy/publish/{workflowName}:
+    post:
+      consumes:
+      - application/json
+      description: 发布工作流到线上环境
+      parameters:
+      - description: 工作流名称
+        in: path
+        name: workflowName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 发布工作流
+      tags:
+      - Deploy
+  /api/v1/deploy/rollback/{historyID}:
+    post:
+      consumes:
+      - application/json
+      description: 回滚项目到指定历史版本
+      parameters:
+      - description: 历史ID
+        in: path
+        name: historyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 回滚项目
+      tags:
+      - Deploy
+  /api/v1/deploy/status/{traceID}:
+    get:
+      consumes:
+      - application/json
+      description: 根据追踪ID获取部署状态
+      parameters:
+      - description: 追踪ID
+        in: path
+        name: traceID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取部署状态
+      tags:
+      - Deploy
+  /api/v1/distributed_nodes:
+    get:
+      consumes:
+      - application/json
+      description: 获取分布式节点列表，支持分页和搜索
+      parameters:
+      - description: 搜索关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.DistributedNode'
+                  type: array
+              type: object
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 获取分布式节点列表
+      tags:
+      - distributed_nodes
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的分布式节点
+      parameters:
+      - description: 节点信息
+        in: body
+        name: node
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.DistributedNode'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 创建分布式节点
+      tags:
+      - distributed_nodes
+  /api/v1/distributed_nodes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据节点ID删除节点
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "404":
+          description: 节点不存在
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 删除分布式节点
+      tags:
+      - distributed_nodes
+    get:
+      consumes:
+      - application/json
+      description: 根据节点ID获取节点信息
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.DistributedNode'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "404":
+          description: 节点不存在
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 根据ID获取分布式节点
+      tags:
+      - distributed_nodes
+    put:
+      consumes:
+      - application/json
+      description: 更新分布式节点信息
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 节点信息
+        in: body
+        name: node
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "404":
+          description: 节点不存在
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 更新分布式节点
+      tags:
+      - distributed_nodes
+  /api/v1/distributed_nodes/nodeInfo/{nodeName}:
+    get:
+      consumes:
+      - application/json
+      description: 根据节点名称获取节点信息
+      parameters:
+      - description: 节点名称
+        in: path
+        name: nodeName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.DistributedNode'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "404":
+          description: 节点不存在
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 根据名称获取分布式节点
+      tags:
+      - distributed_nodes
+  /api/v1/distributed_programs:
+    get:
+      consumes:
+      - application/json
+      description: 获取分布式程序列表，支持分页和筛选
+      parameters:
+      - description: 搜索关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 节点名称
+        in: query
+        name: nodeName
+        type: string
+      - description: 是否活跃
+        in: query
+        name: active
+        type: string
+      - description: 工作流名称
+        in: query
+        name: workflowName
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.DistributedProgram'
+                  type: array
+              type: object
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 获取分布式程序列表
+      tags:
+      - distributed_programs
+    post:
+      consumes:
+      - application/json
+      description: 添加新的工作流任务到指定节点
+      parameters:
+      - description: 程序信息
+        in: body
+        name: program
+        required: true
+        schema:
+          $ref: '#/definitions/entity.DistributedProgram'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 添加分布式程序
+      tags:
+      - distributed_programs
+  /api/v1/distributed_programs/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除分布式程序
+      parameters:
+      - description: 程序ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 删除分布式程序
+      tags:
+      - distributed_programs
+  /api/v1/distributed_programs/{nodeName}/programs:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定节点的工作流任务列表
+      parameters:
+      - description: 节点名称
+        in: path
+        name: nodeName
+        required: true
+        type: string
+      - description: 搜索关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 是否活跃
+        in: query
+        name: active
+        type: string
+      - description: 工作流名称
+        in: query
+        name: workflowName
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.DistributedProgram'
+                  type: array
+              type: object
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 获取节点工作流任务列表
+      tags:
+      - distributed_programs
+  /api/v1/distributed_programs/register:
+    post:
+      consumes:
+      - application/json
+      description: 将新的节点控制器注册到控制器列表中
+      parameters:
+      - description: 节点信息
+        in: body
+        name: node
+        required: true
+        schema:
+          $ref: '#/definitions/entity.DistributedNode'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 注册控制节点
+      tags:
+      - distributed_programs
+  /api/v1/distributed_programs/status:
+    post:
+      consumes:
+      - application/json
+      description: 更新分布式程序的执行状态
+      parameters:
+      - description: 状态信息
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/entity.DistributedProgramStatus'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 更新程序状态
+      tags:
+      - distributed_programs
+  /api/v1/function/definitions:
+    get:
+      consumes:
+      - application/json
+      description: 查询函数定义列表，支持分页和名称过滤
+      parameters:
+      - description: 函数定义名称
+        in: query
+        name: name
+        type: string
+      - description: 偏移量
+        in: query
+        name: offset
+        type: integer
+      - description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.FunctionDefinition'
+                  type: array
+              type: object
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 查询函数定义列表
+      tags:
+      - function_definitions
+    post:
+      consumes:
+      - application/json
+      description: 创建新的函数定义
+      parameters:
+      - description: 函数定义信息
+        in: body
+        name: definition
+        required: true
+        schema:
+          $ref: '#/definitions/entity.FunctionDefinition'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.FunctionDefinition'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 创建函数定义
+      tags:
+      - function_definitions
+  /api/v1/function/definitions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除函数定义
+      parameters:
+      - description: 函数定义ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 删除函数定义
+      tags:
+      - function_definitions
+    get:
+      consumes:
+      - application/json
+      description: 根据ID查询单个函数定义
+      parameters:
+      - description: 函数定义ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.FunctionDefinition'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 查询函数定义
+      tags:
+      - function_definitions
+    put:
+      consumes:
+      - application/json
+      description: 根据ID修改函数定义
+      parameters:
+      - description: 函数定义ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 函数定义信息
+        in: body
+        name: definition
+        required: true
+        schema:
+          $ref: '#/definitions/entity.FunctionDefinition'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.FunctionDefinition'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 修改函数定义
+      tags:
+      - function_definitions
+  /api/v1/function/instances:
+    get:
+      consumes:
+      - application/json
+      description: 列出注册的函数实例，支持分页和状态过滤
+      parameters:
+      - description: 实例状态
+        in: query
+        name: status
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.FunctionInstance'
+                  type: array
+              type: object
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 列出函数实例
+      tags:
+      - function_instances
+    post:
+      consumes:
+      - application/json
+      description: 注册新的函数实例
+      parameters:
+      - description: 函数实例信息
+        in: body
+        name: instance
+        required: true
+        schema:
+          $ref: '#/definitions/entity.FunctionInstance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.FunctionInstance'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 注册函数实例
+      tags:
+      - function_instances
+  /api/v1/function/instances/{functionDefinitionID}:
+    get:
+      consumes:
+      - application/json
+      description: 根据函数定义ID和负载均衡策略发现实例
+      parameters:
+      - description: 函数定义ID
+        in: path
+        name: functionDefinitionID
+        required: true
+        type: string
+      - description: 负载均衡策略
+        in: query
+        name: strategy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/entity.FunctionInstance'
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 发现函数实例
+      tags:
+      - function_instances
+  /api/v1/function/instances/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 注销指定的函数实例
+      parameters:
+      - description: 实例ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 注销函数实例
+      tags:
+      - function_instances
+  /api/v1/function/instances/{id}/heartbeat:
+    put:
+      consumes:
+      - application/json
+      description: 更新函数实例的心跳
+      parameters:
+      - description: 实例ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 请求错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 更新实例心跳
+      tags:
+      - function_instances
+  /api/v1/function/instances/watch:
+    get:
+      consumes:
+      - application/json
+      description: 监听函数实例的状态变化
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 监听状态变化
+      tags:
+      - function_instances
+  /api/v1/lowCode:
+    get:
+      consumes:
+      - application/json
+      description: 获取低代码模板列表，支持关键词和标签过滤
+      parameters:
+      - description: 关键词搜索
+        in: query
+        name: keyword
+        type: string
+      - description: 标签筛选（逗号分隔）
+        in: query
+        name: tags
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.LowCode'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取低代码模板列表
+      tags:
+      - LowCode
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的低代码模板
+      parameters:
+      - description: 低代码模板信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建低代码模板
+      tags:
+      - LowCode
+  /api/v1/lowCode/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定ID的低代码模板
+      parameters:
+      - description: 低代码模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除低代码模板
+      tags:
+      - LowCode
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取单个低代码模板的详细信息
+      parameters:
+      - description: 低代码模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.LowCode'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取单个低代码模板
+      tags:
+      - LowCode
+    put:
+      consumes:
+      - application/json
+      description: 更新指定ID的低代码模板信息
+      parameters:
+      - description: 低代码模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新的低代码模板信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新低代码模板
+      tags:
+      - LowCode
+  /api/v1/projects:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词、标签等条件获取项目列表
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 标签，逗号分隔
+        in: query
+        name: tags
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取项目列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.Project'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取项目列表
+      tags:
+      - 项目管理
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的项目
+      parameters:
+      - description: 项目信息
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/entity.Project'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 项目创建成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建项目
+      tags:
+      - 项目管理
+  /api/v1/projects/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据项目ID删除项目
+      parameters:
+      - description: 项目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 项目删除成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 项目不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除项目
+      tags:
+      - 项目管理
+    get:
+      consumes:
+      - application/json
+      description: 根据项目ID获取项目详细信息
+      parameters:
+      - description: 项目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取项目详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.Project'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 项目不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取项目详情
+      tags:
+      - 项目管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有项目的信息
+      parameters:
+      - description: 项目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 项目信息
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/entity.Project'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 项目更新成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 项目不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新项目
+      tags:
+      - 项目管理
+  /api/v1/prompt/templates:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词、标签等条件获取提示词模板列表
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 标签，逗号分隔
+        in: query
+        name: tags
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取提示词模板列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.PromptTemplate'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取提示词模板列表
+      tags:
+      - 提示词管理
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的提示词模板
+      parameters:
+      - description: 提示词模板信息
+        in: body
+        name: promptTemplate
+        required: true
+        schema:
+          type: object
+      - description: 模板名称
+        in: body
+        name: promptTemplate.name
+        required: true
+        schema:
+          type: string
+      - description: 模板内容
+        in: body
+        name: promptTemplate.content
+        required: true
+        schema:
+          type: string
+      - description: 标签
+        in: body
+        name: promptTemplate.tags
+        schema:
+          items:
+            type: string
+          type: array
+      - description: 描述
+        in: body
+        name: promptTemplate.desc
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提示词模板创建成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建提示词模板
+      tags:
+      - 提示词管理
+  /api/v1/prompt/templates/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除提示词模板
+      parameters:
+      - description: 模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提示词模板删除成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 提示词模板不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除提示词模板
+      tags:
+      - 提示词管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取提示词模板详细信息
+      parameters:
+      - description: 模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取提示词模板
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.PromptTemplate'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 提示词模板不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取单个提示词模板
+      tags:
+      - 提示词管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有提示词模板的信息
+      parameters:
+      - description: 模板ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 提示词模板信息
+        in: body
+        name: promptTemplate
+        required: true
+        schema:
+          type: object
+      - description: 模板名称
+        in: body
+        name: promptTemplate.name
+        required: true
+        schema:
+          type: string
+      - description: 模板内容
+        in: body
+        name: promptTemplate.content
+        required: true
+        schema:
+          type: string
+      - description: 标签
+        in: body
+        name: promptTemplate.tags
+        schema:
+          items:
+            type: string
+          type: array
+      - description: 描述
+        in: body
+        name: promptTemplate.desc
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提示词模板更新成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 提示词模板不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新提示词模板
+      tags:
+      - 提示词管理
+  /api/v1/secret_tpls:
+    get:
+      consumes:
+      - application/json
+      description: 获取密钥模板列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取密钥模板
+      tags:
+      - Secret
+  /api/v1/secrets:
+    get:
+      consumes:
+      - application/json
+      description: 获取密钥列表，支持分页和筛选
+      parameters:
+      - description: 密钥类型
+        in: query
+        name: type
+        type: string
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取密钥列表
+      tags:
+      - Secret
+    post:
+      consumes:
+      - application/json
+      description: 创建新的密钥
+      parameters:
+      - description: 密钥信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建密钥
+      tags:
+      - Secret
+  /api/v1/secrets/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除密钥
+      parameters:
+      - description: 密钥ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除密钥
+      tags:
+      - Secret
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取密钥详情
+      parameters:
+      - description: 密钥ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 根据ID获取密钥
+      tags:
+      - Secret
+    put:
+      consumes:
+      - application/json
+      description: 更新密钥信息
+      parameters:
+      - description: 密钥ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 密钥信息
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新密钥
+      tags:
+      - Secret
+  /api/v1/secrets/byName/{secretName}:
+    get:
+      consumes:
+      - application/json
+      description: 根据名称获取密钥详情
+      parameters:
+      - description: 密钥名称
+        in: path
+        name: secretName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 根据名称获取密钥
+      tags:
+      - Secret
+  /api/v1/secrets/bySecretType/{secretKind}/{secretType}/{provider}:
+    get:
+      consumes:
+      - application/json
+      description: 根据密钥类型、子类型和提供者获取密钥列表
+      parameters:
+      - description: 密钥类型
+        in: path
+        name: secretKind
+        required: true
+        type: string
+      - description: 密钥子类型
+        in: path
+        name: secretType
+        required: true
+        type: string
+      - description: 提供者
+        in: path
+        name: provider
+        type: string
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 根据提供者获取密钥
+      tags:
+      - Secret
+  /api/v1/storages:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词、类型等条件获取存储配置列表
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 名称
+        in: query
+        name: name
+        type: string
+      - description: 存储类型
+        in: query
+        name: type
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取存储列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.Storage'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取存储列表
+      tags:
+      - 存储管理
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的存储配置
+      parameters:
+      - description: 存储配置信息
+        in: body
+        name: storage
+        required: true
+        schema:
+          type: object
+      - description: 存储名称
+        in: body
+        name: storage.name
+        required: true
+        schema:
+          type: string
+      - description: 密钥ID
+        in: body
+        name: storage.secret_id
+        required: true
+        schema:
+          type: integer
+      - description: 存储类型
+        in: body
+        name: storage.type
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 存储创建成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建存储
+      tags:
+      - 存储管理
+  /api/v1/storages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据存储ID删除存储配置
+      parameters:
+      - description: 存储ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 存储删除成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 存储不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除存储
+      tags:
+      - 存储管理
+    get:
+      consumes:
+      - application/json
+      description: 根据存储ID获取存储配置信息
+      parameters:
+      - description: 存储ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取存储信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.Storage'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 存储不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 根据ID获取存储
+      tags:
+      - 存储管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有存储配置信息
+      parameters:
+      - description: 存储ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 存储配置信息
+        in: body
+        name: storage
+        required: true
+        schema:
+          type: object
+      - description: 存储名称
+        in: body
+        name: storage.name
+        required: true
+        schema:
+          type: string
+      - description: 密钥ID
+        in: body
+        name: storage.secret_id
+        required: true
+        schema:
+          type: integer
+      - description: 存储类型
+        in: body
+        name: storage.type
+        required: true
+        schema:
+          type: string
+      - description: 存储桶
+        in: body
+        name: storage.bucket
+        schema:
+          type: string
+      - description: 容量
+        in: body
+        name: storage.capacity
+        schema:
+          type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 存储更新成功
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 存储不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新存储
+      tags:
+      - 存储管理
+  /api/v1/storages/node/{name}:
+    get:
+      consumes:
+      - application/json
+      description: 根据存储名称获取存储配置信息
+      parameters:
+      - description: 存储名称
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取存储信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.Storage'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: 存储不存在
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 根据名称获取存储
+      tags:
+      - 存储管理
+  /api/v1/tasks:
+    get:
+      consumes:
+      - application/json
+      description: 获取任务列表，支持分页和过滤
+      parameters:
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 任务状态
+        in: query
+        name: status
+        type: string
+      - description: 优先级
+        in: query
+        name: priority
+        type: string
+      - description: 创建人
+        in: query
+        name: created_by
+        type: string
+      - description: 负责人
+        in: query
+        name: assigned_to
+        type: string
+      - description: 工作流名称
+        in: query
+        name: workflow_name
+        type: string
+      - description: 父任务ID
+        in: query
+        name: parent_task_id
+        type: string
+      - description: 关键词搜索
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取任务列表
+      tags:
+      - Task
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的任务
+      parameters:
+      - description: 任务信息
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 创建任务
+      tags:
+      - Task
+  /api/v1/tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据任务ID删除任务
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 删除任务
+      tags:
+      - Task
+    get:
+      consumes:
+      - application/json
+      description: 根据任务ID获取任务详情
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Task'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取单个任务
+      tags:
+      - Task
+    put:
+      consumes:
+      - application/json
+      description: 根据任务ID更新任务信息
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 任务更新信息
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Task'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 更新任务
+      tags:
+      - Task
+  /api/v1/tasks/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: 获取任务的状态变更历史
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取任务状态历史
+      tags:
+      - Task
+  /api/v1/tasks/{id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: 获取任务节点的运行日志
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取节点运行日志
+      tags:
+      - Task
+  /api/v1/tasks/by-name/{name}:
+    get:
+      consumes:
+      - application/json
+      description: 根据任务名称获取任务详情
+      parameters:
+      - description: 任务名称
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Task'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 按名称获取任务
+      tags:
+      - Task
+    put:
+      consumes:
+      - application/json
+      description: 根据任务名称更新任务信息
+      parameters:
+      - description: 任务名称
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: 任务更新信息
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 按名称更新任务
+      tags:
+      - Task
+  /api/v1/user/userInfo:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户信息
+          schema:
+            $ref: '#/definitions/dto.UserInfoResp'
+        "401":
+          description: 未登录或令牌失效
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      security:
+      - BearerAuth: []
+      summary: 获取用户信息
+      tags:
+      - user
+  /api/v1/waiting_nodes:
+    get:
+      consumes:
+      - application/json
+      description: 查询等待节点列表，支持分页和筛选
+      parameters:
+      - description: 工作流名称
+        in: query
+        name: workflow_name
+        type: string
+      - description: 追踪ID
+        in: query
+        name: trace_id
+        type: string
+      - description: 节点状态
+        in: query
+        name: status
+        type: string
+      - description: 开始时间 (RFC3339格式)
+        in: query
+        name: start
+        type: string
+      - description: 结束时间 (RFC3339格式)
+        in: query
+        name: end
+        type: string
+      - description: '页码 (默认: 1)'
+        in: query
+        name: page_num
+        type: integer
+      - description: '每页大小 (默认: 10)'
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 等待节点列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.WaitingNode'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      security:
+      - BearerAuth: []
+      summary: 获取等待节点列表
+      tags:
+      - waiting_node
+    post:
+      consumes:
+      - application/json
+      description: 记录一个新的等待节点
+      parameters:
+      - description: 等待节点信息
+        in: body
+        name: node
+        required: true
+        schema:
+          $ref: '#/definitions/entity.WaitingNode'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 记录成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      security:
+      - BearerAuth: []
+      summary: 记录等待节点
+      tags:
+      - waiting_node
+  /api/v1/waiting_nodes/{traceID}:
+    get:
+      consumes:
+      - application/json
+      description: 根据追踪ID获取特定的等待节点信息
+      parameters:
+      - description: 节点追踪ID
+        in: path
+        name: traceID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 等待节点信息
+          schema:
+            $ref: '#/definitions/entity.WaitingNode'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      security:
+      - BearerAuth: []
+      summary: 根据ID获取等待节点
+      tags:
+      - waiting_node
+  /api/v1/waiting_nodes/complete:
+    put:
+      consumes:
+      - application/json
+      description: 将等待节点标记为已完成
+      parameters:
+      - description: 节点追踪ID
+        in: query
+        name: trace_id
+        required: true
+        type: string
+      - description: 节点名称
+        in: query
+        name: node_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 标记成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/app_err.AppError'
+      summary: 标记节点完成
+      tags:
+      - waiting_node
+  /api/v1/worker/tasks/{task_id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: 获取任务的执行日志
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - default: 20
+        description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量
+        in: query
+        name: offset
+        type: integer
+      - description: 日志级别
+        in: query
+        name: level
+        type: string
+      - description: 开始时间
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.GetTaskLogsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取任务日志
+      tags:
+      - Worker
+    post:
+      consumes:
+      - application/json
+      description: 保存任务执行日志
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: 任务日志请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateTaskLogsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建任务日志
+      tags:
+      - Worker
+  /api/v1/worker/tasks/{task_id}/status:
+    put:
+      consumes:
+      - application/json
+      description: 更新任务的执行状态
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: 任务状态更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateTaskStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.UpdateTaskStatusResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新任务状态
+      tags:
+      - Worker
+  /api/v1/worker/tasks/pending:
+    get:
+      consumes:
+      - application/json
+      description: Worker获取待处理的任务列表
+      parameters:
+      - description: Worker ID
+        in: query
+        name: worker_id
+        required: true
+        type: string
+      - default: 10
+        description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      - description: 任务优先级过滤
+        in: query
+        name: priority
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.GetPendingTasksResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取待处理任务
+      tags:
+      - Worker
+  /api/v1/workflow/:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的工作流
+      parameters:
+      - description: 工作流信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateWorkflowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 创建工作流
+      tags:
+      - Workflow
+  /api/v1/workflow/{workflowName}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据名称删除工作流
+      parameters:
+      - description: 工作流名称
+        in: path
+        name: workflowName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 删除工作流
+      tags:
+      - Workflow
+    get:
+      consumes:
+      - application/json
+      description: 根据名称获取工作流详情
+      parameters:
+      - description: 工作流名称
+        in: path
+        name: workflowName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.Workflow'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取工作流详情
+      tags:
+      - Workflow
+    put:
+      consumes:
+      - application/json
+      description: 更新工作流信息
+      parameters:
+      - description: 工作流名称
+        in: path
+        name: workflowName
+        required: true
+        type: string
+      - description: 工作流信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateWorkflowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 更新工作流
+      tags:
+      - Workflow
+  /api/v1/workflow/load:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 从YAML文件加载工作流
+      parameters:
+      - description: YAML文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 工作流名称
+        in: formData
+        name: workflowName
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 从文件加载工作流
+      tags:
+      - Workflow
+  /api/v1/workflow/node_tpls:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有节点模板列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取节点模板列表
+      tags:
+      - Workflow
+  /api/v1/workflow/workflowList:
+    get:
+      consumes:
+      - application/json
+      description: 获取工作流列表，支持分页和筛选
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.Workflow'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取工作流列表
+      tags:
+      - Workflow
+  /api/v1/workflow_logs/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据工作流名称、节点名称、跟踪ID等条件获取节点运行日志列表
+      parameters:
+      - description: 工作流名称
+        in: query
+        name: workflow_name
+        type: string
+      - description: 节点名称
+        in: query
+        name: node_name
+        type: string
+      - description: 跟踪ID
+        in: query
+        name: trace_id
+        type: string
+      - description: 开始时间 (RFC3339格式)
+        in: query
+        name: start
+        type: string
+      - description: 结束时间 (RFC3339格式)
+        in: query
+        name: end
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取节点运行日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.NodeRunLog'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取节点运行日志列表
+      tags:
+      - 日志管理
+  /api/v1/workflow_logs/list:
+    get:
+      consumes:
+      - application/json
+      description: 根据工作流名称、状态、跟踪ID等条件获取工作流运行日志列表
+      parameters:
+      - description: 工作流名称
+        in: query
+        name: workflow_name
+        type: string
+      - description: 跟踪ID
+        in: query
+        name: trace_id
+        type: string
+      - description: 开始时间 (RFC3339格式)
+        in: query
+        name: start
+        type: string
+      - description: 结束时间 (RFC3339格式)
+        in: query
+        name: end
+        type: string
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - default: 10
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功获取工作流运行日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/resp.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.WorkflowRunLog'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 获取工作流运行日志列表
+      tags:
+      - 日志管理
+  /api/v1/ws/connect:
+    get:
+      consumes:
+      - application/json
+      description: 建立WebSocket连接以进行实时通信
+      parameters:
+      - description: 追踪ID
+        in: query
+        name: traceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: WebSocket连接成功
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 建立WebSocket连接
+      tags:
+      - websocket
+  /api/v1/ws/task:
+    post:
+      consumes:
+      - application/json
+      description: 通过HTTP POST提交一个新的工作流任务
+      parameters:
+      - description: 任务提交信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.TaskSubmissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 任务提交成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 提交任务
+      tags:
+      - websocket
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

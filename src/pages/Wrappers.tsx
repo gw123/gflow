@@ -4,6 +4,7 @@ import { useUIStore, useUserStore, useWorkflowStore } from '../stores';
 import ToolsManager from '../components/ToolsManager';
 import ApiManager from '../components/ApiManager';
 import { WorkflowListPage } from '../components/workflow-list/WorkflowListPage';
+import { PluginManagementPage } from './PluginManagementPage';
 import { api } from '../api/client';
 import { ArrowLeft, Database } from 'lucide-react';
 
@@ -23,6 +24,17 @@ const BackButton = () => {
 export { SecretsPage } from './SecretsPage';
 export { ToolsPage } from './ToolsPage';
 export { ApiPage } from './ApiPage';
+
+export const PluginsPage = () => {
+    return (
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-40 flex flex-col">
+            <div className="pt-16 h-full overflow-auto">
+                <PluginManagementPage />
+            </div>
+            <BackButton />
+        </div>
+    )
+};
 
 export const WorkflowsPage = () => {
     const navigate = useNavigate();

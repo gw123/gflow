@@ -80,9 +80,6 @@ export const EditorPage: React.FC = () => {
   // --- Initialization ---
 
   useEffect(() => {
-    // Check Auth
-    api.getMe().then(userStore.setUser).catch(() => { });
-
     const load = async () => {
         try {
             if (workflowId) {
