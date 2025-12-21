@@ -40,6 +40,7 @@ export const EditorPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const workflowId = searchParams.get('id');
+  const workflowName = searchParams.get('workflow');
 
   // Stores
   const ui = useUIStore();
@@ -56,8 +57,10 @@ export const EditorPage: React.FC = () => {
       wfStore.setNodes(nextNodes);
 
       if (changes.some((c: any) => c.type === 'position' && !c.dragging)) {
-        const newWf = flowToWorkflow(wfStore.workflowData, nextNodes, wfStore.edges);
-        wfStore.updateWorkflowData(newWf);
+        if (wfStore.workflowData) {
+          const newWf = flowToWorkflow(wfStore.workflowData, nextNodes, wfStore.edges);
+          wfStore.updateWorkflowData(newWf);
+        }
       }
     },
     [wfStore]
@@ -67,8 +70,10 @@ export const EditorPage: React.FC = () => {
     (changes: any) => {
       const nextEdges = applyEdgeChanges(changes, wfStore.edges);
       wfStore.setEdges(nextEdges);
-      const newWf = flowToWorkflow(wfStore.workflowData, wfStore.nodes, nextEdges);
-      wfStore.updateWorkflowData(newWf);
+      if (wfStore.workflowData) {
+        const newWf = flowToWorkflow(wfStore.workflowData, wfStore.nodes, nextEdges);
+        wfStore.updateWorkflowData(newWf);
+      }
     },
     [wfStore]
   );
@@ -84,21 +89,46 @@ export const EditorPage: React.FC = () => {
         try {
             if (workflowId) {
                 // Load from ID
+                console.log('[EditorPage] Loading workflow by ID:', workflowId);
                 const wf = await api.getWorkflow(workflowId);
-                wfStore.loadWorkflow(wf.content, workflowId);
-            } else if (!wfStore.workflowData.nodes || wfStore.workflowData.nodes.length === 0) {
+                console.log('[EditorPage] Workflow loaded:', wf);
+                // Backend returns workflow definition directly (no content wrapper)
+                if (!wf || !wf.nodes) {
+                    throw new Error('Workflow has no nodes');
+                }
+                wfStore.loadWorkflow(wf as any, workflowId);
+            } else if (workflowName) {
+                // Load from workflow name
+                console.log('[EditorPage] Loading workflow by name:', workflowName);
+                const wf = await api.getWorkflow(workflowName);
+                console.log('[EditorPage] Workflow loaded:', wf);
+                // Backend returns workflow definition directly (no content wrapper)
+                if (!wf || !wf.nodes) {
+                    throw new Error('Workflow has no nodes');
+                }
+                wfStore.loadWorkflow(wf as any, wf.id);
+            } else if (!wfStore.workflowData || !wfStore.workflowData.nodes || wfStore.workflowData.nodes.length === 0) {
                 // Initial Sample Load if empty
+                console.log('[EditorPage] Loading sample workflow');
                 const parsed = yaml.load(SAMPLE_YAML) as WorkflowDefinition;
                 wfStore.loadWorkflow(parsed);
             }
         } catch (e: any) {
-            console.error("Failed to load workflow", e);
+            console.error("[EditorPage] Failed to load workflow", e);
+            console.error("[EditorPage] Error stack:", e.stack);
             ui.showToast(`Failed to load workflow: ${e.message}`, 'error');
+            // Load sample workflow as fallback
+            try {
+                const parsed = yaml.load(SAMPLE_YAML) as WorkflowDefinition;
+                wfStore.loadWorkflow(parsed);
+            } catch (fallbackError) {
+                console.error("[EditorPage] Failed to load fallback workflow", fallbackError);
+            }
         }
     };
     
     load();
-  }, [workflowId]); // Reload if ID changes
+  }, [workflowId, workflowName]); // Reload if ID or name changes
 
   // --- Handlers ---
 
@@ -150,8 +180,10 @@ export const EditorPage: React.FC = () => {
 
       const newNodes = wfStore.nodes.concat(newNode);
       wfStore.setNodes(newNodes);
-      const newData = flowToWorkflow(wfStore.workflowData, newNodes, wfStore.edges);
-      wfStore.updateWorkflowData(newData);
+      if (wfStore.workflowData) {
+        const newData = flowToWorkflow(wfStore.workflowData, newNodes, wfStore.edges);
+        wfStore.updateWorkflowData(newData);
+      }
     },
     [project, wfStore]
   );
@@ -163,6 +195,8 @@ export const EditorPage: React.FC = () => {
   // --- Execution Logic ---
 
   const handleRunNode = async (nodeName: string) => {
+    if (!wfStore.workflowData) return;
+    
     if (!runnerRef.current) {
       const currentData = flowToWorkflow(wfStore.workflowData, wfStore.nodes, wfStore.edges);
       const runner = new WorkflowRunner(currentData, (state) => {
@@ -187,6 +221,11 @@ export const EditorPage: React.FC = () => {
   };
 
   const handleRunWorkflow = async (mode: 'run' | 'step' = 'run') => {
+    if (!wfStore.workflowData) {
+      ui.showToast("Workflow not loaded", "error");
+      return;
+    }
+    
     if (execStore.executionState.isRunning && !execStore.executionState.isPaused && !execStore.executionState.waitingForInput) {
       ui.showToast("Workflow is already running", "info");
       return;
@@ -348,7 +387,7 @@ export const EditorPage: React.FC = () => {
               </button>
             </div>
 
-            {ui.showYamlView && (
+            {ui.showYamlView && wfStore.workflowData && (
               <div className="absolute inset-0 z-20 animate-in slide-in-from-bottom duration-300">
                 <YamlView
                   yamlContent={yaml.dump(wfStore.workflowData)}

@@ -27,6 +27,7 @@ import * as SecretsModule from './modules/secrets';
 import * as ApisModule from './modules/apis';
 import * as PluginsModule from './modules/plugins';
 import * as ProxyModule from './modules/proxy';
+import * as WebhookRoutesModule from './modules/webhook-routes';
 export type {
   User,
   AuthResponse,
@@ -45,7 +46,12 @@ export type {
   PaginatedPlugins,
   ApiResponse,
   ServerSecret,
-  SecretTemplate
+  SecretTemplate,
+  WebhookRoute,
+  CreateWebhookRouteRequest,
+  UpdateWebhookRouteRequest,
+  WebhookRouteListParams,
+  PaginatedWebhookRoutes
 } from './models';
 
 class ApiClient {
@@ -245,6 +251,28 @@ class ApiClient {
 
   async deletePlugin(id: number): Promise<void> {
     await PluginsModule.deletePlugin(this.getHeaders(), id);
+  }
+
+  // --- Webhook Routes ---
+
+  async getWebhookRoutes(params?: WebhookRouteListParams): Promise<PaginatedWebhookRoutes> {
+    return WebhookRoutesModule.getWebhookRoutes(this.getHeaders(), params);
+  }
+
+  async getWebhookRoute(id: number): Promise<WebhookRoute> {
+    return WebhookRoutesModule.getWebhookRoute(this.getHeaders(), id);
+  }
+
+  async createWebhookRoute(route: CreateWebhookRouteRequest): Promise<WebhookRoute> {
+    return WebhookRoutesModule.createWebhookRoute(this.getHeaders(), route);
+  }
+
+  async updateWebhookRoute(id: number, route: UpdateWebhookRouteRequest): Promise<void> {
+    await WebhookRoutesModule.updateWebhookRoute(this.getHeaders(), id, route);
+  }
+
+  async deleteWebhookRoute(id: number): Promise<void> {
+    await WebhookRoutesModule.deleteWebhookRoute(this.getHeaders(), id);
   }
 }
 

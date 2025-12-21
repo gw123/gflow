@@ -5,7 +5,7 @@ import { ReactFlowProvider } from 'reactflow';
 // Import Pages
 import { HomePage } from './pages/HomePage';
 import { EditorPage } from './pages/EditorPage';
-import { SecretsPage, ToolsPage, ApiPage, WorkflowsPage, StoragePage, PluginsPage } from './pages/Wrappers';
+import { SecretsPage, ToolsPage, ApiPage, WorkflowsPage, StoragePage, PluginsPage, WebhookRoutesPage } from './pages/Wrappers';
 import { useUserStore } from './stores';
 import { api, User } from './api/client';
 
@@ -44,6 +44,7 @@ const AppContent = () => {
         <Route path="/apis" element={<ApiPage />} />
         <Route path="/plugins" element={<PluginsPage />} />
         <Route path="/storage" element={<StoragePage />} />
+        <Route path="/webhook-routes" element={<WebhookRoutesPage />} />
       </Routes>
     </HashRouter>
   );

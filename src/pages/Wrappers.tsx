@@ -24,6 +24,7 @@ const BackButton = () => {
 export { SecretsPage } from './SecretsPage';
 export { ToolsPage } from './ToolsPage';
 export { ApiPage } from './ApiPage';
+export { WebhookRoutesPage } from './WebhookRoutesPage';
 
 export const PluginsPage = () => {
     return (

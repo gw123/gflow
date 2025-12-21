@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Key, Database, Globe, Wrench, Plus, 
-  LogOut, UserCircle, Plug
+  LogOut, UserCircle, Plug, Webhook
 } from 'lucide-react';
 import { useUserStore, useUIStore } from '../stores';
 
@@ -151,6 +151,20 @@ export const HomePage = () => {
            </div>
            <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Plugin Management</h3>
            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Register, configure and manage plugins for extending workflow capabilities.</p>
+        </div>
+
+        {/* Webhook Routes */}
+        <div 
+            onClick={() => navigate('/webhook-routes')} 
+            className="group cursor-pointer p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-orange-500/50 dark:hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300"
+        >
+           <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Webhook size={28} />
+              </div>
+           </div>
+           <h3 className="text-xl font-bold mb-2 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">Webhook Routes</h3>
+           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Configure webhook routes to trigger workflows from external HTTP requests.</p>
         </div>
       </div>
     </div>

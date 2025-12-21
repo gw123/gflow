@@ -170,3 +170,59 @@ export interface SecretTemplate {
   value: Record<string, any>;
   validation?: Record<string, string>;
 }
+
+// WebhookRoute types
+export interface WebhookRoute {
+  id: number;
+  path: string;
+  method: string;
+  backend: string;
+  workflow_name: string;
+  timeout: number;
+  max_retry: number;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWebhookRouteRequest {
+  path: string;
+  method: string;
+  backend: string;
+  workflow_name: string;
+  timeout?: number;
+  max_retry?: number;
+}
+
+export interface UpdateWebhookRouteRequest {
+  path?: string;
+  method?: string;
+  backend?: string;
+  workflow_name?: string;
+  timeout?: number;
+  max_retry?: number;
+}
+
+export interface WebhookRouteListParams {
+  keyword?: string;
+  page_num?: number;
+  page_size?: number;
+}
+
+export interface PaginatedWebhookRoutes {
+  list: WebhookRoute[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WebhookRouteApiListResponse {
+  code: string;
+  code_en: string;
+  pagination: {
+    total_count: number;
+    has_more: boolean;
+    last_id: number;
+  };
+  data: WebhookRoute[];
+}
