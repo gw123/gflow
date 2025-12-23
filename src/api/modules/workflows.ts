@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { PaginatedWorkflows, QueryParams, WorkflowRecord, ServerExecutionResponse, PaginatedExecutions } from '../models';
+import { PaginatedWorkflows, QueryParams, WorkflowRecord, ServerExecutionResponse, PaginatedExecutions, NodeTemplatesResponse } from '../models';
 import { WorkflowDefinition } from '../../types';
 
 export async function getWorkflows(headers: Record<string, string>): Promise<WorkflowRecord[]> {
@@ -155,4 +155,17 @@ export async function executeWorkflow(headers: Record<string, string>, workflow:
     throw new Error(raw?.error?.message || raw?.error || 'Server execution failed');
   }
   return raw?.data ?? raw;
+}
+
+export async function getNodeTemplates(headers: Record<string, string>): Promise<NodeTemplatesResponse> {
+  const res = await fetch(`${API_BASE}/workflow/nodeTpls`, { headers });
+  const raw = await res.json();
+  if (!res.ok) {
+    throw new Error(raw?.message || raw?.error || 'Failed to fetch node templates');
+  }
+  // Check for error responses
+  if (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success') {
+    throw new Error(raw?.message || 'Failed to fetch node templates');
+  }
+  return raw as NodeTemplatesResponse;
 }

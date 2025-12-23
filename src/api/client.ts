@@ -19,7 +19,13 @@ import {
   PaginatedPlugins,
   ApiResponse,
   ServerSecret,
-  SecretTemplate
+  SecretTemplate,
+  NodeTemplatesResponse,
+  WebhookRoute,
+  CreateWebhookRouteRequest,
+  UpdateWebhookRouteRequest,
+  WebhookRouteListParams,
+  PaginatedWebhookRoutes
 } from './models';
 import * as AuthModule from './modules/auth';
 import * as WorkflowModule from './modules/workflows';
@@ -51,7 +57,10 @@ export type {
   CreateWebhookRouteRequest,
   UpdateWebhookRouteRequest,
   WebhookRouteListParams,
-  PaginatedWebhookRoutes
+  PaginatedWebhookRoutes,
+  NodeTemplatesResponse,
+  NodeTemplate,
+  NodeTemplateCategory
 } from './models';
 
 class ApiClient {
@@ -77,6 +86,11 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
     return headers;
+  }
+
+  // Public method to get headers for external use (e.g., plugin loading)
+  public getAuthHeaders(): Record<string, string> {
+    return this.getHeaders();
   }
 
   setToken(token: string | null) {
@@ -169,6 +183,10 @@ class ApiClient {
     params: { limit?: number; offset?: number } = {}
   ): Promise<PaginatedExecutions> {
     return WorkflowModule.getWorkflowExecutions(this.getHeaders(), id, params);
+  }
+
+  async getNodeTemplates(): Promise<NodeTemplatesResponse> {
+    return WorkflowModule.getNodeTemplates(this.getHeaders());
   }
 
   // --- Secrets ---

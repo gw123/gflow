@@ -15,7 +15,10 @@ export async function getSecrets(headers: Record<string, string>): Promise<Crede
   const res = await fetch(`${API_BASE}/secrets`, { headers });
   const raw = await res.json();
   if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to fetch secrets');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to fetch secrets');
+  // 适配新的返回格式：code 为 "200" 表示成功
+  if (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success') {
+    throw new Error(raw?.message || 'Failed to fetch secrets');
+  }
   const list = Array.isArray(raw?.data) ? raw.data : [];
   return list.map((s: ServerSecret) => mapServerSecretToCredentialItem(s));
 }
@@ -31,8 +34,13 @@ export async function createSecret(headers: Record<string, string>, secret: Cred
     })
   });
   const raw = await res.json();
-  if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to save secret');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to save secret');
+  
+  // Check for error responses
+  if (!res.ok || (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success')) {
+    const errorMessage = raw?.message || raw?.error || 'Failed to save secret';
+    throw new Error(errorMessage);
+  }
+  
   return raw;
 }
 
@@ -47,8 +55,13 @@ export async function updateSecret(headers: Record<string, string>, secret: Cred
     })
   });
   const raw = await res.json();
-  if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to update secret');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to update secret');
+  
+  // Check for error responses
+  if (!res.ok || (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success')) {
+    const errorMessage = raw?.message || raw?.error || 'Failed to update secret';
+    throw new Error(errorMessage);
+  }
+  
   return raw;
 }
 
@@ -57,13 +70,23 @@ export async function deleteSecret(headers: Record<string, string>, id: string):
     method: 'DELETE',
     headers
   });
-  if (!res.ok) {
-    let msg = 'Failed to delete secret';
-    try {
-      const raw = await res.json();
-      if (raw?.message) msg = raw.message;
-    } catch {}
-    throw new Error(msg);
+  
+  // Always try to parse the response body
+  let raw;
+  try {
+    raw = await res.json();
+  } catch (e) {
+    // If response is not JSON, throw generic error
+    if (!res.ok) {
+      throw new Error('Failed to delete secret');
+    }
+    return;
+  }
+  
+  // Check for error responses
+  if (!res.ok || (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success')) {
+    const errorMessage = raw?.message || raw?.error || 'Failed to delete secret';
+    throw new Error(errorMessage);
   }
 }
 
@@ -71,7 +94,9 @@ export async function getSecret(headers: Record<string, string>, id: string): Pr
   const res = await fetch(`${API_BASE}/secrets/${id}`, { headers });
   const raw = await res.json();
   if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to fetch secret');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to fetch secret');
+  if (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success') {
+    throw new Error(raw?.message || 'Failed to fetch secret');
+  }
   return mapServerSecretToCredentialItem(raw?.data as ServerSecret);
 }
 
@@ -79,7 +104,9 @@ export async function getSecretByName(headers: Record<string, string>, secretNam
   const res = await fetch(`${API_BASE}/secrets/byName/${encodeURIComponent(secretName)}`, { headers });
   const raw = await res.json();
   if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to fetch secret');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to fetch secret');
+  if (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success') {
+    throw new Error(raw?.message || 'Failed to fetch secret');
+  }
   return mapServerSecretToCredentialItem(raw?.data as ServerSecret);
 }
 
@@ -91,7 +118,9 @@ export async function getSecretsBySecretType(headers: Record<string, string>, se
   const res = await fetch(`${path}${qs}`, { headers });
   const raw = await res.json();
   if (!res.ok) throw new Error(raw?.message || raw?.error || 'Failed to fetch secrets');
-  if (raw?.code && raw.code !== 'success') throw new Error(raw?.message || 'Failed to fetch secrets');
+  if (raw?.code && raw.code !== '200' && raw.code !== 'SUCCESS' && raw.code !== 'success') {
+    throw new Error(raw?.message || 'Failed to fetch secrets');
+  }
   const list = Array.isArray(raw?.data) ? raw.data : [];
   return list.map((s: ServerSecret) => mapServerSecretToCredentialItem(s));
 }

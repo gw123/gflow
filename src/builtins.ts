@@ -1,6 +1,6 @@
 
 import { Registry } from './registry';
-import { NodePlugin } from './types';
+import { NodePlugin, NodeVisuals, NodeRunner } from './types';
 
 // Import new proxy runners
 import { HttpNodeRunnerProxy } from './runners/http';
@@ -23,421 +23,387 @@ import {
     TtsNodeRunner
 } from './runners';
 
-const plugins: NodePlugin[] = [
-    // --- Trigger ---
-    {
-        type: 'manual',
-        category: 'trigger',
-        template: {
-            name: "Manual",
-            type: "manual",
-            parameters: { input_example: { key: "value" } },
-            global: { start_time: "={{ $P.startTime }}" }
-        },
-        runner: new ManualNodeRunner(),
-        visuals: { icon: 'Play', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
-    },
-    {
-        type: 'webhook',
-        category: 'trigger',
-        template: {
-            name: "Webhook",
-            type: "webhook",
-            parameters: { method: "POST", path: "my-hook" },
-            parameterDefinitions: [
-                { name: "method", type: "string", options: ["GET", "POST", "PUT", "DELETE", "PATCH"], defaultValue: "POST" },
-                { name: "path", type: "string", defaultValue: "my-hook" }
-            ]
-        },
-        runner: new HttpNodeRunnerProxy(),
-        visuals: { icon: 'Globe', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
-    },
-    {
-        type: 'timer',
-        category: 'trigger',
-        template: {
-            name: "Timer",
-            type: "timer",
-            parameters: { secondsInterval: 60 }
-        },
-        runner: new TimeNodeRunnerProxy(),
-        visuals: { icon: 'Clock', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
-    },
-    {
-        type: 'media_capture',
-        category: 'trigger',
-        template: {
-            name: "Media Capture",
-            type: "media_capture",
-            desc: "Captures audio and video from the user's device for a set duration.",
-            parameters: { mode: "audio", duration: 5, fps: 1 },
-            parameterDefinitions: [
-                { name: "mode", type: "string", options: ["audio", "video", "both"], defaultValue: "audio" },
-                { name: "duration", type: "number", defaultValue: 5, description: "Capture duration in seconds" },
-                { name: "fps", type: "number", defaultValue: 1, description: "Frames per second (video/both mode only)" }
-            ]
-        },
-        runner: new MediaNodeRunner(),
-        visuals: { icon: 'Video', color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
-    },
+const plugins: NodePlugin[] = []
 
-    // --- Action ---
-    {
-        type: 'http',
-        category: 'action',
-        template: {
-            name: "HTTP Request",
-            type: "http",
-            parameters: { url: "https://api.example.com", method: "GET", headers: {}, body: {} },
-            parameterDefinitions: [
-                { name: "method", type: "string", options: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], defaultValue: "GET" },
-                { name: "url", type: "string", defaultValue: "https://api.example.com" },
-                { name: "headers", type: "object", defaultValue: {} },
-                { name: "body", type: "object", defaultValue: {} }
-            ]
-        },
-        runner: new HttpNodeRunnerProxy(),
-        visuals: { icon: 'Globe', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
-    },
-    {
-        type: 'wait',
-        category: 'action',
-        template: {
-            name: "Wait",
-            type: "wait",
-            parameters: { seconds: 5 }
-        },
-        runner: new TimeNodeRunnerProxy(),
-        visuals: { icon: 'Clock', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
-    },
-    {
-        type: 'js',
-        category: 'action',
-        template: {
-            name: "JavaScript",
-            type: "js",
-            parameters: { code: "return { result: 'Hello ' + input.name };" }
-        },
-        runner: new JsNodeRunnerProxy(),
-        visuals: { icon: 'Code', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
-    },
-    {
-        type: 'code_search',
-        category: 'action',
-        template: {
-            name: "Code Search",
-            type: "code_search",
-            parameters: { query: "search query" }
-        },
-        runner: new JsNodeRunnerProxy(), // Reusing JS runner for now
-        visuals: { icon: 'Search', color: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' }
-    },
-    {
-        type: 'play_media',
-        category: 'action',
-        template: {
-            name: "Play Media",
-            type: "play_media",
-            desc: "Plays audio or video data from variables (e.g. captured frames) or URLs.",
-            parameters: { mediaType: "audio", data: "={{ $P.audioData }}" },
-            parameterDefinitions: [
-                { name: "mediaType", type: "string", options: ["audio", "video"], defaultValue: "audio" },
-                { name: "data", type: "string", defaultValue: "={{ $P.audioData }}", description: "URL or Base64 data variable" },
-                { name: "fps", type: "number", defaultValue: 2, description: "FPS for video frame playback" }
-            ]
-        },
-        runner: new PlayMediaNodeRunner(),
-        visuals: { icon: 'Volume2', color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-800' }
-    },
-
-    // --- AI ---
-    {
-        type: 'langchain_agent',
-        category: 'ai',
-        template: {
-            name: "LangChain Agent",
-            type: "langchain_agent",
-            desc: "AI Agent with tool support and Langfuse observability.",
-            parameters: {
-                goal: "Summarize the last email and check calendar.",
-                tools: ["search", "calculator", "calendar"],
-                temperature: 0.2
-            },
-            credentials: { openai_api_key: "", langfuse_keys: {} },
-            parameterDefinitions: [
-                { name: "goal", type: "string", defaultValue: "Solve a task", description: "The primary objective for the agent" },
-                { name: "tools", type: "object", defaultValue: ["search"], description: "Array of tool names enabled for this agent" },
-                { name: "temperature", type: "number", defaultValue: 0.2, description: "Model temperature" },
-                { name: "maxSteps", type: "number", defaultValue: 5, description: "Maximum reasoning steps" }
-            ]
-        },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'Workflow', color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' }
-    },
-    {
-        type: 'chatgpt',
-        category: 'ai',
-        template: {
-            name: "LLM Chat",
-            type: "chatgpt",
-            desc: "Generate text using Gemini 2.5 Flash.",
-            parameters: { model: "gemini-2.5-flash", prompt: "Hello!" },
-            credentials: { openai_api_key: "", langfuse_keys: {} },
-            parameterDefinitions: [
-                { name: "model", type: "string", options: ["gemini-2.5-flash", "gemini-3-pro-preview"], defaultValue: "gemini-2.5-flash" },
-                { name: "prompt", type: "string", defaultValue: "Hello!" }
-            ]
-        },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-    {
-        type: 'ai_image_gen',
-        category: 'ai',
-        template: {
-            name: "AI Image Gen",
-            type: "ai_image_gen",
-            desc: "Generate images using Google's Nano Banana (Gemini Flash Image) model.",
-            parameters: { prompt: "A futuristic city with flying cars", aspectRatio: "1:1", outputFormat: "data_uri", download: false },
-            parameterDefinitions: [
-                { name: "prompt", type: "string", defaultValue: "A futuristic city", description: "Image description" },
-                { name: "aspectRatio", type: "string", options: ["1:1", "3:4", "4:3", "9:16", "16:9"], defaultValue: "1:1" },
-                { name: "outputFormat", type: "string", options: ["base64", "data_uri"], defaultValue: "data_uri", description: "Output format" },
-                { name: "download", type: "boolean", defaultValue: false, description: "Auto-download to device" }
-            ]
-        },
-        runner: new AiImageNodeRunner(),
-        visuals: { icon: 'Image', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-    {
-        type: 'tts',
-        category: 'ai',
-        template: {
-            name: "Text To Speech",
-            type: "tts",
-            desc: "Convert text to audio using Gemini 2.5.",
-            parameters: { text: "Hello world", voice: "Puck" },
-            parameterDefinitions: [
-                { name: "text", type: "string", defaultValue: "Hello World", description: "Text to speak" },
-                { name: "voice", type: "string", options: ["Puck", "Charon", "Kore", "Fenrir", "Zephyr"], defaultValue: "Puck" }
-            ]
-        },
-        runner: new TtsNodeRunner(), // Using Real Optimized Runner
-        visuals: { icon: 'Volume2', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-    {
-        type: 'agent',
-        category: 'ai',
-        template: {
-            name: "Agent",
-            type: "agent",
-            parameters: { role: "You are a helpful assistant", prompt: "How can I help?" }
-        },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-    {
-        type: 'ai_low_code',
-        category: 'ai',
-        template: {
-            name: "AI Low Code",
-            type: "ai_low_code",
-            parameters: { instruction: "Create a form" }
-        },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'Bot', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-    {
-        type: 'prompt_template',
-        category: 'ai',
-        template: {
-            name: "Prompt Template",
-            type: "prompt_template",
-            parameters: { template: "Hello {{name}}", name: "World" }
-        },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'File', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800' }
-    },
-
-    // --- Control ---
-    {
-        type: 'if',
-        category: 'control',
-        template: {
-            name: "If Condition",
-            type: "if",
-            parameters: { condition: "={{ $P.value > 10 }}" }
-        },
-        runner: new ControlNodeRunnerProxy(),
-        visuals: { icon: 'GitBranch', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
-    },
-    {
-        type: 'switch',
-        category: 'control',
-        template: {
-            name: "Switch",
-            type: "switch",
-            parameters: { value: "={{ $P.category }}" }
-        },
-        runner: new ControlNodeRunnerProxy(),
-        visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
-    },
-    {
-        type: 'loop',
-        category: 'control',
-        template: {
-            name: "Loop",
-            type: "loop",
-            parameters: { items: "={{ $P.items }}" }
-        },
-        runner: new ControlNodeRunnerProxy(),
-        visuals: { icon: 'Shuffle', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-900/20', border: 'border-slate-200 dark:border-slate-800' }
-    },
-
-    // --- System ---
-    {
-        type: 'execute_command',
-        category: 'system',
-        template: {
-            name: "Execute Command",
-            type: "execute_command",
-            parameters: { command: "echo 'hello'" }
-        },
-        runner: new SystemNodeRunner(),
-        visuals: { icon: 'Terminal', color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
-    },
-    {
-        type: 'docker',
-        category: 'system',
-        template: {
-            name: "Docker",
-            type: "docker",
-            parameters: { image: "alpine", action: "run" },
-            parameterDefinitions: [
-                { name: "action", type: "string", options: ["run", "stop", "start", "restart", "logs"], defaultValue: "run" },
-                { name: "image", type: "string", defaultValue: "alpine" },
-                { name: "docker-compose-file", type: "string", defaultValue: "" }
-            ]
-        },
-        runner: new SystemNodeRunner(),
-        visuals: { icon: 'Box', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
-    },
-    {
-        type: 'docker_compose',
-        category: 'system',
-        template: {
-            name: "Docker Compose",
-            type: "docker_compose",
-            parameters: { file: "docker-compose.yml" }
-        },
-        runner: new SystemNodeRunner(),
-        visuals: { icon: 'Box', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800' }
-    },
-    {
-        type: 'git',
-        category: 'system',
-        template: {
-            name: "Git",
-            type: "git",
-            parameters: { action: "clone", repo: "" },
-            parameterDefinitions: [
-                { name: "action", type: "string", options: ["clone", "pull", "push", "checkout"], defaultValue: "clone" },
-                { name: "repo", type: "string", defaultValue: "" }
-            ]
-        },
-        runner: new SystemNodeRunner(),
-        visuals: { icon: 'GitBranch', color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', border: 'border-gray-200 dark:border-gray-800' }
-    },
-
-    // --- Data ---
-    {
-        type: 'mysql',
-        category: 'data',
-        template: {
-            name: "MySQL",
-            type: "mysql",
-            desc: "Execute SQL queries against a MySQL database.",
-            parameters: {
-                host: "localhost",
-                port: 3306,
-                user: "root",
-                password: "",
-                database: "",
-                sql: "SELECT * FROM users LIMIT 10"
-            },
-            parameterDefinitions: [
-                { name: "host", type: "string", defaultValue: "localhost", description: "MySQL server host" },
-                { name: "port", type: "number", defaultValue: 3306, description: "MySQL server port" },
-                { name: "user", type: "string", defaultValue: "root", description: "Database user" },
-                { name: "password", type: "string", defaultValue: "", description: "Database password" },
-                { name: "database", type: "string", defaultValue: "", description: "Database name" },
-                { name: "sql", type: "string", defaultValue: "SELECT 1", description: "SQL query to execute" },
-                { name: "values", type: "object", defaultValue: [], description: "Parameterized query values (optional)" }
-            ]
-        },
-        runner: new MysqlNodeRunnerProxy(),
-        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
-    },
-    {
-        type: 'pg',
-        category: 'data',
-        template: { name: "PostgreSQL", type: "pg", parameters: { sql: "SELECT * FROM table" } },
-        runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
-    },
-    {
-        type: 'redis',
-        category: 'data',
-        template: { name: "Redis", type: "redis", parameters: { command: "GET key" } },
-        runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: 'Layers', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800' }
-    },
-    {
-        type: 'feishu_bitable',
-        category: 'data',
-        template: { name: "Feishu Bitable", type: "feishu_bitable", parameters: { app_token: "" } },
-        runner: new SystemNodeRunner(), // Mock
-        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
-    },
-    {
-        type: 'text2sql',
-        category: 'data',
-        template: { name: "Text to SQL", type: "text2sql", parameters: { prompt: "Find users" } },
-        runner: new LlmNodeRunner(),
-        visuals: { icon: 'Database', color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-800' }
-    },
-
-    // --- Human ---
-    {
-        type: 'user_interaction',
-        category: 'human',
-        template: {
-            name: "User Form",
-            type: "user_interaction",
-            parameters: {
-                title: "Approval",
-                fields: [
-                    { key: "approved", label: "Approve?", type: "boolean", required: true }
-                ]
-            }
-        },
-        runner: new InteractionNodeRunner(),
-        visuals: { icon: 'User', color: 'text-pink-600', bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-800' }
-    },
-
-    // --- Plugin ---
-    {
-        type: 'grpc_plugin',
-        category: 'plugin',
-        template: {
-            name: "gRPC Plugin",
-            type: "grpc_plugin",
-            parameters: { endpoint: "localhost:50051" }
-        },
-        runner: new GrpcNodeRunner(),
-        visuals: { icon: 'Plug', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' }
-    }
-];
-
-// Register all
+// Register all built-in plugins
 plugins.forEach(p => Registry.register(p));
+
+// --- Dynamic Plugin Loading from Server ---
+
+/**
+ * Load node templates from server and register them dynamically
+ * @param headers - Authentication headers for API requests
+ * @returns Promise that resolves when all templates are loaded and registered
+ */
+export async function loadServerNodeTemplates(headers: Record<string, string>): Promise<void> {
+    console.log('[Template Loader] Starting to load node templates...');
+    console.log('[Template Loader] Headers:', Object.keys(headers));
+    
+    try {
+        // Import the workflows API module
+        const { getNodeTemplates } = await import('./api/modules/workflows');
+        
+        console.log('[Template Loader] Fetching from API...');
+        
+        // Fetch node templates from server
+        const response = await getNodeTemplates(headers);
+        
+        console.log('[Template Loader] API Response:', {
+            code: response.code,
+            message: response.message,
+            hasData: !!response.data,
+            dataKeys: response.data ? Object.keys(response.data) : []
+        });
+        
+        if (!response.data) {
+            console.warn('[Template Loader] No template data received from server');
+            return;
+        }
+        
+        let totalLoaded = 0;
+        
+        // Process each category
+        for (const [categoryKey, categoryData] of Object.entries(response.data)) {
+            const category = mapServerCategoryToLocal(categoryKey);
+            
+            console.log(`[Template Loader] Processing category: ${categoryKey} (${categoryData.templates?.length || 0} templates)`);
+            
+            // Register each template in the category
+            for (const template of categoryData.templates || []) {
+                try {
+                    // Get existing runner for this type, or use default
+                    const existingPlugin = Registry.get(template.type);
+                    const runner = existingPlugin?.runner || getRunnerForType(template.type);
+                    
+                    // Create NodePlugin from server template
+                    const nodePlugin: NodePlugin = {
+                        type: template.type,
+                        category: category,
+                        template: {
+                            name: template.name,
+                            type: template.type,
+                            desc: categoryData.description,
+                            parameters: template.parameters || {},
+                            credentials: template.credentials || {},
+                            credentialType: template.credentialType
+                        },
+                        runner: runner,
+                        visuals: existingPlugin?.visuals || getVisualsForCategory(category)
+                    };
+                    
+                    Registry.register(nodePlugin);
+                    totalLoaded++;
+                    console.log(`[Template Loader] ✓ Registered: ${template.name} (${template.type})`);
+                } catch (error) {
+                    console.error(`[Template Loader] ✗ Failed to register template ${template.name}:`, error);
+                }
+            }
+        }
+        
+        console.log(`[Template Loader] ✓ Successfully loaded ${totalLoaded} node templates from server`);
+    } catch (error: any) {
+        console.error('[Template Loader] ✗ Failed to load node templates from server:', error);
+        console.error('[Template Loader] Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        throw error;
+    }
+}
+
+/**
+ * Load gRPC plugins from server and register them dynamically
+ * @param headers - Authentication headers for API requests
+ * @returns Promise that resolves when all plugins are loaded and registered
+ */
+export async function loadServerPlugins(headers: Record<string, string>): Promise<void> {
+    try {
+        // Import the plugins API module
+        const { getPlugins } = await import('./api/modules/plugins');
+        
+        // Fetch all plugins from server (paginated)
+        const result = await getPlugins(headers, { page_size: 100 });
+        
+        // Filter only enabled plugins
+        const enabledPlugins = result.data.filter(plugin => plugin.enabled);
+        
+        console.log(`[Plugin Loader] Found ${enabledPlugins.length} enabled gRPC plugins from server`);
+        
+        // Register each plugin
+        for (const serverPlugin of enabledPlugins) {
+            try {
+                // Determine category based on plugin kind
+                const category = getCategoryFromKind(serverPlugin.kind);
+                
+                // Create NodePlugin from server Plugin
+                const nodePlugin: NodePlugin = {
+                    type: `grpc_plugin_${serverPlugin.id}`, // Unique type identifier
+                    category: category,
+                    template: {
+                        name: serverPlugin.name,
+                        type: `grpc_plugin_${serverPlugin.id}`,
+                        desc: serverPlugin.description,
+                        parameters: {
+                            endpoint: serverPlugin.endpoint,
+                            plugin_id: serverPlugin.id,
+                            plugin_kind: serverPlugin.kind
+                        },
+                        meta: {
+                            kind: serverPlugin.kind,
+                            nodeType: `grpc_plugin_${serverPlugin.id}`,
+                            category: category
+                        }
+                    },
+                    runner: new GrpcNodeRunner(), // Use gRPC runner for server plugins
+                    visuals: getVisualsForKind(serverPlugin.kind)
+                };
+                
+                Registry.register(nodePlugin);
+                console.log(`[Plugin Loader] Registered gRPC plugin: ${serverPlugin.name} (${serverPlugin.kind})`);
+            } catch (error) {
+                console.error(`[Plugin Loader] Failed to register plugin ${serverPlugin.name}:`, error);
+            }
+        }
+        
+        console.log(`[Plugin Loader] Successfully loaded ${enabledPlugins.length} gRPC plugins`);
+    } catch (error) {
+        console.error('[Plugin Loader] Failed to load gRPC plugins from server:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load all server resources (node templates + gRPC plugins)
+ * @param headers - Authentication headers for API requests
+ */
+export async function loadAllServerResources(headers: Record<string, string>): Promise<void> {
+    console.log('[Server Loader] Loading all server resources...');
+    
+    const results = await Promise.allSettled([
+        loadServerNodeTemplates(headers),
+        loadServerPlugins(headers)
+    ]);
+    
+    // Log results
+    if (results[0].status === 'fulfilled') {
+        console.log('[Server Loader] ✓ Node templates loaded');
+    } else {
+        console.error('[Server Loader] ✗ Node templates failed:', results[0].reason);
+    }
+    
+    if (results[1].status === 'fulfilled') {
+        console.log('[Server Loader] ✓ gRPC plugins loaded');
+    } else {
+        console.error('[Server Loader] ✗ gRPC plugins failed:', results[1].reason);
+    }
+    
+    console.log('[Server Loader] Server resource loading complete');
+}
+
+/**
+ * Map server category key to local category
+ */
+function mapServerCategoryToLocal(serverCategory: string): string {
+    const categoryMap: Record<string, string> = {
+        'cache': 'data',
+        'code': 'action',
+        'control': 'control',
+        'database': 'data',
+        'trigger': 'trigger',
+        'ai': 'ai',
+        'system': 'system',
+        'human': 'human',
+        'plugin': 'plugin'
+    };
+    
+    return categoryMap[serverCategory.toLowerCase()] || 'action';
+}
+
+/**
+ * Get appropriate runner for node type
+ */
+function getRunnerForType(type: string): NodeRunner {
+    // Map node types to their runners
+    const typeRunnerMap: Record<string, NodeRunner> = {
+        // HTTP
+        'http': new HttpNodeRunnerProxy(),
+        'webhook': new HttpNodeRunnerProxy(),
+        
+        // JavaScript
+        'js': new JsNodeRunnerProxy(),
+        'code_search': new JsNodeRunnerProxy(),
+        'code_project': new JsNodeRunnerProxy(),
+        
+        // Time
+        'wait': new TimeNodeRunnerProxy(),
+        'timer': new TimeNodeRunnerProxy(),
+        
+        // Control
+        'if': new ControlNodeRunnerProxy(),
+        'switch': new ControlNodeRunnerProxy(),
+        'loop': new ControlNodeRunnerProxy(),
+        
+        // Database
+        'mysql': new MysqlNodeRunnerProxy(),
+        'pg': new SystemNodeRunner(),
+        'redis': new SystemNodeRunner(),
+        'redis_list': new SystemNodeRunner(),
+        
+        // System
+        'execute_command': new SystemNodeRunner(),
+        'docker': new SystemNodeRunner(),
+        'git': new SystemNodeRunner(),
+        
+        // AI
+        'chatgpt': new LlmNodeRunner(),
+        'agent': new LlmNodeRunner(),
+        'langchain_agent': new LlmNodeRunner(),
+        'ai_image_gen': new AiImageNodeRunner(),
+        'tts': new TtsNodeRunner(),
+        
+        // Human
+        'user_interaction': new InteractionNodeRunner(),
+        
+        // Media
+        'media_capture': new MediaNodeRunner(),
+        'play_media': new PlayMediaNodeRunner(),
+        
+        // Plugin
+        'grpc_plugin': new GrpcNodeRunner()
+    };
+    
+    return typeRunnerMap[type] || new SystemNodeRunner();
+}
+
+/**
+ * Get visual styling for category
+ */
+function getVisualsForCategory(category: string): NodeVisuals {
+    const categoryVisuals: Record<string, NodeVisuals> = {
+        'trigger': {
+            icon: 'Play',
+            color: 'text-amber-600',
+            bg: 'bg-amber-50 dark:bg-amber-900/20',
+            border: 'border-amber-200 dark:border-amber-800'
+        },
+        'action': {
+            icon: 'Zap',
+            color: 'text-blue-600',
+            bg: 'bg-blue-50 dark:bg-blue-900/20',
+            border: 'border-blue-200 dark:border-blue-800'
+        },
+        'ai': {
+            icon: 'Brain',
+            color: 'text-purple-600',
+            bg: 'bg-purple-50 dark:bg-purple-900/20',
+            border: 'border-purple-200 dark:border-purple-800'
+        },
+        'control': {
+            icon: 'GitBranch',
+            color: 'text-slate-600',
+            bg: 'bg-slate-50 dark:bg-slate-900/20',
+            border: 'border-slate-200 dark:border-slate-800'
+        },
+        'system': {
+            icon: 'Terminal',
+            color: 'text-gray-600',
+            bg: 'bg-gray-50 dark:bg-gray-900/20',
+            border: 'border-gray-200 dark:border-gray-800'
+        },
+        'data': {
+            icon: 'Database',
+            color: 'text-cyan-600',
+            bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+            border: 'border-cyan-200 dark:border-cyan-800'
+        },
+        'human': {
+            icon: 'User',
+            color: 'text-pink-600',
+            bg: 'bg-pink-50 dark:bg-pink-900/20',
+            border: 'border-pink-200 dark:border-pink-800'
+        },
+        'plugin': {
+            icon: 'Plug',
+            color: 'text-green-600',
+            bg: 'bg-green-50 dark:bg-green-900/20',
+            border: 'border-green-200 dark:border-green-800'
+        }
+    };
+    
+    return categoryVisuals[category] || categoryVisuals['action'];
+}
+
+/**
+ * Determine category based on plugin kind
+ */
+function getCategoryFromKind(kind: string): string {
+    const kindLower = kind.toLowerCase();
+    
+    // Map common plugin kinds to categories
+    if (kindLower.includes('trigger') || kindLower.includes('webhook') || kindLower.includes('timer')) {
+        return 'trigger';
+    }
+    if (kindLower.includes('ai') || kindLower.includes('llm') || kindLower.includes('ml')) {
+        return 'ai';
+    }
+    if (kindLower.includes('db') || kindLower.includes('database') || kindLower.includes('sql')) {
+        return 'data';
+    }
+    if (kindLower.includes('control') || kindLower.includes('flow') || kindLower.includes('condition')) {
+        return 'control';
+    }
+    if (kindLower.includes('system') || kindLower.includes('command') || kindLower.includes('shell')) {
+        return 'system';
+    }
+    if (kindLower.includes('human') || kindLower.includes('interaction') || kindLower.includes('form')) {
+        return 'human';
+    }
+    
+    // Default to plugin category
+    return 'plugin';
+}
+
+/**
+ * Get visual styling based on plugin kind
+ */
+function getVisualsForKind(kind: string): NodeVisuals {
+    const kindLower = kind.toLowerCase();
+    
+    // Trigger plugins
+    if (kindLower.includes('trigger') || kindLower.includes('webhook')) {
+        return {
+            icon: 'Zap',
+            color: 'text-amber-600',
+            bg: 'bg-amber-50 dark:bg-amber-900/20',
+            border: 'border-amber-200 dark:border-amber-800'
+        };
+    }
+    
+    // AI plugins
+    if (kindLower.includes('ai') || kindLower.includes('llm')) {
+        return {
+            icon: 'Brain',
+            color: 'text-purple-600',
+            bg: 'bg-purple-50 dark:bg-purple-900/20',
+            border: 'border-purple-200 dark:border-purple-800'
+        };
+    }
+    
+    // Database plugins
+    if (kindLower.includes('db') || kindLower.includes('database')) {
+        return {
+            icon: 'Database',
+            color: 'text-cyan-600',
+            bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+            border: 'border-cyan-200 dark:border-cyan-800'
+        };
+    }
+    
+    // Default plugin styling
+    return {
+        icon: 'Plug',
+        color: 'text-green-600',
+        bg: 'bg-green-50 dark:bg-green-900/20',
+        border: 'border-green-200 dark:border-green-800'
+    };
+}

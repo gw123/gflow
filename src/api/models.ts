@@ -226,3 +226,25 @@ export interface WebhookRouteApiListResponse {
   };
   data: WebhookRoute[];
 }
+
+// Node Template types
+export interface NodeTemplate {
+  name: string;
+  type: string;
+  credentialType?: string;
+  credentials?: Record<string, any>;
+  parameters?: Record<string, any>;
+}
+
+export interface NodeTemplateCategory {
+  type: string;
+  description: string;
+  templates: NodeTemplate[];
+}
+
+export interface NodeTemplatesResponse {
+  code: string;
+  code_en: string;
+  message: string;
+  data: Record<string, NodeTemplateCategory>;
+}

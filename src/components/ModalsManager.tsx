@@ -40,6 +40,7 @@ export const ModalsManager: React.FC = () => {
          onServerCreate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
          onServerUpdate={userStore.user ? (s) => api.saveSecret(s).then(() => {}) : undefined}
          onServerDelete={userStore.user ? (id) => api.deleteSecret(id).then(() => {}) : undefined}
+         onServerFetch={userStore.user ? (id) => api.getSecret(id) : undefined}
       />
 
       <ToolsManager 

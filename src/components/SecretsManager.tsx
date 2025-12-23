@@ -17,11 +17,12 @@ interface SecretsManagerProps {
   onServerCreate?: (secret: CredentialItem) => Promise<CredentialItem | void>;
   onServerUpdate?: (secret: CredentialItem) => Promise<CredentialItem | void>;
   onServerDelete?: (id: string) => Promise<void>;
+  onServerFetch?: (id: string) => Promise<CredentialItem>;
 }
 
 const SecretsManager: React.FC<SecretsManagerProps> = ({ 
   isOpen, onClose, credentials, onSave, onCredentialUpdate, notify,
-  isServerMode = false, onServerCreate, onServerUpdate, onServerDelete
+  isServerMode = false, onServerCreate, onServerUpdate, onServerDelete, onServerFetch
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>(CREDENTIAL_DEFINITIONS[0]?.name || '');
@@ -30,6 +31,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
 
   // Prepare list of filtered credentials
@@ -38,13 +40,28 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
     c.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (cred: CredentialItem) => {
+  const handleEdit = async (cred: CredentialItem) => {
     setEditingId(cred.id);
     setFormName(cred.name);
     setSelectedType(cred.type);
-    setFormData(JSON.parse(JSON.stringify(cred.data)));
     setErrors({});
     setVisibleFields({});
+    
+    // 如果是服务器模式且有获取详情的方法，则调用接口获取完整数据
+    if (isServerMode && onServerFetch) {
+      setIsLoading(true);
+      try {
+        const fullSecret = await onServerFetch(cred.id);
+        setFormData(JSON.parse(JSON.stringify(fullSecret.data || {})));
+      } catch (error: any) {
+        notify(`Failed to load secret details: ${error.message}`, 'error');
+        setFormData(JSON.parse(JSON.stringify(cred.data || {})));
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setFormData(JSON.parse(JSON.stringify(cred.data || {})));
+    }
   };
 
   const handleCreate = () => {
@@ -80,8 +97,8 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
              await onServerDelete(id);
              if (editingId === id) setEditingId(null);
              notify("Secret deleted successfully", "success");
-         } catch(e) {
-             notify("Failed to delete secret", "error");
+         } catch(e: any) {
+             notify(e.message || "Failed to delete secret", "error");
          } finally {
              setIsSaving(false);
          }
@@ -334,6 +351,11 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
            </div>
            {editingId ? (
                <div className="flex-1 overflow-y-auto p-6">
+                  {isLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                          <Loader2 size={48} className="animate-spin text-blue-500" />
+                      </div>
+                  ) : (
                   <div className="max-w-2xl mx-auto space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -376,6 +398,7 @@ const SecretsManager: React.FC<SecretsManagerProps> = ({
                           </div>
                       </div>
                   </div>
+                  )}
                </div>
            ) : (
                <div className="flex-1 flex flex-col items-center justify-center text-gray-400">

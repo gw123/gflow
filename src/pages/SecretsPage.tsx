@@ -73,6 +73,7 @@ export const SecretsPage = () => {
              onServerCreate={userStore.user ? (s) => api.saveSecret(s) : undefined}
              onServerUpdate={userStore.user ? (s) => api.updateSecret(s) : undefined}
              onServerDelete={userStore.user ? (id) => api.deleteSecret(id) : undefined}
+             onServerFetch={userStore.user ? (id) => api.getSecret(id) : undefined}
           />
        </div>
     </div>
