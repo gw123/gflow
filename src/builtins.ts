@@ -75,6 +75,12 @@ export async function loadServerNodeTemplates(headers: Record<string, string>): 
                     const existingPlugin = Registry.get(template.type);
                     const runner = existingPlugin?.runner || getRunnerForType(template.type);
                     
+                    // Generate parameter definitions from parameters
+                    const parameterDefinitions = generateParameterDefinitions(template.parameters || {});
+                    
+                    // Use template description if available, otherwise use category description
+                    const description = (template as any).description || (template as any).desc || categoryData.description || `${template.name} node`;
+                    
                     // Create NodePlugin from server template
                     const nodePlugin: NodePlugin = {
                         type: template.type,
@@ -82,8 +88,9 @@ export async function loadServerNodeTemplates(headers: Record<string, string>): 
                         template: {
                             name: template.name,
                             type: template.type,
-                            desc: categoryData.description,
+                            desc: description,
                             parameters: template.parameters || {},
+                            parameterDefinitions: parameterDefinitions,
                             credentials: template.credentials || {},
                             credentialType: template.credentialType
                         },
@@ -101,6 +108,11 @@ export async function loadServerNodeTemplates(headers: Record<string, string>): 
         }
         
         console.log(`[Template Loader] ✓ Successfully loaded ${totalLoaded} node templates from server`);
+        
+        // Trigger UI refresh
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('refreshNodeLibrary'));
+        }
     } catch (error: any) {
         console.error('[Template Loader] ✗ Failed to load node templates from server:', error);
         console.error('[Template Loader] Error details:', {
@@ -166,6 +178,11 @@ export async function loadServerPlugins(headers: Record<string, string>): Promis
         }
         
         console.log(`[Plugin Loader] Successfully loaded ${enabledPlugins.length} gRPC plugins`);
+        
+        // Trigger UI refresh
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('refreshNodeLibrary'));
+        }
     } catch (error) {
         console.error('[Plugin Loader] Failed to load gRPC plugins from server:', error);
         throw error;
@@ -198,6 +215,12 @@ export async function loadAllServerResources(headers: Record<string, string>): P
     }
     
     console.log('[Server Loader] Server resource loading complete');
+    
+    // Trigger UI refresh
+    console.log('[Server Loader] Triggering UI refresh...');
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('refreshNodeLibrary'));
+    }
 }
 
 /**
@@ -217,6 +240,54 @@ function mapServerCategoryToLocal(serverCategory: string): string {
     };
     
     return categoryMap[serverCategory.toLowerCase()] || 'action';
+}
+
+/**
+ * Generate parameter definitions from parameter values
+ * This creates the schema needed for the UI to render parameter forms
+ */
+function generateParameterDefinitions(parameters: Record<string, any>): any[] {
+    const definitions: any[] = [];
+    
+    for (const [key, value] of Object.entries(parameters)) {
+        let type: string;
+        let defaultValue = value;
+        
+        // Determine type from value
+        if (typeof value === 'string') {
+            type = 'string';
+        } else if (typeof value === 'number') {
+            type = 'number';
+        } else if (typeof value === 'boolean') {
+            type = 'boolean';
+        } else if (Array.isArray(value)) {
+            type = 'array';
+        } else if (typeof value === 'object' && value !== null) {
+            type = 'object';
+        } else {
+            type = 'string';
+            defaultValue = String(value);
+        }
+        
+        // Generate friendly description from key name
+        const friendlyName = key
+            .replace(/_/g, ' ')
+            .replace(/([A-Z])/g, ' $1')
+            .trim()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+        
+        definitions.push({
+            name: key,
+            type: type,
+            defaultValue: defaultValue,
+            description: friendlyName,
+            required: false
+        });
+    }
+    
+    return definitions;
 }
 
 /**

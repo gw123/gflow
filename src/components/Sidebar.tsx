@@ -32,6 +32,55 @@ const CATEGORY_ICON_NAMES: Record<string, string> = {
 
 const Sidebar = () => {
   const [library, setLibrary] = React.useState(TEMPLATE_LIBRARY);
+  const [refreshKey, setRefreshKey] = React.useState(0);
+
+  // Function to refresh library from Registry
+  const refreshLibrary = React.useCallback(() => {
+    console.log('[Sidebar] Refreshing node library...');
+    const allPlugins = Registry.getAll();
+    const newLibrary: Record<string, any> = {};
+    
+    allPlugins.forEach(plugin => {
+      // Update NODE_TEMPLATES for each plugin
+      NODE_TEMPLATES[plugin.type] = plugin.template;
+      
+      // Group by category for library
+      if (!newLibrary[plugin.category]) {
+        newLibrary[plugin.category] = {
+          description: Registry.getCategoryDescription(plugin.category),
+          templates: []
+        };
+      }
+      newLibrary[plugin.category].templates.push(plugin.template);
+    });
+    
+    console.log('[Sidebar] Library refreshed:', {
+      categories: Object.keys(newLibrary),
+      totalNodes: allPlugins.length,
+      nodeTemplatesCount: Object.keys(NODE_TEMPLATES).length
+    });
+    
+    setLibrary(newLibrary);
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Initial load and periodic refresh
+  React.useEffect(() => {
+    // Initial refresh
+    refreshLibrary();
+    
+    // Listen for custom event to refresh
+    const handleRefresh = () => {
+      console.log('[Sidebar] Received refresh event');
+      refreshLibrary();
+    };
+    
+    window.addEventListener('refreshNodeLibrary', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshNodeLibrary', handleRefresh);
+    };
+  }, [refreshLibrary]);
 
   React.useEffect(() => {
     const fetchPlugins = async () => {

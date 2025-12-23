@@ -56,10 +56,19 @@ function loadNodesFromLocalRegistry(): void {
     TEMPLATE_LIBRARY[plugin.category].templates.push(plugin.template);
   });
   
-  console.log('Nodes loaded from local registry as fallback:', {
+  console.log('Nodes loaded from local registry:', {
     categories: Object.keys(TEMPLATE_LIBRARY),
     templates: Object.keys(NODE_TEMPLATES).length
   });
+}
+
+/**
+ * Refresh TEMPLATE_LIBRARY and NODE_TEMPLATES from Registry
+ * Call this after loading server resources
+ */
+export function refreshNodeLibrary(): void {
+  console.log('[Node Library] Refreshing from Registry...');
+  loadNodesFromLocalRegistry();
 }
 
 // Initial load from local registry
