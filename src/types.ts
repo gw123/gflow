@@ -34,6 +34,7 @@ export interface NodeCredentials {
   [key: string]: any;
 }
 
+// Legacy parameter definition (for backward compatibility)
 export interface PluginParameterDefinition {
   name: string;
   type: 'string' | 'int' | 'integer' | 'float' | 'double' | 'number' | 'bool' | 'boolean' | 'array' | 'object';
@@ -43,6 +44,44 @@ export interface PluginParameterDefinition {
   options?: string[]; // For select inputs
 }
 
+// New parameter definition from server API (parameter_defs)
+export interface ParameterOption {
+  label: string;
+  value: string | number | boolean;
+  description?: string;
+}
+
+export interface ParameterValidation {
+  min_value?: number;
+  max_value?: number;
+  min_length?: number;
+  max_length?: number;
+  pattern?: string;
+}
+
+export interface ParameterDefaultValue {
+  value: any;
+}
+
+export interface ParameterDefinition {
+  name: string;
+  display_name: string;
+  description?: string;
+  type: 'string' | 'int' | 'float' | 'bool' | 'array' | 'object' | 'enum' | 'expression' | 'code' | 'url';
+  ui_type: 'text' | 'textarea' | 'select' | 'switch' | 'number' | 'code_editor' | 'json_editor' | 'key_value' | 'expression';
+  group?: 'basic' | 'advanced' | string;
+  order?: number;
+  required?: boolean;
+  default_value?: ParameterDefaultValue;
+  options?: ParameterOption[];
+  placeholder?: string;
+  hint?: string;
+  validation?: ParameterValidation;
+  // Conditional display
+  depends_on?: string;
+  show_when?: string; // Expression like "action == 'navigate'"
+}
+
 export interface PluginMetadata {
   kind: string;
   nodeType: string;
@@ -50,6 +89,11 @@ export interface PluginMetadata {
   parameters?: PluginParameterDefinition[];
   // 节点分类：用于识别触发节点（例如 'trigger'）
   category?: string;
+}
+
+// Extended NodeDefinition template with parameter definitions
+export interface NodeTemplate extends NodeDefinition {
+  parameterDefinitions?: PluginParameterDefinition[] | ParameterDefinition[];
 }
 
 export interface NodeDefinition {
@@ -182,7 +226,7 @@ export interface NodeVisuals {
 export interface NodePlugin {
   type: string;
   category: string; // 'trigger' | 'action' | 'ai' | 'control' | 'system' | 'data' | 'human' | 'plugin'
-  template: NodeDefinition;
+  template: NodeTemplate;
   runner: NodeRunner;
   visuals: NodeVisuals;
 }

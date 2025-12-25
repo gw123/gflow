@@ -1,4 +1,4 @@
-import { WorkflowDefinition, NodeExecutionResult } from '../types';
+import { WorkflowDefinition, NodeExecutionResult, ParameterDefinition } from '../types';
 
 export interface WorkflowSummary {
   id: string;
@@ -234,6 +234,7 @@ export interface NodeTemplate {
   credentialType?: string;
   credentials?: Record<string, any>;
   parameters?: Record<string, any>;
+  parameter_defs?: ParameterDefinition[];
 }
 
 export interface NodeTemplateCategory {

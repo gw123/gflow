@@ -1,6 +1,6 @@
 
 import { Registry } from './registry';
-import { NodePlugin, NodeVisuals, NodeRunner } from './types';
+import { NodePlugin, NodeVisuals, NodeRunner, ParameterDefinition, PluginParameterDefinition } from './types';
 
 // Import new proxy runners
 import { HttpNodeRunnerProxy } from './runners/http';
@@ -75,8 +75,11 @@ export async function loadServerNodeTemplates(headers: Record<string, string>): 
                     const existingPlugin = Registry.get(template.type);
                     const runner = existingPlugin?.runner || getRunnerForType(template.type);
                     
-                    // Generate parameter definitions from parameters
-                    const parameterDefinitions = generateParameterDefinitions(template.parameters || {});
+                    // Use parameter_defs from server if available, otherwise generate from parameters
+                    const serverTemplate = template as any;
+                    const parameterDefinitions = serverTemplate.parameter_defs && serverTemplate.parameter_defs.length > 0
+                        ? serverTemplate.parameter_defs as ParameterDefinition[]
+                        : generateParameterDefinitions(template.parameters || {});
                     
                     // Use template description if available, otherwise use category description
                     const description = (template as any).description || (template as any).desc || categoryData.description || `${template.name} node`;
@@ -100,7 +103,7 @@ export async function loadServerNodeTemplates(headers: Record<string, string>): 
                     
                     Registry.register(nodePlugin);
                     totalLoaded++;
-                    console.log(`[Template Loader] ✓ Registered: ${template.name} (${template.type})`);
+                    console.log(`[Template Loader] ✓ Registered: ${template.name} (${template.type}) with ${parameterDefinitions.length} param defs`);
                 } catch (error) {
                     console.error(`[Template Loader] ✗ Failed to register template ${template.name}:`, error);
                 }

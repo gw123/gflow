@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save, Trash2, Code, List, AlertCircle, Link, Info, Copy, ChevronRight, ChevronDown, Play, Database, FileText, Settings, ExternalLink } from 'lucide-react';
-import { NodeDefinition, PluginParameterDefinition, InputFieldDefinition } from '../types';
+import { NodeDefinition, PluginParameterDefinition, ParameterDefinition, InputFieldDefinition } from '../types';
 import { FormBuilder } from './FormBuilder';
 import { useUIStore, useWorkflowStore, useExecutionStore, useUserStore } from '../stores';
 import { Registry } from '../registry';
@@ -231,7 +231,7 @@ const SectionEditor: React.FC<{
   isLocked?: boolean; 
   headerAction?: React.ReactNode;
   defaultOpen?: boolean;
-  pluginParams?: PluginParameterDefinition[];
+  pluginParams?: (PluginParameterDefinition | ParameterDefinition)[];
   isUserInteraction?: boolean;
 }> = ({ title, description, data, rawString, onDataChange, onRawChange, isLocked, headerAction, defaultOpen = true, pluginParams, isUserInteraction }) => {
   const [mode, setMode] = useState<'form' | 'json'>('form');
